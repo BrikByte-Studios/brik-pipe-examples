@@ -20,5 +20,7 @@
   "dependencies": {
     "express": "^4.19.2"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/express": "^5.0.5"
+  }
 }

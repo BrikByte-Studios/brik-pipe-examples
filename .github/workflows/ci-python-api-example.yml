@@ -1,0 +1,14 @@
+name: "CI — Python API Example"
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  ci:
+    uses: BrikByte-Studios/.github/.github/workflows/template-python-ci.yml@main
+    with:
+      python-version: "3.11"
+      project-path: "python-api-example"
