@@ -7,7 +7,8 @@ on:
     branches: [ main, master ]
 
 jobs:
-     ci:
-       uses: BrikByte-Studios/.github/.github/workflows/template-node-ci.yml@main
-       with:
-         node-version: "20"
+  ci:
+    uses: BrikByte-Studios/.github/.github/workflows/template-node-ci.yml@main
+    with:
+      node-version: "20"
+
