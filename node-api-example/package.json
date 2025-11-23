@@ -1,0 +1,24 @@
+{
+  "name": "node-api-example",
+  "version": "1.0.0",
+  "description": "Example Node.js API project used to validate BrikByteOS CI templates.",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node src/index.js",
+    "build": "mkdir -p dist && cp -r src dist/",
+    "test": "node --test"
+  },
+  "keywords": [
+    "example",
+    "brikbyte",
+    "ci",
+    "nodejs"
+  ],
+  "author": "BrikByte Studios",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {}
+}
