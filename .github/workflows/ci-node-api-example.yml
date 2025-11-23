@@ -1,0 +1,22 @@
+name: "CI — Node API Example"
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "node-api-example/**"
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - "node-api-example/**"
+
+jobs:
+  ci:
+    uses: BrikByte-Studios/.github/.github/workflows/template-node-ci.yml@main
+    with:
+      node-version: "20"
+      project-path: "node-api-example"
