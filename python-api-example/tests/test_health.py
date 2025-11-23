@@ -5,7 +5,7 @@ Uses FastAPI's TestClient (based on Starlette/requests) to perform
 an HTTP GET against the /health endpoint and verifies:
 
 - HTTP 200 OK
-- JSON body: {"status": "ok"}
+- JSON body: {"status": "ok"}.
 """
 
 from fastapi.testclient import TestClient
