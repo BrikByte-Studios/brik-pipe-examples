@@ -1,0 +1,16 @@
+name: "CI — Java API Example"
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  ci:
+    uses: BrikByte-Studios/.github/.github/workflows/template-java-ci.yml@main
+    with:
+      java-version: "17"
+      distribution: "temurin"
+      project-path: "java-api-example"
+      enable-cache: "true"
