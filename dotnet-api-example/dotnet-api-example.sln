@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2022 / dotnet solution
+VisualStudioVersion = 17.0.31912.275
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BrikByte.DotNetApiExample", "src\BrikByte.DotNetApiExample\BrikByte.DotNetApiExample.csproj", "{F97131B7-0C66-4F28-9D41-AB68B9E271E5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BrikByte.DotNetApiExample.Tests", "tests\BrikByte.DotNetApiExample.Tests\BrikByte.DotNetApiExample.Tests.csproj", "{F4E458A3-9E35-4D91-9BF8-3C6C9F716AC0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F97131B7-0C66-4F28-9D41-AB68B9E271E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F97131B7-0C66-4F28-9D41-AB68B9E271E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F97131B7-0C66-4F28-9D41-AB68B9E271E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F97131B7-0C66-4F28-9D41-AB68B9E271E5}.Release|Any CPU.Build.0 = Release|Any CPU
+
+		{F4E458A3-9E35-4D91-9BF8-3C6C9F716AC0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4E458A3-9E35-4D91-9BF8-3C6C9F716AC0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4E458A3-9E35-4D91-9BF8-3C6C9F716AC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4E458A3-9E35-4D91-9BF8-3C6C9F716AC0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

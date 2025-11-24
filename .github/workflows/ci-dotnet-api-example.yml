@@ -1,0 +1,14 @@
+name: "CI — .NET API Example"
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  ci:
+    uses: BrikByte-Studios/.github/.github/workflows/template-dotnet-ci.yml@main
+    with:
+      dotnet-version: "8.0.x"
+      project-path: "dotnet-api-example"
