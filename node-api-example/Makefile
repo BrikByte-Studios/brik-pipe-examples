@@ -33,7 +33,7 @@ help:
 	@echo "  make clean   - Remove build artifacts and node_modules cache (optional)"
 
 install:
-	@echo "📦 Installing Node dependencies via npm ci..."
+	@echo "📦 Installing Node dependencies via npm ci...."
 	$(NPM) ci
 
 build:
