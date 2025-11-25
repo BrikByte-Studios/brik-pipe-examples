@@ -19,11 +19,11 @@ on:
 jobs:
   # 1) Validate brikpipe.build.yml
   config-validate:
-    name: "Config: Validate brikpipe.build.yml"
     uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
     with:
-      config-path: "node-api-example/brikpipe.build.yml"
-    secrets: inherit
+      project-path: "node-api-example"
+      config-file: "brikpipe.build.yml"
+      # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
 
   # 2) Only run Node CI if config is valid
   node-ci:
