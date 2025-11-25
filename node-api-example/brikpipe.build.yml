@@ -1,0 +1,22 @@
+# PIPE-BUILD-SCHEMA-TEST-004 — Valid example for Node.js
+
+schema_version: v1
+language: node
+runtime_version: "20"
+build_command: "npm run build"
+test_command: "npm test"
+output_dir: "dist"
+
+cache_paths:
+  - "node_modules"
+  - "~/.npm"
+
+env_files:
+  - ".env"
+
+metadata:
+  service_name: "Node API Example"
+  owner: "platform-team"
+  tags:
+    - "example"
+    - "node"
