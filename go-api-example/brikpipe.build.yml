@@ -1,0 +1,21 @@
+# PIPE-BUILD-SCHEMA-TEST-004 — Valid example for Go
+
+schema_version: v1
+language: go
+runtime_version: "1.22.x"
+build_command: "go build ./..."
+test_command: "go test ./..."
+output_dir: "bin"
+
+cache_paths:
+  - "~/go/pkg/mod"
+
+env_files:
+  - ".env"
+
+metadata:
+  service_name: "Go API Example"
+  owner: "platform-team"
+  tags:
+    - "example"
+    - "go"

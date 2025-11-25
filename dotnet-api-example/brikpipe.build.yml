@@ -1,0 +1,22 @@
+# PIPE-BUILD-SCHEMA-TEST-004 — Valid example for .NET
+
+schema_version: v1
+language: dotnet
+runtime_version: "8.0.x"
+build_command: "dotnet build --configuration Release"
+test_command: "dotnet test --configuration Release --logger trx"
+output_dir: "src/BrikByte.DotNetApiExample/bin/Release"
+
+cache_paths:
+  - "~/.nuget/packages"
+
+env_files:
+  - "src/BrikByte.DotNetApiExample/appsettings.json"
+  - "src/BrikByte.DotNetApiExample/appsettings.Development.json"
+
+metadata:
+  service_name: "DotNet API Example"
+  owner: "platform-team"
+  tags:
+    - "example"
+    - "dotnet"

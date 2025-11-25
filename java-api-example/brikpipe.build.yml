@@ -1,0 +1,21 @@
+# PIPE-BUILD-SCHEMA-TEST-004 — Valid example for Java (Maven)
+
+schema_version: v1
+language: java
+runtime_version: "17"
+build_command: "mvn -B clean package"
+test_command: "mvn -B test"
+output_dir: "target"
+
+cache_paths:
+  - "~/.m2/repository"
+
+env_files:
+  - "src/main/resources/application.properties"
+
+metadata:
+  service_name: "Java API Example"
+  owner: "platform-team"
+  tags:
+    - "example"
+    - "java"

@@ -3,12 +3,28 @@ name: "CI — Python API Example"
 on:
   push:
     branches: [ main, master ]
+    paths:
+      - "python-api-example/**"
+      - ".github/workflows/ci-python-api-example.yml"
   pull_request:
     branches: [ main, master ]
+    paths:
+      - "python-api-example/**"
+      - ".github/workflows/ci-python-api-example.yml"
 
 jobs:
-  ci:
+  # 1) Validate brikpipe.build.yml.
+  config-validate:
+    uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
+    with:
+      project-path: "python-api-example"
+      config-file: "brikpipe.build.yml"
+      # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
+
+  # 2) Only run Python CI if config is valid
+  python-ci:
     uses: BrikByte-Studios/.github/.github/workflows/template-python-ci.yml@main
     with:
       python-version: "3.11"
       project-path: "python-api-example"
+    secrets: inherit

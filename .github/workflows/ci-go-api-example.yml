@@ -3,12 +3,28 @@ name: "CI — Go API Example"
 on:
   push:
     branches: [ main, master ]
+    paths:
+      - "go-api-example/**"
+      - ".github/workflows/ci-go-api-example.yml"
   pull_request:
     branches: [ main, master ]
+    paths:
+      - "go-api-example/**"
+      - ".github/workflows/ci-go-api-example.yml"
 
 jobs:
-  ci:
+  # 1) Validate brikpipe.build.yml.
+  config-validate:
+    uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
+    with:
+      project-path: "go-api-example"
+      config-file: "brikpipe.build.yml"
+      # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
+
+  # 2) Only run Go CI if config is valid
+  go-ci:
     uses: BrikByte-Studios/.github/.github/workflows/template-go-ci.yml@main
     with:
       go-version: "1.22.x"
       project-path: "go-api-example"
+    secrets: inherit

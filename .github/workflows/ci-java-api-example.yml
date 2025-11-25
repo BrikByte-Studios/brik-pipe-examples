@@ -3,14 +3,30 @@ name: "CI — Java API Example"
 on:
   push:
     branches: [ main, master ]
+    paths:
+      - "java-api-example/**"
+      - ".github/workflows/ci-java-api-example.yml"
   pull_request:
     branches: [ main, master ]
+    paths:
+      - "java-api-example/**"
+      - ".github/workflows/ci-java-api-example.yml"
 
 jobs:
-  ci:
+  # 1) Validate brikpipe.build.yml.
+  config-validate:
+    uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
+    with:
+      project-path: "java-api-example"
+      config-file: "brikpipe.build.yml"
+      # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
+
+  # 2) Only run Java CI if config is valid
+  java-ci:
     uses: BrikByte-Studios/.github/.github/workflows/template-java-ci.yml@main
     with:
       java-version: "17"
       distribution: "temurin"
       project-path: "java-api-example"
       enable-cache: "true"
+    secrets: inherit

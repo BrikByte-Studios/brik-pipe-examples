@@ -1,0 +1,21 @@
+# PIPE-BUILD-SCHEMA-TEST-004 — Valid example for Python
+
+schema_version: v1
+language: python
+runtime_version: "3.11"
+build_command: "python -m build"
+test_command: "pytest"
+output_dir: "dist"
+
+cache_paths:
+  - "~/.cache/pip"
+
+env_files:
+  - ".env"
+
+metadata:
+  service_name: "Python API Example"
+  owner: "platform-team"
+  tags:
+    - "example"
+    - "python"

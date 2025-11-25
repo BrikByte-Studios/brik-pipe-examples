@@ -3,12 +3,28 @@ name: "CI — .NET API Example"
 on:
   push:
     branches: [ main, master ]
+    paths:
+      - "dotnet-api-example/**"
+      - ".github/workflows/ci-dotnet-api-example.yml
   pull_request:
     branches: [ main, master ]
+    paths:
+      - "dotnet-api-example/**"
+      - ".github/workflows/ci-dotnet-api-example.yml
 
 jobs:
-  ci:
+  # 1) Validate brikpipe.build.yml.
+  config-validate:
+    uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
+    with:
+      project-path: "dotnet-api-example"
+      config-file: "brikpipe.build.yml"
+      # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
+
+  # 2) Only run .NET CI if config is valid
+  dotnet-ci:
     uses: BrikByte-Studios/.github/.github/workflows/template-dotnet-ci.yml@main
     with:
       dotnet-version: "8.0.x"
       project-path: "dotnet-api-example"
+    secrets: inherit
