@@ -7,16 +7,30 @@ on:
       - master
     paths:
       - "node-api-example/**"
+      - ".github/workflows/ci-node-api-example.yml"
   pull_request:
     branches:
       - main
       - master
     paths:
       - "node-api-example/**"
+      - ".github/workflows/ci-node-api-example.yml"
 
 jobs:
-  ci:
+  # 1) Validate brikpipe.build.yml
+  config-validate:
+    name: "Config: Validate brikpipe.build.yml"
+    uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
+    with:
+      config-path: "node-api-example/brikpipe.build.yml"
+    secrets: inherit
+
+  # 2) Only run Node CI if config is valid
+  node-ci:
+    name: "Node: Build & Test"
+    needs: config-validate
     uses: BrikByte-Studios/.github/.github/workflows/template-node-ci.yml@main
     with:
       node-version: "20"
       project-path: "node-api-example"
+    secrets: inherit
