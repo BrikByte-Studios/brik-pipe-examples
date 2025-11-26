@@ -50,14 +50,14 @@ build:
 	fi
 
 test:
-	@echo "🧪 Running pytest test suite..."
-	$(PYTHON) -m pip install pytest
-	if compgen -G "test_*.py" > /dev/null || [ -d "$(TEST_DIR)" ]; then \
-		@echo "🔧 Setting PYTHONPATH and running pytest..." && \
-		PYTHONPATH="$$(pwd):$$PYTHONPATH" pytest; \
+	@echo "🔧 Checking for tests..."
+	@if ls tests/test_*.py >/dev/null 2>&1; then \
+	  echo "🔧 Setting PYTHONPATH and running pytest..."; \
+	  PYTHONPATH="$$(pwd):$$PYTHONPATH" pytest; \
 	else \
-		echo "ℹ️ No tests found; skipping pytest."; \
+	  echo "ℹ️ No tests found; skipping pytest."; \
 	fi
+
 
 ci: deps build test
 	@echo "✅ CI pipeline (Python) completed successfully."
