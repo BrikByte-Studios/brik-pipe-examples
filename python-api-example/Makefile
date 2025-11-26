@@ -53,7 +53,8 @@ test:
 	@echo "🧪 Running pytest test suite..."
 	$(PYTHON) -m pip install pytest
 	if compgen -G "test_*.py" > /dev/null || [ -d "$(TEST_DIR)" ]; then \
-		pytest; \
+		@echo "🔧 Setting PYTHONPATH and running pytest..." && \
+		PYTHONPATH="$$(pwd):$$PYTHONPATH" pytest; \
 	else \
 		echo "ℹ️ No tests found; skipping pytest."; \
 	fi
