@@ -1,0 +1,58 @@
+# BrikByteOS Pipelines — Java API Kaniko Example
+#
+# This workflow:
+#   - Runs on pushes to main that touch java-service-example.
+#   - Builds a Java microservice container image using Kaniko.
+#   - Tags image with:
+#       - v0.1.0 (semver-like)
+#       - sha-<GITHUB_SHA>
+#   - Pushes to GHCR → ghcr.io/brikbyte-studios/example-java-service
+#
+# Repo structure expected:
+#   brik-pipe-examples/
+#     .github/workflows/java-api-use-kaniko.yml   (← this file)
+#     java-service-example/
+#       Dockerfile
+#       (Maven/Gradle sources here)
+
+name: "CI — Build & Push (Java, Kaniko Example)"
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "java-service-example/**"
+      - ".github/workflows/java-api-use-kaniko.yml"
+
+jobs:
+  build-and-push:
+    # Reusable workflow reference
+    uses: BrikByte-Studios/.github/.github/workflows/ci-build-kaniko.yml@main
+
+    with:
+      # GHCR target (DO NOT include tag here — tags are below)
+      image_name: ghcr.io/brikbyte-studios/example-java-service
+
+      # Dockerfile path for the java service container
+      dockerfile: ./java-service-example/Dockerfile
+
+      # Build context directory (Kaniko build root)
+      context: ./java-service-example
+
+      # Deployment tags → reusable workflow converts into full destinations:
+      #   ghcr.io/brikbyte-studios/example-java-service:v0.1.0
+      #   ghcr.io/brikbyte-studios/example-java-service:sha-xxxxxx
+      tags: |
+        v0.1.0
+        sha-${{ github.sha }}
+
+      # Optional build args (environment specific)
+      build_args: |
+        JAVA_ENV=production
+        SERVICE_NAME=example-java-service
+
+      # Registry endpoint for login + push
+      registry: ghcr.io
+
+    secrets:
+      REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GHCR push token

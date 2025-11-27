@@ -1,0 +1,64 @@
+# BrikByteOS Pipelines — Go API Kaniko Example
+#
+# This workflow:
+#   - Runs on pushes to main that touch go-service-example.
+#   - Builds a Go service image using the reusable Kaniko workflow.
+#   - Tags it with:
+#       - v0.1.0 (semver-like)
+#       - sha-<GITHUB_SHA>
+#   - Pushes to GHCR (ghcr.io/brikbyte-studios/example-go-service).
+#
+# Assumes monorepo layout:
+#   - brik-pipe-examples/
+#       .github/workflows/go-api-use-kaniko.yml   (this file)
+#       go-service-example/
+#         Dockerfile
+#         ...
+
+name: "CI — Build & Push (Go, Kaniko Example)"
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "go-service-example/**"
+      - ".github/workflows/go-api-use-kaniko.yml"
+
+jobs:
+  build-and-push:
+    # Calls the reusable Kaniko workflow in BrikByte-Studios/.github
+    # Ensure '@main' matches the default branch of that repo.
+    uses: BrikByte-Studios/.github/.github/workflows/ci-build-kaniko.yml@main
+
+    with:
+      # Fully qualified image name (no tag; tags are provided separately)
+      image_name: ghcr.io/brikbyte-studios/example-go-service
+
+      # Path to Dockerfile for the Go service
+      dockerfile: ./go-service-example/Dockerfile
+
+      # Build context (folder containing the app + Dockerfile)
+      context: ./go-service-example
+
+      # Two tags:
+      #   - semver-like
+      #   - SHA-based
+      # The reusable workflow will turn these into:
+      #   ghcr.io/brikbyte-studios/example-go-service:v0.1.0
+      #   ghcr.io/brikbyte-studios/example-go-service:sha-<sha>
+      tags: |
+        v0.1.0
+        sha-${{ github.sha }}
+
+      # Optional build arguments for the Docker build
+      build_args: |
+        GO_ENV=production
+        SERVICE_NAME=example-go-service
+
+      # Registry host (login step in reusable workflow will use this)
+      registry: ghcr.io
+
+    secrets:
+      # For GHCR, this can typically be the built-in GITHUB_TOKEN
+      # if the repo has "packages: write" permission.
+      REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
