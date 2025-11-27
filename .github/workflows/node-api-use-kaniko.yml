@@ -1,23 +1,20 @@
 # Example: Using the reusable Kaniko build & push workflow from `.github`.
 # This workflow:
-#   - Runs on pushes to main.
+#   - Runs on pushes to main that touch node-api-example.
 #   - Builds a Node API image.
 #   - Tags it with:
 #       - v0.1.0 (semver-like)
-#       - sha-<short-sha>
+#       - sha-<sha>
 #   - Pushes to GHCR (ghcr.io/brikbyte-studios/example-node-api)
-#
-# Pre-requisites:
-#   - Repository has a Dockerfile at ./Dockerfile (or adjust dockerfile path).
-#   - Repo has access to GHCR via `secrets.GITHUB_TOKEN` or a PAT.
-#   - Organization-level workflow exists at:
-#       BrikByte-Studios/.github/.github/workflows/ci-build-kaniko.yml
 
-name: "CI — Build & Push (Kaniko Example)"
+name: "CI — Build & Push (Node, Kaniko Example)"
 
 on:
   push:
     branches: [ main ]
+    paths:
+      - "node-api-example/**"
+      - ".github/workflows/node-api-use-kaniko.yml"
 
 env:
   # Example semver version. In a real setup you may derive this from:
@@ -38,17 +35,14 @@ jobs:
       image_name: ghcr.io/brikbyte-studios/example-node-api
 
       # Path to Dockerfile (inside this repo)
-      dockerfile: ./Dockerfile
+      dockerfile: ./node-api-example/Dockerfile
 
-      # Build context (root of the repo)
-      context: .
+      # Build context: the node-api-example folder
+      context: ./node-api-example
 
-      # Tags can be:
-      #   - Semver-like
-      #   - SHA-based (short SHA)
-      #
-      # Here we pass newline-separated values which the reusable workflow
-      # will accept as-is (no commas required).
+      # Tags:
+      #   - semver-like
+      #   - full SHA (you can shorten in future if you like)
       tags: |
         v${{ env.APP_VERSION }}
         sha-${{ github.sha }}
