@@ -16,35 +16,26 @@ on:
       - "node-api-example/**"
       - ".github/workflows/node-api-use-kaniko.yml"
 
-env:
-  # Example semver version. In a real setup you may derive this from:
-  #   - package.json version
-  #   - git tags
-  #   - a release workflow
-  APP_VERSION: 0.1.0
-
 jobs:
   build-and-push:
-    # NOTE:
-    #   - This calls the reusable workflow in the `.github` org repo.
-    #   - Adjust the ref (@main) as needed (tag, SHA, or branch).
+    # Calls the reusable workflow in BrikByte-Studios/.github
     uses: BrikByte-Studios/.github/.github/workflows/ci-build-kaniko.yml@main
 
     with:
       # Full image name hosted on GHCR
       image_name: ghcr.io/brikbyte-studios/example-node-api
 
-      # Path to Dockerfile (inside this repo)
+      # Path to Dockerfile inside this monorepo
       dockerfile: ./node-api-example/Dockerfile
 
-      # Build context: the node-api-example folder
+      # Build context for the app
       context: ./node-api-example
 
-      # Tags:
-      #   - semver-like
-      #   - full SHA (you can shorten in future if you like)
+      # Two tags:
+      #   - semver-like (hard-coded here as v0.1.0 for the example)
+      #   - SHA-based
       tags: |
-        v${{ env.APP_VERSION }}
+        v0.1.0
         sha-${{ github.sha }}
 
       # Optional build arguments for the Docker build
@@ -57,6 +48,4 @@ jobs:
       registry: ghcr.io
 
     secrets:
-      # For GHCR you can commonly use the built-in GITHUB_TOKEN.
-      # If you prefer a PAT, you can map that here instead.
       REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
