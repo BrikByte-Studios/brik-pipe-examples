@@ -44,7 +44,7 @@ jobs:
         APP_NAME=example-node-api
 
       # Registry host; defaults to ghcr.io in the reusable workflow,
-      # but we pass it for clarity.
+      # but we pass it for clarity
       registry: ghcr.io
 
     secrets:
