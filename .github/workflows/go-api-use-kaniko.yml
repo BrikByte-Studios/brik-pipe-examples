@@ -35,10 +35,10 @@ jobs:
       image_name: ghcr.io/brikbyte-studios/example-go-service
 
       # Path to Dockerfile for the Go service
-      dockerfile: ./go-service-example/Dockerfile
+      dockerfile: ./go-api-example/Dockerfile
 
       # Build context (folder containing the app + Dockerfile)
-      context: ./go-service-example
+      context: ./go-api-example
 
       # Two tags:
       #   - semver-like

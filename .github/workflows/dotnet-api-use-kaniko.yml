@@ -35,10 +35,10 @@ jobs:
       image_name: ghcr.io/brikbyte-studios/example-dotnet-service
 
       # Path to Dockerfile for the .NET service
-      dockerfile: ./dotnet-service-example/Dockerfile
+      dockerfile: ./dotnet-api-example/Dockerfile
 
       # Build context (folder containing the app + Dockerfile)
-      context: ./dotnet-service-example
+      context: ./dotnet-api-example
 
       # Two tags:
       #   - semver-like

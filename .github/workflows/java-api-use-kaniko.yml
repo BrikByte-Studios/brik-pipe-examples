@@ -34,10 +34,10 @@ jobs:
       image_name: ghcr.io/brikbyte-studios/example-java-service
 
       # Dockerfile path for the java service container
-      dockerfile: ./java-service-example/Dockerfile
+      dockerfile: ./java-api-example/Dockerfile
 
       # Build context directory (Kaniko build root)
-      context: ./java-service-example
+      context: ./java-api-example
 
       # Deployment tags → reusable workflow converts into full destinations:
       #   ghcr.io/brikbyte-studios/example-java-service:v0.1.0

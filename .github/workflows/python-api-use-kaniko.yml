@@ -35,10 +35,10 @@ jobs:
       image_name: ghcr.io/brikbyte-studios/example-python-service
 
       # Path to Dockerfile for the Python service
-      dockerfile: ./python-service-example/Dockerfile
+      dockerfile: ./python-api-example/Dockerfile
 
       # Build context (folder containing the app + Dockerfile)
-      context: ./python-service-example
+      context: ./python-api-example
 
       # Two tags:
       #   - semver-like
