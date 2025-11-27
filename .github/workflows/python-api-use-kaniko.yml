@@ -32,7 +32,7 @@ jobs:
 
     with:
       # Fully qualified image name (no tag; tags are provided separately)
-      image_name: ghcr.io/brikbyte-studios/example-python-service
+      image_name: ghcr.io/brikbyte-studios/example-python-api
 
       # Path to Dockerfile for the Python service
       dockerfile: ./python-api-example/Dockerfile

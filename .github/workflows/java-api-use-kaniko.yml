@@ -31,7 +31,7 @@ jobs:
 
     with:
       # GHCR target (DO NOT include tag here — tags are below)
-      image_name: ghcr.io/brikbyte-studios/example-java-service
+      image_name: ghcr.io/brikbyte-studios/example-java-api
 
       # Dockerfile path for the java service container
       dockerfile: ./java-api-example/Dockerfile

@@ -32,7 +32,7 @@ jobs:
 
     with:
       # Fully qualified image name (no tag; tags are provided separately)
-      image_name: ghcr.io/brikbyte-studios/example-go-service
+      image_name: ghcr.io/brikbyte-studios/example-go-api
 
       # Path to Dockerfile for the Go service
       dockerfile: ./go-api-example/Dockerfile

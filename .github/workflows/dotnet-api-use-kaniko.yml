@@ -32,7 +32,7 @@ jobs:
 
     with:
       # Fully qualified image name (no tag; tags are provided separately)
-      image_name: ghcr.io/brikbyte-studios/example-dotnet-service
+      image_name: ghcr.io/brikbyte-studios/example-dotnet-api
 
       # Path to Dockerfile for the .NET service
       dockerfile: ./dotnet-api-example/Dockerfile
