@@ -1,0 +1,68 @@
+# Example: Using the reusable Kaniko build & push workflow from `.github`.
+# This workflow:
+#   - Runs on pushes to main.
+#   - Builds a Node API image.
+#   - Tags it with:
+#       - v0.1.0 (semver-like)
+#       - sha-<short-sha>
+#   - Pushes to GHCR (ghcr.io/brikbyte-studios/example-node-api)
+#
+# Pre-requisites:
+#   - Repository has a Dockerfile at ./Dockerfile (or adjust dockerfile path).
+#   - Repo has access to GHCR via `secrets.GITHUB_TOKEN` or a PAT.
+#   - Organization-level workflow exists at:
+#       BrikByte-Studios/.github/.github/workflows/ci-build-kaniko.yml
+
+name: "CI — Build & Push (Kaniko Example)"
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  # Example semver version. In a real setup you may derive this from:
+  #   - package.json version
+  #   - git tags
+  #   - a release workflow
+  APP_VERSION: 0.1.0
+
+jobs:
+  build-and-push:
+    # NOTE:
+    #   - This calls the reusable workflow in the `.github` org repo.
+    #   - Adjust the ref (@main) as needed (tag, SHA, or branch).
+    uses: BrikByte-Studios/.github/.github/workflows/ci-build-kaniko.yml@main
+
+    with:
+      # Full image name hosted on GHCR
+      image_name: ghcr.io/brikbyte-studios/example-node-api
+
+      # Path to Dockerfile (inside this repo)
+      dockerfile: ./Dockerfile
+
+      # Build context (root of the repo)
+      context: .
+
+      # Tags can be:
+      #   - Semver-like
+      #   - SHA-based (short SHA)
+      #
+      # Here we pass newline-separated values which the reusable workflow
+      # will accept as-is (no commas required).
+      tags: |
+        v${{ env.APP_VERSION }}
+        sha-${{ github.sha }}
+
+      # Optional build arguments for the Docker build
+      build_args: |
+        NODE_ENV=production
+        APP_NAME=example-node-api
+
+      # Registry host; defaults to ghcr.io in the reusable workflow,
+      # but we pass it for clarity.
+      registry: ghcr.io
+
+    secrets:
+      # For GHCR you can commonly use the built-in GITHUB_TOKEN.
+      # If you prefer a PAT, you can map that here instead.
+      REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}

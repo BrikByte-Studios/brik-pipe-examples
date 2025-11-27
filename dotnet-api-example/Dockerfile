@@ -9,6 +9,10 @@ ARG APP_DIR=/src
 
 FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS builder
 
+# Re-declare APP_DIR so it’s usable in this stage
+ARG APP_DIR
+
+# Set working directory where the build will happen
 WORKDIR ${APP_DIR}
 
 COPY *.sln ./
