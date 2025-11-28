@@ -26,9 +26,9 @@ on:
       - "node-api-example/**"
       - ".github/workflows/node-api-use-kaniko.yml"
 
-  env:
-    APP_VERSION: 0.1.0
-    
+env:
+  APP_VERSION: 0.1.0
+
 jobs:
   build-and-push:
     # Calls the reusable workflow in BrikByte-Studios/.github
