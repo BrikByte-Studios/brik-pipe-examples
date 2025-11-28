@@ -21,7 +21,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - "python-service-example/**"
+      - "python-api-example/**"
       - ".github/workflows/python-api-use-kaniko.yml"
 
 jobs:
@@ -58,7 +58,12 @@ jobs:
       # Registry host (login step in reusable workflow will use this)
       registry: ghcr.io
 
+      # explicit cache repo scope per service
+      cache_enabled: true
+      cache_repo: ghcr.io/brikbyte-studios/cache/example-python-api
+
     secrets:
       # For GHCR, this can typically be the built-in GITHUB_TOKEN
       # if the repo has "packages: write" permission.
       REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}

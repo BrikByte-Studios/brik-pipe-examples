@@ -21,7 +21,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - "java-service-example/**"
+      - "java-api-example/**"
       - ".github/workflows/java-api-use-kaniko.yml"
 
 jobs:
@@ -51,8 +51,13 @@ jobs:
         JAVA_ENV=production
         SERVICE_NAME=example-java-service
 
+      # explicit cache repo for Java builds
+      cache_enabled: true
+      cache_repo: ghcr.io/brikbyte-studios/cache/example-java-api
+
       # Registry endpoint for login + push
       registry: ghcr.io
 
     secrets:
       REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GHCR push token
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
