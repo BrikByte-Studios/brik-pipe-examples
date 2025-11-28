@@ -26,6 +26,9 @@ on:
       - "node-api-example/**"
       - ".github/workflows/node-api-use-kaniko.yml"
 
+  env:
+    APP_VERSION: 0.1.0
+    
 jobs:
   build-and-push:
     # Calls the reusable workflow in BrikByte-Studios/.github
@@ -45,7 +48,7 @@ jobs:
       #   - semver-like (hard-coded here as v0.1.0 for the example)
       #   - SHA-based
       tags: |
-        v0.1.0
+        v${{ env.APP_VERSION }}
         sha-${{ github.sha }}
 
       # Optional build arguments for the Docker build

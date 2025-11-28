@@ -51,4 +51,4 @@ jobs:
       # no REGISTRY_USERNAME -> login must collapse
 
     # Expected outcome — force CI red
-    # continue-on-error: false
+    continue-on-error: false
