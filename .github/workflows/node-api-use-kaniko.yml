@@ -61,7 +61,7 @@ jobs:
       cache_enabled: true
 
       # Optional explicit cache repo (commented out):
-      # cache_repo: ghcr.io/brikbyte-studios/cache/example-node-api
+      cache_repo: ghcr.io/brikbyte-studios/cache/example-node-api
 
     secrets:
       # Map repo/org secrets into the reusable workflow.
