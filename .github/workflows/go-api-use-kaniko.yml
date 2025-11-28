@@ -21,7 +21,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - "go-service-example/**"
+      - "go-api-example/**"
       - ".github/workflows/go-api-use-kaniko.yml"
 
 jobs:
@@ -58,7 +58,11 @@ jobs:
       # Registry host (login step in reusable workflow will use this)
       registry: ghcr.io
 
+      cache_enabled: true
+      cache_repo: ghcr.io/brikbyte-studios/cache/example-go-api
+
     secrets:
       # For GHCR, this can typically be the built-in GITHUB_TOKEN
       # if the repo has "packages: write" permission.
       REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
