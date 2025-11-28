@@ -41,14 +41,14 @@ jobs:
       # Path to Dockerfile inside this monorepo
       dockerfile: ./node-api-example/Dockerfile
 
-      # Build context for the app
+      # Build context for the app.
       context: ./node-api-example
 
       # Two tags:
       #   - semver-like (hard-coded here as v0.1.0 for the example)
       #   - SHA-based
       tags: |
-        v${{ env.APP_VERSION }}
+        v0.1.0
         sha-${{ github.sha }}
 
       # Optional build arguments for the Docker build
