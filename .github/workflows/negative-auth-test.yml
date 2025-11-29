@@ -1,54 +1,54 @@
-# # 🔥 Negative Auth Test — TC-REGISTRY-AUTH-002
-# #
-# # This workflow deliberately uses an invalid registry credential to ensure:
-# #   1) Authentication fails loudly.
-# #   2) No secrets leak into logs.
-# #   3) CI exits with failure — proving failure is enforced, not bypassed.
-# #
-# # The goal is to test the failure path, *not* build correctness.
-# # This SHOULD fail and must never be allowed to pass.
-# #
-# # To execute:
-# #   Trigger manually via Actions tab → "Negative Registry Auth Test"
-# #   OR uncomment scheduled trigger below for periodic validation.
+# 🔥 Negative Auth Test — TC-REGISTRY-AUTH-002
+#
+# This workflow deliberately uses an invalid registry credential to ensure:
+#   1) Authentication fails loudly.
+#   2) No secrets leak into logs.
+#   3) CI exits with failure — proving failure is enforced, not bypassed.
+#
+# The goal is to test the failure path, *not* build correctness.
+# This SHOULD fail and must never be allowed to pass.
+#
+# To execute:
+#   Trigger manually via Actions tab → "Negative Registry Auth Test"
+#   OR uncomment scheduled trigger below for periodic validation.
 
-# name: "❌ Negative Registry Auth Test (Expected Failure)"
+name: "❌ Negative Registry Auth Test (Expected Failure)"
 
-# on:
-#   workflow_dispatch:  # manual trigger only — safe and intentional
-#     inputs:
-#       confirm:
-#         description: "Type FAIL to run"
-#         required: true
-#         type: string
+on:
+  workflow_dispatch:  # manual trigger only — safe and intentional
+    inputs:
+      confirm:
+        description: "Type FAIL to run"
+        required: true
+        type: string
 
-#   # Optional periodic enforcement — uncomment if needed
-#   # schedule:
-#   #   - cron: "0 2 * * 1"   # Weekly failure expectation test
+  # Optional periodic enforcement — uncomment if needed
+  # schedule:
+  #   - cron: "0 2 * * 1"   # Weekly failure expectation test
 
-# jobs:
-#   negative-auth-test:
-#     if: ${{ github.event.inputs.confirm == 'FAIL' }} # Safety guard
-#     name: "Kaniko Push → Expected Failure"
-#     uses: BrikByte-Studios/.github/.github/workflows/ci-build-kaniko.yml@main
+jobs:
+  negative-auth-test:
+    if: ${{ github.event.inputs.confirm == 'FAIL' }} # Safety guard
+    name: "Kaniko Push → Expected Failure"
+    uses: BrikByte-Studios/.github/.github/workflows/ci-build-kaniko.yml@main
 
-#     with:
-#       image_name: ghcr.io/brikbyte-studios/negative-auth-test
-#       dockerfile: ./go-service-example/Dockerfile  # tiny build for fast fail
-#       context: .
-#       tags: |
-#         noauth-test
-#         sha-${{ github.sha }}
+    with:
+      image_name: ghcr.io/brikbyte-studios/negative-auth-test
+      dockerfile: ./go-service-example/Dockerfile  # tiny build for fast fail
+      context: .
+      tags: |
+        noauth-test
+        sha-${{ github.sha }}
 
-#       cache_enabled: false  # no need for caching in failure case
+      cache_enabled: false  # no need for caching in failure case
 
-#       build_args: |
-#         TEST_MODE=AUTH_NEGATIVE_CHECK
+      build_args: |
+        TEST_MODE=AUTH_NEGATIVE_CHECK
 
-#     # Deliberately broken authentication — MUST FAIL
-#     secrets:
-#       REGISTRY_TOKEN: "deadbeefdeadbeefdeadbeefdeadbeef" # ❌ fake token
-#       # no REGISTRY_USERNAME -> login must collapse
+    # Deliberately broken authentication — MUST FAIL
+    secrets:
+      REGISTRY_TOKEN: "deadbeefdeadbeefdeadbeefdeadbeef" # ❌ fake token
+      # no REGISTRY_USERNAME -> login must collapse
 
-#     # Expected outcome — force CI red
-#     continue-on-error: false
+    # Expected outcome — force CI red
+    continue-on-error: false

@@ -41,13 +41,13 @@ env:
 
 jobs:
   build-test:
-    name: "Build & Test — node-api=example"
+    name: "Build & Test — node-api-example"
     runs-on: ubuntu-latest
 
     # All 'run:' commands automatically execute inside /node-app
     defaults:
       run:
-        working-directory: node-api=example
+        working-directory: node-api-example
 
     steps:
 
