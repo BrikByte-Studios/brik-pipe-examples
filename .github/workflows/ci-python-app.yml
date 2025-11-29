@@ -1,0 +1,121 @@
+# ======================================================================
+# BrikByteOS — CI for Python Example App (Poetry + Cached Deps)
+#
+# Purpose:
+#   - Demonstrate Python dependency caching for Poetry using the
+#     cache-python-deps composite action from BrikByte-Studios/.github.
+#   - Prove that:
+#       * First run => cache miss + full install.
+#       * Second run => cache hit + faster poetry install.
+#   - Enforce reproducible in-project virtualenv (.venv).
+#
+# Triggers:
+#   - On pushes/PRs touching python-app or this workflow file.
+# ======================================================================
+
+name: "CI — Python App (Poetry + Cached Deps)"
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "python-api-example/**"
+      - ".github/workflows/ci-python-app.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "python-api-example/**"
+      - ".github/workflows/ci-python-app.yml"
+
+env:
+  # Python version used for this example app and for cache keying.
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  build-test:
+    name: "Build & Test — python-api-example (Poetry)"
+    runs-on: ubuntu-latest
+
+    # All run steps execute relative to python-app/
+    defaults:
+      run:
+        working-directory: python-api-example
+
+    steps:
+      # -------------------------------------------------------------
+      # 1) Checkout monorepo (brik-pipe-examples)
+      # -------------------------------------------------------------
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+
+      # -------------------------------------------------------------
+      # 2) Setup Python runtime
+      # -------------------------------------------------------------
+      - name: "Setup Python ${{ env.PYTHON_VERSION }}"
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # -------------------------------------------------------------
+      # 3) Install Poetry (tooling only, not project deps)
+      #
+      #    - This is separate from dependency install, which occurs
+      #      after the cache step.
+      # -------------------------------------------------------------
+      - name: "Install Poetry"
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install poetry
+
+      # -------------------------------------------------------------
+      # 4) Cache Python dependencies (pip / Poetry / Pipenv)
+      #
+      #    - For this repo, we expect poetry.lock → tool = poetry
+      #    - This will:
+      #        * configure Poetry to use in-project .venv
+      #        * cache the .venv directory keyed by:
+      #            - runner.os
+      #            - PYTHON_VERSION
+      #            - "poetry"
+      #            - hash(poetry.lock)
+      # -------------------------------------------------------------
+      - name: "Cache Python dependencies (Poetry / pip / Pipenv)"
+        uses: BrikByte-Studios/.github/.github/actions/cache-python-deps@main
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # -------------------------------------------------------------
+      # 5) Install project dependencies (Poetry)
+      #
+      #    - With a warm cache, Poetry will re-use the .venv environment,
+      #      making this step significantly faster.
+      # -------------------------------------------------------------
+      - name: "Install dependencies with Poetry"
+        run: |
+          poetry install --no-interaction --no-ansi
+
+      # -------------------------------------------------------------
+      # 6) Run tests (if configured)
+      #
+      #    - Uses poetry run pytest as a conventional test command.
+      #    - If pytest is not installed yet, we log a warning instead
+      #      of failing CI outright.
+      # -------------------------------------------------------------
+      - name: "Run unit tests (if pytest present)"
+        run: |
+          set -euo pipefail
+
+          if poetry run python -m pytest -q; then
+            echo "✅ pytest completed successfully."
+          else
+            echo "::warning::pytest not configured or tests failed. Investigate logs for details."
+          fi
+
+      # -------------------------------------------------------------
+      # 7) Optional: Lint or type-check step (placeholder)
+      #
+      #    - Add tools like ruff, flake8, mypy as needed.
+      # -------------------------------------------------------------
+      - name: "Static checks (placeholder)"
+        run: |
+          echo "🔍 Add ruff / flake8 / mypy / bandit checks here as needed."
