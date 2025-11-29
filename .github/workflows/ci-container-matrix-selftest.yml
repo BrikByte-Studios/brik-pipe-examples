@@ -45,10 +45,10 @@ permissions:
   packages: write   # required for GHCR push/pull
   id-token: write   # future-proof for cosign / OIDC if needed
 
-env:
-  # Self-test "pseudo-version" — valid SemVer with pre-release tag.
-  # This satisfies GOV-IMAGES-TAG-POLICY-CONFIG-001 (SHA + SemVer).
-  MATRIX_SEMVER_TAG: "v0.0.0-selftest"
+# env:
+#   # Self-test "pseudo-version" — valid SemVer with pre-release tag.
+#   # This satisfies GOV-IMAGES-TAG-POLICY-CONFIG-001 (SHA + SemVer).
+#   MATRIX_SEMVER_TAG: "v0.0.0-selftest"
 
 # ======================================================================
 # 1) BUILD & PUSH (Kaniko via reusable workflow)
@@ -119,7 +119,7 @@ jobs:
       #   - One SemVer-style tag
       #   - One SHA-based tag
       tags: |
-        ${{ env.MATRIX_SEMVER_TAG }}
+        v0.0.0-selftest
         sha-${{ github.sha }}
 
       # Registry + cache wiring (GHCR + per-image cache).
