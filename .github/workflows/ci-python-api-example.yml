@@ -27,4 +27,5 @@ jobs:
     with:
       python-version: "3.11"
       project-path: "python-api-example"
+      force-cache-refresh: "false"
     secrets: inherit

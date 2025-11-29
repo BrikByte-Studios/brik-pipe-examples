@@ -29,4 +29,5 @@ jobs:
       distribution: "temurin"
       project-path: "java-api-example"
       enable-cache: "true"
+      force-cache-refresh: "false"
     secrets: inherit
