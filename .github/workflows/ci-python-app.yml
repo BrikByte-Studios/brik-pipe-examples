@@ -22,12 +22,12 @@ on:
     branches: [ main ]
     paths:
       - "python-api-example/**"
-      - ".github/workflows/ci-python-api-example.yml"
+      - ".github/workflows/ci-python-app.yml"
   pull_request:
     branches: [ main ]
     paths:
       - "python-api-example/**"
-      - ".github/workflows/ci-python-api-example.yml"
+      - ".github/workflows/ci-python-app.yml"
 
 env:
   # Python version used for CI + cache keying.
@@ -98,7 +98,7 @@ jobs:
       # -------------------------------------------------------------------
       # 5) Run tests (if present)
       #
-      #    - Adjust as needed (pytest, unittest, etc).
+      #    - Adjust as needed (pytest, unittest, etc)
       # -------------------------------------------------------------------
       - name: "Run tests (if any)"
         run: |
