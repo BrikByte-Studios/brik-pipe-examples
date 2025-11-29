@@ -56,7 +56,6 @@ env:
 jobs:
   build-and-push:
     name: "Build & Push via Kaniko (Matrix)"
-    runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
