@@ -1,121 +1,120 @@
-# ======================================================================
-# BrikByteOS — CI for Python Example App (Poetry + Cached Deps)
+# BrikByteOS Pipelines — Python API Example (pip + cache)
+#
+# Repo:
+#   BrikByte-Studios/brik-pipe-examples
+#
+# Service:
+#   python-api-example/
 #
 # Purpose:
-#   - Demonstrate Python dependency caching for Poetry using the
-#     cache-python-deps composite action from BrikByte-Studios/.github.
-#   - Prove that:
-#       * First run => cache miss + full install.
-#       * Second run => cache hit + faster poetry install.
-#   - Enforce reproducible in-project virtualenv (.venv).
+#   - Run CI for the FastAPI-based Python example.
+#   - Use BrikByteOS Python cache composite (pip / Poetry / Pipenv aware).
+#   - Install dependencies via pip (requirements.txt) for this project.
 #
-# Triggers:
-#   - On pushes/PRs touching python-app or this workflow file.
-# ======================================================================
+# Notes:
+#   - This project is pip-based (no pyproject.toml), so we do NOT run Poetry here.
+#   - If you want a dedicated Poetry example later, we can add python-poetry-example.
 
-name: "CI — Python App (Poetry + Cached Deps)"
+name: "CI — Python API Example (pip + cache)"
 
 on:
   push:
     branches: [ main ]
     paths:
       - "python-api-example/**"
-      - ".github/workflows/ci-python-app.yml"
+      - ".github/workflows/ci-python-api-example.yml"
   pull_request:
     branches: [ main ]
     paths:
       - "python-api-example/**"
-      - ".github/workflows/ci-python-app.yml"
+      - ".github/workflows/ci-python-api-example.yml"
 
 env:
-  # Python version used for this example app and for cache keying.
+  # Python version used for CI + cache keying.
   PYTHON_VERSION: "3.11"
 
 jobs:
   build-test:
-    name: "Build & Test — python-api-example (Poetry)"
+    name: "Build & Test — python-api-example"
     runs-on: ubuntu-latest
 
-    # All run steps execute relative to python-app/
+    # All run steps happen inside the service folder.
     defaults:
       run:
         working-directory: python-api-example
 
     steps:
-      # -------------------------------------------------------------
-      # 1) Checkout monorepo (brik-pipe-examples)
-      # -------------------------------------------------------------
+      # -------------------------------------------------------------------
+      # 1) Checkout monorepo
+      # -------------------------------------------------------------------
       - name: "Checkout repository"
         uses: actions/checkout@v4
 
-      # -------------------------------------------------------------
-      # 2) Setup Python runtime
-      # -------------------------------------------------------------
-      - name: "Setup Python ${{ env.PYTHON_VERSION }}"
+      # -------------------------------------------------------------------
+      # 2) Setup Python (actions/setup-python)
+      #
+      #    - Sets pythonLocation, etc.
+      #    - We also export PYTHON_VERSION for cache keys.
+      # -------------------------------------------------------------------
+      - name: "Setup Python"
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # -------------------------------------------------------------
-      # 3) Install Poetry (tooling only, not project deps)
-      #
-      #    - This is separate from dependency install, which occurs
-      #      after the cache step.
-      # -------------------------------------------------------------
-      - name: "Install Poetry"
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install poetry
+      - name: "Export PYTHON_VERSION for cache"
+        run: echo "PYTHON_VERSION=${PYTHON_VERSION}" >> "$GITHUB_ENV"
 
-      # -------------------------------------------------------------
-      # 4) Cache Python dependencies (pip / Poetry / Pipenv)
+      # -------------------------------------------------------------------
+      # 3) Cache Python dependencies (pip / Poetry / Pipenv-aware)
       #
-      #    - For this repo, we expect poetry.lock → tool = poetry
-      #    - This will:
-      #        * configure Poetry to use in-project .venv
-      #        * cache the .venv directory keyed by:
-      #            - runner.os
-      #            - PYTHON_VERSION
-      #            - "poetry"
-      #            - hash(poetry.lock)
-      # -------------------------------------------------------------
-      - name: "Cache Python dependencies (Poetry / pip / Pipenv)"
+      #    - Uses BrikByteOS composite action:
+      #        Repo: BrikByte-Studios/.github
+      #        File: .github/actions/cache-python-deps/action.yml
+      #    - This project has requirements.txt → tool = pip.
+      #    - Cache path: ~/.cache/pip
+      #    - Key includes: runner.os + PYTHON_VERSION + tool + lockfile hash.
+      # -------------------------------------------------------------------
+      - name: "Cache Python dependencies (pip / poetry / pipenv)"
         uses: BrikByte-Studios/.github/.github/actions/cache-python-deps@main
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # -------------------------------------------------------------
-      # 5) Install project dependencies (Poetry)
+      # -------------------------------------------------------------------
+      # 4) Install dependencies via pip
       #
-      #    - With a warm cache, Poetry will re-use the .venv environment,
-      #      making this step significantly faster.
-      # -------------------------------------------------------------
-      - name: "Install dependencies with Poetry"
-        run: |
-          poetry install --no-interaction --no-ansi
-
-      # -------------------------------------------------------------
-      # 6) Run tests (if configured)
-      #
-      #    - Uses poetry run pytest as a conventional test command.
-      #    - If pytest is not installed yet, we log a warning instead
-      #      of failing CI outright.
-      # -------------------------------------------------------------
-      - name: "Run unit tests (if pytest present)"
+      #    - This example uses requirements.txt (pip-based).
+      #    - No pyproject.toml → Poetry is not used here.
+      # -------------------------------------------------------------------
+      - name: "Install dependencies (pip)"
         run: |
           set -euo pipefail
+          if [ ! -f "requirements.txt" ]; then
+            echo "ERROR: requirements.txt not found in python-api-example/"
+            exit 1
+          fi
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
-          if poetry run python -m pytest -q; then
-            echo "✅ pytest completed successfully."
+      # -------------------------------------------------------------------
+      # 5) Run tests (if present)
+      #
+      #    - Adjust as needed (pytest, unittest, etc).
+      # -------------------------------------------------------------------
+      - name: "Run tests (if any)"
+        run: |
+          set -euo pipefail
+          if [ -f "pytest.ini" ] || ls tests/test_*.py >/dev/null 2>&1; then
+            pytest
           else
-            echo "::warning::pytest not configured or tests failed. Investigate logs for details."
+            echo "No explicit tests detected — skipping pytest."
           fi
 
-      # -------------------------------------------------------------
-      # 7) Optional: Lint or type-check step (placeholder)
+      # -------------------------------------------------------------------
+      # 6) Smoke run (optional) — import app to ensure it loads
       #
-      #    - Add tools like ruff, flake8, mypy as needed.
-      # -------------------------------------------------------------
-      - name: "Static checks (placeholder)"
+      #    - This is a very light sanity check that main.py imports.
+      # -------------------------------------------------------------------
+      - name: "Import app module (sanity check)"
         run: |
-          echo "🔍 Add ruff / flake8 / mypy / bandit checks here as needed."
+          set -euo pipefail
+          python -c "import main; print('Imported main.app OK:', hasattr(main, 'app'))"
