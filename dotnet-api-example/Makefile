@@ -21,6 +21,7 @@
 DOTNET        ?= dotnet
 SOLUTION_FILE := dotnet-api-example.sln
 CONFIG        := Release
+TEST_RESULTS_DIR := TestResults
 
 .PHONY: help restore build test ci clean
 
@@ -42,7 +43,11 @@ build: restore
 
 test:
 	@echo "🧪 Running .NET tests (Release)..."
-	$(DOTNET) test $(SOLUTION_FILE) --configuration $(CONFIG) --no-build --logger trx
+	$(DOTNET) test $(SOLUTION_FILE) \
+		--configuration $(CONFIG) \
+		--no-build \
+		--logger "trx;LogFileName=TestResult.trx" \
+		--results-directory $(TEST_RESULTS_DIR)
 
 ci: build test
 	@echo "✅ CI pipeline (.NET) completed successfully."
