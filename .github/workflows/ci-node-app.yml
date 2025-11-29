@@ -1,0 +1,98 @@
+# BrikByteOS — Node App CI with Lockfile-Aware Caching
+# -------------------------------------------------------------
+# PIPE-CACHE-NODE-BUILD-001 (Example Usage)
+#
+# This workflow demonstrates:
+#   - Node setup via actions/setup-node
+#   - Shared Node cache via cache-node-deps composite action
+#   - Basic install + test (npm by default)
+#
+# Behavior:
+#   - On first run (cold build) → cache MISS, dependencies installed from network.
+#   - On subsequent runs with same lockfile + Node version → cache HIT,
+#     installs reuse local cache → much faster CI.
+#
+# Manager selection:
+#   - If pnpm-lock.yaml present → pnpm cache
+#   - Else if yarn.lock present → Yarn cache
+#   - Else → npm cache (~/.npm)
+#
+# Triggers:
+#   - Push and PR to main, when Node app or workflow changes.
+
+name: "CI — Node App (with cache)"
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "node-app/**"
+      - ".github/workflows/ci-node-app.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "node-app/**"
+      - ".github/workflows/ci-node-app.yml"
+
+permissions:
+  contents: read
+
+env:
+  # Keep Node version central so it's easy to change later.
+  NODE_VERSION: "20"
+
+jobs:
+  build-and-test:
+    name: "Build & Test Node App"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: node-app
+
+    steps:
+      # ---------------------------------------------------------
+      # 1) Checkout the repo
+      # ---------------------------------------------------------
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+
+      # ---------------------------------------------------------
+      # 2) Setup Node.js
+      #
+      #    - Uses env.NODE_VERSION so workflow + cache stay aligned.
+      # ---------------------------------------------------------
+      - name: "Setup Node.js ${{ env.NODE_VERSION }}"
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # ---------------------------------------------------------
+      # 3) Cache Node dependencies (npm / Yarn / pnpm)
+      #
+      #    - Uses composite action from BrikByte-Studios/.github
+      #    - Manager detection & cache key composition are handled there.
+      # ---------------------------------------------------------
+      - name: "Cache Node dependencies (BrikByteOS standard)"
+        uses: BrikByte-Studios/.github/.github/actions/cache-node-deps@main
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # ---------------------------------------------------------
+      # 4) Install dependencies
+      #
+      #    - npm example (default for node-app).
+      #    - If you switch to Yarn or pnpm, just change this step:
+      #        yarn install --immutable
+      #        pnpm install --frozen-lockfile
+      # ---------------------------------------------------------
+      - name: "Install dependencies (npm ci)"
+        run: npm ci
+
+      # ---------------------------------------------------------
+      # 5) Run tests / build
+      # ---------------------------------------------------------
+      - name: "Run tests"
+        run: npm test -- --ci --reporters=default
+
+      - name: "Build app"
+        run: npm run build
