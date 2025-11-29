@@ -1,26 +1,43 @@
 """
-Simple FastAPI application used as a Python CI example for BrikByteOS.
+Python FastAPI example service for BrikByteOS container-matrix testing.
 
-This service exposes a single health-check endpoint:
+This service exposes two endpoints:
 
-    GET /health  ->  {"status": "ok"}
+    GET /       ->  {"message": "Python API Example — BrikByteOS pipelines OK"}
+    GET /health ->  {"status": "ok"}
 
-The goal is to provide:
-- A tiny, realistic "API" surface.
-- Something your GitHub Actions Python CI template can build & test.
+Used for:
+- Kaniko CI image validation
+- Smoke-test execution in PIPE-CONTAINER-TEST-STACKS-TEST-006
+- Runtime consistency across Node / Go / .NET / Java services
 """
 
 from fastapi import FastAPI
 
 # Create FastAPI app instance
-app = FastAPI(title="Python API Example", version="1.0.0")
+app = FastAPI(
+    title="Python API Example",
+    version="1.0.0",
+    description="Minimal BrikByteOS Python service for CI container build + smoke tests",
+)
+
+
+@app.get("/")
+def root() -> dict:
+    """
+    Root endpoint — mirrors Node API example for cross-stack parity.
+
+    Useful for debugging, local manual tests, and CI readability.
+    """
+    return {"message": "Python API Example — BrikByteOS pipelines OK"}
 
 
 @app.get("/health")
 def health() -> dict:
     """
-    Health-check endpoint.
+    Health-check endpoint required for CI matrix smoke testing.
 
-    Returns a simple JSON payload indicating that the service is up.
+    BrikByteOS pipelines expect HTTP 200 + JSON response.
+    Used by Docker/Kaniko self-tests to determine container readiness.
     """
     return {"status": "ok"}
