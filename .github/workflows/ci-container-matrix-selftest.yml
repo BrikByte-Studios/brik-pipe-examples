@@ -157,7 +157,7 @@ jobs:
 
           - runtime: python
             service_key: python-api
-            port: 8000
+            port: 8080
             health_path: /health
             image_name: ghcr.io/brikbyte-studios/example-python-api-selftest
 
