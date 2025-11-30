@@ -192,34 +192,18 @@ jobs:
 
           echo "⚠️  Cache benchmark regression detected for ${LANGUAGE}."
 
-          # Optionally create a GitHub issue using the GITHUB_TOKEN + gh CLI.
-          # NOTE:
-          #   - Requires gh to be installed (GitHub-hosted runners have it).
-          #   - Requires 'issues: write' permission on this token.
           ISSUE_TITLE="Cache benchmark regression for ${LANGUAGE}"
           ISSUE_BODY_FILE="${CACHE_BENCH_OUTPUT_DIR}/issue-${LANGUAGE}.md"
 
-          mkdir -p "${CACHE_BENCH_OUTPUT_DIR}"
-
-          cat > "${ISSUE_BODY_FILE}" <<EOF
-Cache benchmark regression detected for **${LANGUAGE}**.
-
-**Metrics**
-- Cold build:  \`${COLD_BUILD_MS} ms\`
-- Warm build:  \`${WARM_BUILD_MS} ms\`
-- Improvement: \`${IMPROVEMENT_PCT}%\`
-- Required minimum improvement: \`${MIN_IMPROVEMENT_PCT}%\`
-
-**Status**
-- ${BENCHMARK_STATUS}
-
-Please investigate:
-- Dependency caching configuration for ${LANGUAGE}
-- Recent changes to build/test pipeline
-- Runner variability / flakiness
-
-Task: PIPE-CACHE-BENCHMARK-TEST-005
-EOF
+          # 🔧 Use the shared script instead of inline heredoc
+          LANGUAGE="${LANGUAGE}" \
+          COLD_BUILD_MS="${COLD_BUILD_MS}" \
+          WARM_BUILD_MS="${WARM_BUILD_MS}" \
+          IMPROVEMENT_PCT="${IMPROVEMENT_PCT}" \
+          MIN_IMPROVEMENT_PCT="${MIN_IMPROVEMENT_PCT}" \
+          BENCHMARK_STATUS="${BENCHMARK_STATUS}" \
+          ISSUE_BODY_FILE="${ISSUE_BODY_FILE}" \
+            .github/scripts/cache-benchmark-issue.sh
 
           echo "📝 Creating GitHub issue: '${ISSUE_TITLE}' ..."
           gh issue create \
