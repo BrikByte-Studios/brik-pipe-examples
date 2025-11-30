@@ -5,306 +5,330 @@
 # Task: PIPE-CACHE-BENCHMARK-TEST-005
 #
 # Repos:
-#   - Implemented in: BrikByte-Studios/brik-pipe-examples
-#   - Metrics may be referenced by: BrikByte-Studios/.github (docs / dashboards)
+#   - Implemented in:
+#       • BrikByte-Studios/brik-pipe-examples
+#   - Referenced by workflow:
+#       • .github/workflows/ci-cache-benchmark.yml
 #
 # Purpose:
-#   Run "cold" and "warm" builds for a given runtime (Node, Python, JVM, Go,
-#   .NET), measure timings, compute cache improvement %, and emit both JSON and
-#   Markdown summaries for historical tracking and CI gate enforcement.
+#   For a given runtime (LANGUAGE + PROJECT_PATH), run:
+#     1) A "cold" build with caches cleared.
+#     2) A "warm" build with caches reused.
 #
-# Inputs (via env):
-#   - LANGUAGE                : node | python | java | go | dotnet
-#   - PROJECT_PATH            : path to the example project (e.g. node-api-example)
-#   - MIN_IMPROVEMENT_PCT     : minimum % improvement required for PASS (default: 30)
-#   - REGRESSION_TOLERANCE_PCT: future hook for tracking against previous runs.
-#   - CACHE_BENCH_OUTPUT_DIR  : where JSON + env files are written (default: .audit/cache-benchmark)
+#   Then:
+#     - Compute improvement_pct = (cold - warm) / cold * 100
+#     - Classify benchmark status (PASS / FAIL).
+#     - Emit:
+#         • JSON:  .audit/cache-benchmark/<timestamp>-<language>.json
+#         • ENV:   .audit/cache-benchmark/latest-<language>.env
+#         • MD:    brik-pipe-docs/cache/cache-benchmark-history.md
 #
-# Outputs:
-#   - JSON:
-#       ${CACHE_BENCH_OUTPUT_DIR}/<timestamp>-<language>.json
-#   - ENV:
-#       ${CACHE_BENCH_OUTPUT_DIR}/latest-<language>.env
-#   - Markdown (append-only history):
-#       brik-pipe-docs/cache/cache-benchmark-history.md
+# Inputs (env):
+#   LANGUAGE              → node | python | java | go | dotnet
+#   PROJECT_PATH          → path to example project (e.g. node-api-example)
+#   MIN_IMPROVEMENT_PCT   → minimum required improvement (e.g. "30")
+#   CACHE_BENCH_OUTPUT_DIR→ .audit/cache-benchmark
 #
-# Important:
-#   - This script DOES NOT itself fail CI. It always exits 0.
-#   - CI enforcement happens in the workflow step that reads the env/JSON.
+# Notes:
+#   - This script MUST be idempotent.
+#   - It MUST NOT rely on secrets.
+#   - It MUST exit non-zero only if:
+#       • The benchmark cannot be run (missing project/tools), OR
+#       • We explicitly want CI to fail for this job (status FAIL is handled
+#         by the caller workflow, not here).
 # =============================================================================
 
 set -euo pipefail
 
-# -----------------------------------------------------------------------------
-# Helper: log with consistent prefix
-# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------#
+# Helpers
+# -----------------------------------------------------------------------------#
+
 log() {
   # shellcheck disable=SC2145
   echo "[CACHE-BENCH] $@"
 }
 
-# -----------------------------------------------------------------------------
-# Helper: current time in milliseconds
-# -----------------------------------------------------------------------------
-now_ms() {
-  # GNU date on GitHub runners supports %3N
-  date +%s%3N
+die() {
+  log "❌ $*"
+  exit 1
 }
 
-# -----------------------------------------------------------------------------
-# Default environment values
-# -----------------------------------------------------------------------------
-LANGUAGE="${LANGUAGE:-unknown}"
-PROJECT_PATH="${PROJECT_PATH:-.}"
+# -----------------------------------------------------------------------------#
+# 1) Load inputs and defaults
+# -----------------------------------------------------------------------------#
+
+LANGUAGE="${LANGUAGE:-}"
+PROJECT_PATH="${PROJECT_PATH:-}"
 MIN_IMPROVEMENT_PCT="${MIN_IMPROVEMENT_PCT:-30}"
-REGRESSION_TOLERANCE_PCT="${REGRESSION_TOLERANCE_PCT:-25}"
 CACHE_BENCH_OUTPUT_DIR="${CACHE_BENCH_OUTPUT_DIR:-.audit/cache-benchmark}"
 
-# Validate inputs
-if [ "${LANGUAGE}" = "unknown" ]; then
-  log "❌ LANGUAGE env var is required (node|python|java|go|dotnet)."
-  exit 1
+if [[ -z "${LANGUAGE}" ]]; then
+  die "LANGUAGE env var is required (node|python|java|go|dotnet)."
 fi
 
-if [ ! -d "${PROJECT_PATH}" ]; then
-  log "❌ PROJECT_PATH '${PROJECT_PATH}' does not exist."
-  exit 1
+if [[ -z "${PROJECT_PATH}" ]]; then
+  die "PROJECT_PATH env var is required (e.g. node-api-example)."
 fi
-
-mkdir -p "${CACHE_BENCH_OUTPUT_DIR}"
 
 log "Language      : ${LANGUAGE}"
 log "Project path  : ${PROJECT_PATH}"
-log "Min improvement % : ${MIN_IMPROVEMENT_PCT}"
+log "Min improv %  : ${MIN_IMPROVEMENT_PCT}"
 log "Output dir    : ${CACHE_BENCH_OUTPUT_DIR}"
 
-# -----------------------------------------------------------------------------
-# Language-specific cache cleanup helpers
-#   (best-effort; this is to approximate a cold build)
-# -----------------------------------------------------------------------------
-clean_caches_for_language() {
-  local lang="$1"
+mkdir -p "${CACHE_BENCH_OUTPUT_DIR}"
 
-  case "${lang}" in
+TIMESTAMP="$(date -u '+%Y%m%dT%H%M%SZ')"
+HISTORY_MD="brik-pipe-docs/cache/cache-benchmark-history.md"
+mkdir -p "$(dirname "${HISTORY_MD}")"
+
+# -----------------------------------------------------------------------------#
+# 2) Optional: use central cache-clean script if present
+# -----------------------------------------------------------------------------#
+
+CACHE_CLEAN_SCRIPT=".github/scripts/cache-clean.sh"
+
+run_cache_clean() {
+  # Accepts a list of cache paths as arguments.
+  if [[ ! -f "${CACHE_CLEAN_SCRIPT}" ]]; then
+    log "cache-clean.sh not found at ${CACHE_CLEAN_SCRIPT} — skipping cache directory cleanup."
+    return 0
+  fi
+
+  chmod +x "${CACHE_CLEAN_SCRIPT}"
+
+  local paths=("$@")
+  if [[ "${#paths[@]}" -eq 0 ]]; then
+    log "No cache paths passed to run_cache_clean; nothing to clean."
+    return 0
+  fi
+
+  log "Invoking cache-clean.sh for ${#paths[@]} path(s)..."
+  # We pass CLI args so cache-clean.sh logs each path individually.
+  bash "${CACHE_CLEAN_SCRIPT}" "${paths[@]}"
+  log "cache-clean.sh completed."
+}
+
+# -----------------------------------------------------------------------------#
+# 3) Language-specific: define cache paths + build command
+# -----------------------------------------------------------------------------#
+
+get_cold_cache_paths_for_language() {
+  # Echo a list of cache paths to clean for the *cold* run.
+  case "${LANGUAGE}" in
     node)
-      log "Cleaning Node caches (~/.npm + node_modules)..."
-      rm -rf "${HOME}/.npm" || true
-      rm -rf "${PROJECT_PATH}/node_modules" || true
+      echo "${HOME}/.npm"
+      echo "${PROJECT_PATH}/node_modules"
       ;;
     python)
-      log "Cleaning Python caches (pip cache + .venv)..."
-      rm -rf "${HOME}/.cache/pip" || true
-      rm -rf "${PROJECT_PATH}/.venv" || true
+      echo "${HOME}/.cache/pip"
+      echo "${PROJECT_PATH}/.venv"
+      echo "${PROJECT_PATH}/.pytest_cache"
       ;;
     java)
-      log "Cleaning JVM caches (~/.m2/repository + ~/.gradle/caches)..."
-      rm -rf "${HOME}/.m2/repository" || true
-      rm -rf "${HOME}/.gradle/caches" || true
+      echo "${HOME}/.m2/repository"
+      echo "${HOME}/.gradle/caches"
+      echo "${PROJECT_PATH}/target"
+      echo "${PROJECT_PATH}/build"
       ;;
     go)
-      log "Cleaning Go caches (GOMODCACHE + GOCACHE)..."
-      rm -rf "${GOMODCACHE:-$HOME/go/pkg/mod}" || true
-      rm -rf "${GOCACHE:-$HOME/.cache/go-build}" || true
+      # Use go env to discover caches (if Go/tooling is installed).
+      if command -v go >/dev/null 2>&1; then
+        go env GOMODCACHE || true
+        go env GOCACHE || true
+      fi
+      echo "${PROJECT_PATH}/bin"
+      echo "${PROJECT_PATH}/build"
       ;;
     dotnet)
-      log "Cleaning .NET caches (~/.nuget/packages + ~/.dotnet/tools)..."
-      rm -rf "${HOME}/.nuget/packages" || true
-      rm -rf "${HOME}/.dotnet/tools" || true
+      echo "${HOME}/.nuget/packages"
+      echo "${HOME}/.dotnet/tools"
+      echo "${PROJECT_PATH}/bin"
+      echo "${PROJECT_PATH}/obj"
       ;;
     *)
-      log "⚠️  No cache cleanup defined for language '${lang}'."
+      die "Unsupported LANGUAGE '${LANGUAGE}' for cache paths."
       ;;
   esac
 }
 
-# -----------------------------------------------------------------------------
-# Language-specific build executor
-#   For now we delegate to Makefile conventions:
-#      make ci  → should run clean + deps + build + test.
-# -----------------------------------------------------------------------------
-run_build_for_language() {
-  local lang="$1"
-  local mode="$2" # "cold" or "warm"
-
-  log "▶ Running ${mode} build for ${lang} in ${PROJECT_PATH} ..."
+run_ci_build_for_language() {
+  # Run the canonical "make ci" inside PROJECT_PATH for the given LANGUAGE.
+  # Assumes Makefile + language-specific tooling are already installed.
+  log "▶ Running ${LANGUAGE} CI build in ${PROJECT_PATH} ..."
+  if [[ ! -d "${PROJECT_PATH}" ]]; then
+    die "PROJECT_PATH '${PROJECT_PATH}' does not exist."
+  fi
+  if [[ ! -f "${PROJECT_PATH}/Makefile" ]]; then
+    die "Makefile not found under '${PROJECT_PATH}'."
+  fi
 
   pushd "${PROJECT_PATH}" >/dev/null
-
-  # You can branch on ${lang} here if you ever want custom commands per runtime.
-  # For now, we assume Makefile exposes a canonical `make ci`.
+  # Standard CI entrypoint: make ci
   make ci
-
   popd >/dev/null
-
-  log "✅ ${mode} build for ${lang} completed."
+  log "✅ ${LANGUAGE} CI build in ${PROJECT_PATH} completed."
 }
 
-# -----------------------------------------------------------------------------
-# Measure build time (helper)
-# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------#
+# 4) Timing helper — measure build duration in milliseconds
+# -----------------------------------------------------------------------------#
+
 measure_build_ms() {
-  local lang="$1"
-  local mode="$2"
+  # Usage:
+  #   local result_var
+  #   measure_build_ms result_var "COLD"  [clean_caches=true|false]
+  #
+  #   This will:
+  #     - Optionally clean caches (for cold run).
+  #     - Run language-specific CI build.
+  #     - Set $result_var to <duration_ms> and log metrics.
+  local __result_var="$1"
+  local mode_label="$2"
+  local clean_caches="${3:-false}"
 
-  local start end duration
+  log "===== ${mode_label} BUILD ====="
 
-  start="$(now_ms)"
-  run_build_for_language "${lang}" "${mode}"
-  end="$(now_ms)"
+  if [[ "${clean_caches}" == "true" ]]; then
+    log "Cleaning caches before ${mode_label} build..."
+    mapfile -t paths < <(get_cold_cache_paths_for_language)
+    if [[ "${#paths[@]}" -gt 0 ]]; then
+      run_cache_clean "${paths[@]}"
+    else
+      log "No cache paths discovered for LANGUAGE=${LANGUAGE}; skipping clean."
+    fi
+  fi
 
-  # duration = end - start
-  duration=$(( end - start ))
-  echo "${duration}"
+  # Use GNU date to measure time in milliseconds.
+  local start_ms end_ms duration_ms
+  start_ms="$(date +%s%3N)"
+
+  # Run actual CI build (logs go to STDOUT/STDERR).
+  run_ci_build_for_language
+
+  end_ms="$(date +%s%3N)"
+  duration_ms=$((end_ms - start_ms))
+
+  # Log and return numeric duration.
+  log "${mode_label} build duration: ${duration_ms} ms"
+
+  # Set caller's variable.
+  printf -v "${__result_var}" '%s' "${duration_ms}"
 }
 
-# -----------------------------------------------------------------------------
-# 1) COLD BUILD — clear caches + run CI
-# -----------------------------------------------------------------------------
-log "===== COLD BUILD ====="
-clean_caches_for_language "${LANGUAGE}"
-COLD_BUILD_MS="$(measure_build_ms "${LANGUAGE}" "cold")"
-log "Cold build duration: ${COLD_BUILD_MS} ms"
+# -----------------------------------------------------------------------------#
+# 5) Execute cold + warm builds and compute improvements
+# -----------------------------------------------------------------------------#
 
-# -----------------------------------------------------------------------------
-# 2) WARM BUILD — run CI again with caches primed
-# -----------------------------------------------------------------------------
-log "===== WARM BUILD ====="
-WARM_BUILD_MS="$(measure_build_ms "${LANGUAGE}" "warm")"
-log "Warm build duration: ${WARM_BUILD_MS} ms"
+COLD_BUILD_MS=0
+WARM_BUILD_MS=0
 
-# -----------------------------------------------------------------------------
-# 3) Compute improvement %
-#     improvement_pct = (cold - warm) / cold * 100
-# -----------------------------------------------------------------------------
-if [ "${COLD_BUILD_MS}" -le 0 ]; then
-  log "⚠️  Cold build duration is non-positive (${COLD_BUILD_MS}); forcing improvement_pct=0."
-  IMPROVEMENT_PCT="0.0"
-else
-  IMPROVEMENT_PCT="$(
-    python - <<PY
-cold = float("${COLD_BUILD_MS}")
-warm = float("${WARM_BUILD_MS}")
+# Cold: clear caches + run CI
+measure_build_ms COLD_BUILD_MS "COLD" "true"
+
+# Warm: do NOT clear caches; run CI again using warmed caches
+measure_build_ms WARM_BUILD_MS "WARM" "false"
+
+# Validate numeric
+if ! [[ "${COLD_BUILD_MS}" =~ ^[0-9]+$ ]]; then
+  die "Cold build duration not numeric: '${COLD_BUILD_MS}'"
+fi
+if ! [[ "${WARM_BUILD_MS}" =~ ^[0-9]+$ ]]; then
+  die "Warm build duration not numeric: '${WARM_BUILD_MS}'"
+fi
+
+log "Cold ms = ${COLD_BUILD_MS}"
+log "Warm ms = ${WARM_BUILD_MS}"
+
+# Compute improvement via Python for precision:
+export COLD_BUILD_MS WARM_BUILD_MS MIN_IMPROVEMENT_PCT
+
+IMPROVEMENT_PCT="$(
+python - << 'PY'
+import os
+
+cold = float(os.environ["COLD_BUILD_MS"])
+warm = float(os.environ["WARM_BUILD_MS"])
+min_req = float(os.environ.get("MIN_IMPROVEMENT_PCT", "30"))
+
 if cold <= 0:
-    print("0.0")
+    improvement = 0.0
 else:
-    print(round((cold - warm) / cold * 100.0, 2))
-PY
-  )"
-fi
+    improvement = round((cold - warm) / cold * 100.0, 2)
 
-log "Computed improvement_pct: ${IMPROVEMENT_PCT}%"
-
-# -----------------------------------------------------------------------------
-# 4) Determine benchmark status (PASS / FAIL)
-# -----------------------------------------------------------------------------
-BENCHMARK_STATUS="PASS"
-
-# Warm must be faster; if warm >= cold, treat as regression
-if python - <<PY
-cold = float("${COLD_BUILD_MS}")
-warm = float("${WARM_BUILD_MS}")
-print("REG" if warm >= cold else "OK")
-PY
-then :; fi
-
-warm_vs_cold_regression="$(
-python - <<PY
-cold = float("${COLD_BUILD_MS}")
-warm = float("${WARM_BUILD_MS}")
-print("REG" if warm >= cold else "OK")
+print(improvement)
 PY
 )"
 
-if [ "${warm_vs_cold_regression}" = "REG" ]; then
-  log "⚠️  Warm build is not faster than cold build (possible regression)."
-  BENCHMARK_STATUS="FAIL"
-elif python - <<PY
-imp = float("${IMPROVEMENT_PCT}")
-threshold = float("${MIN_IMPROVEMENT_PCT}")
-print("FAIL" if imp < threshold else "PASS")
-PY
-then :; fi
+log "Improvement % = ${IMPROVEMENT_PCT}"
 
-status_from_threshold="$(
-python - <<PY
-imp = float("${IMPROVEMENT_PCT}")
-threshold = float("${MIN_IMPROVEMENT_PCT}")
-print("FAIL" if imp < threshold else "PASS")
+# Determine status (PASS/FAIL) based solely on improvement vs threshold.
+BENCHMARK_STATUS="$(
+python - << 'PY'
+import os
+
+imp = float(os.environ["IMPROVEMENT_PCT"])
+min_req = float(os.environ.get("MIN_IMPROVEMENT_PCT", "30"))
+
+if imp >= min_req:
+    print("PASS")
+else:
+    print("FAIL")
 PY
 )"
 
-if [ "${status_from_threshold}" = "FAIL" ]; then
-  BENCHMARK_STATUS="FAIL"
-fi
+log "Benchmark status = ${BENCHMARK_STATUS}"
 
-log "Final benchmark status for ${LANGUAGE}: ${BENCHMARK_STATUS}"
+# -----------------------------------------------------------------------------#
+# 6) Persist results: ENV, JSON, Markdown
+# -----------------------------------------------------------------------------#
 
-# -----------------------------------------------------------------------------
-# 5) Emit JSON metrics
-# -----------------------------------------------------------------------------
-TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
-JSON_PATH="${CACHE_BENCH_OUTPUT_DIR}/${TIMESTAMP}-${LANGUAGE}.json"
+LATEST_ENV="${CACHE_BENCH_OUTPUT_DIR}/latest-${LANGUAGE}.env"
+JSON_FILE="${CACHE_BENCH_OUTPUT_DIR}/${TIMESTAMP}-${LANGUAGE}.json"
 
-cat > "${JSON_PATH}" <<EOF
+cat > "${LATEST_ENV}" <<EOF
+LANGUAGE=${LANGUAGE}
+COLD_BUILD_MS=${COLD_BUILD_MS}
+WARM_BUILD_MS=${WARM_BUILD_MS}
+IMPROVEMENT_PCT=${IMPROVEMENT_PCT}
+BENCHMARK_STATUS=${BENCHMARK_STATUS}
+TIMESTAMP=${TIMESTAMP}
+EOF
+
+log "Wrote latest env metrics to ${LATEST_ENV}"
+
+cat > "${JSON_FILE}" <<EOF
 {
   "language": "${LANGUAGE}",
-  "project_path": "${PROJECT_PATH}",
   "cold_build_ms": ${COLD_BUILD_MS},
   "warm_build_ms": ${WARM_BUILD_MS},
   "improvement_pct": ${IMPROVEMENT_PCT},
-  "min_improvement_pct_required": ${MIN_IMPROVEMENT_PCT},
   "status": "${BENCHMARK_STATUS}",
   "timestamp": "${TIMESTAMP}"
 }
 EOF
 
-log "🔖 Wrote JSON metrics to ${JSON_PATH}"
+log "Wrote JSON metrics to ${JSON_FILE}"
 
-# -----------------------------------------------------------------------------
-# 6) Emit env file for workflow consumption
-# -----------------------------------------------------------------------------
-LATEST_ENV="${CACHE_BENCH_OUTPUT_DIR}/latest-${LANGUAGE}.env"
-
-cat > "${LATEST_ENV}" <<EOF
-LANGUAGE=${LANGUAGE}
-PROJECT_PATH=${PROJECT_PATH}
-COLD_BUILD_MS=${COLD_BUILD_MS}
-WARM_BUILD_MS=${WARM_BUILD_MS}
-IMPROVEMENT_PCT=${IMPROVEMENT_PCT}
-MIN_IMPROVEMENT_PCT=${MIN_IMPROVEMENT_PCT}
-BENCHMARK_STATUS=${BENCHMARK_STATUS}
-TIMESTAMP=${TIMESTAMP}
-EOF
-
-log "🔖 Wrote env metrics to ${LATEST_ENV}"
-
-# -----------------------------------------------------------------------------
-# 7) Append Markdown summary line
-#     File: brik-pipe-docs/cache/cache-benchmark-history.md
-# -----------------------------------------------------------------------------
-MD_PATH="brik-pipe-docs/cache/cache-benchmark-history.md"
-MD_DIR="$(dirname "${MD_PATH}")"
-mkdir -p "${MD_DIR}"
-
-if [ ! -f "${MD_PATH}" ]; then
-  cat > "${MD_PATH}" <<EOF
+# Markdown history header (if first time)
+if [[ ! -f "${HISTORY_MD}" ]]; then
+  cat > "${HISTORY_MD}" <<EOF
 # Cache Benchmark History
 
-> Auto-generated by PIPE-CACHE-BENCHMARK-TEST-005  
-> Do not edit rows manually; they are append-only from CI.
-
-| Timestamp        | Language | Project Path         | Cold (ms) | Warm (ms) | Improvement % | Min Required % | Status |
-|------------------|----------|----------------------|-----------|-----------|---------------|----------------|--------|
+| Timestamp (UTC) | Language | Cold Build (ms) | Warm Build (ms) | Improvement (%) | Status |
+|-----------------|----------|-----------------|-----------------|-----------------|--------|
 EOF
 fi
 
-echo "| ${TIMESTAMP} | ${LANGUAGE} | ${PROJECT_PATH} | ${COLD_BUILD_MS} | ${WARM_BUILD_MS} | ${IMPROVEMENT_PCT} | ${MIN_IMPROVEMENT_PCT} | ${BENCHMARK_STATUS} |" >> "${MD_PATH}"
+echo "| ${TIMESTAMP} | ${LANGUAGE} | ${COLD_BUILD_MS} | ${WARM_BUILD_MS} | ${IMPROVEMENT_PCT}% | ${BENCHMARK_STATUS} |" >> "${HISTORY_MD}"
 
-log "📘 Appended Markdown summary to ${MD_PATH}"
+log "Appended Markdown summary to ${HISTORY_MD}"
 
-# -----------------------------------------------------------------------------
-# 8) Script exit
-#     - Always exit 0; CI enforcement is done in workflow layer.
-# -----------------------------------------------------------------------------
-log "✅ cache-benchmark.sh completed successfully for ${LANGUAGE}."
+log "Benchmark script completed for LANGUAGE=${LANGUAGE}."
+
+# NOTE:
+#   We DO NOT exit non-zero here based on PASS/FAIL.
+#   The CI workflow step that calls this script will:
+#     - Source latest-<language>.env
+#     - Decide whether to fail job and create an issue.
 exit 0
