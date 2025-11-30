@@ -1,0 +1,244 @@
+# =============================================================================
+# CI — Cross-Runtime Cache Benchmark Suite
+# -----------------------------------------------------------------------------
+# Task: PIPE-CACHE-BENCHMARK-TEST-005
+#
+# Repos:
+#   - Implemented in:
+#       • BrikByte-Studios/brik-pipe-examples
+#   - Optionally referenced / summarized in docs within:
+#       • BrikByte-Studios/.github (brik-pipe-docs/cache/*.md)
+#
+# Purpose:
+#   Measure cache effectiveness across all supported runtimes:
+#     - Node.js
+#     - Python
+#     - JVM (Java / Maven / Gradle)
+#     - Go
+#     - .NET
+#
+#   For each runtime, we:
+#     1) Run a "cold" build (after clearing caches).
+#     2) Run a "warm" build (using freshly populated caches).
+#     3) Record:
+#          - cold_build_ms
+#          - warm_build_ms
+#          - improvement_pct
+#          - status (PASS / REGRESSION)
+#     4) Emit JSON + Markdown, and optionally fail CI + open an issue on regression.
+#
+# Triggers:
+#   - Manual: workflow_dispatch
+#   - Scheduled: weekly (Monday 03:00 UTC)
+#
+# Output:
+#   - JSON:    .audit/cache-benchmark/<timestamp>-<language>.json
+#   - Env:     .audit/cache-benchmark/latest-<language>.env
+#   - Markdown: brik-pipe-docs/cache/cache-benchmark-history.md
+# =============================================================================
+name: "CI — Cache Benchmark Suite"
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every Monday at 03:00 UTC
+    - cron: "0 3 * * 1"
+
+permissions:
+  contents: write        # Needed if you want to commit docs / use gh to create issues.
+  issues: write          # For auto-issue creation.
+  actions: read
+
+jobs:
+  cache-benchmark:
+    name: "Cache Benchmark (All Runtimes)"
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: node
+            project-path: node-api-example
+          - language: python
+            project-path: python-api-example
+          - language: java
+            project-path: java-api-example
+          - language: go
+            project-path: go-api-example
+          - language: dotnet
+            project-path: dotnet-api-example
+
+    env:
+      # Thresholds (can be tuned centrally):
+      MIN_IMPROVEMENT_PCT: "30"   # Warm build should be >= 30% faster than cold.
+      REGRESSION_TOLERANCE_PCT: "25" # If warm becomes >25% slower vs last good, mark regression (advanced use).
+      CACHE_BENCH_OUTPUT_DIR: ".audit/cache-benchmark"
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1) Checkout repo with example projects.
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 2) Setup runtime per matrix.language
+      # -----------------------------------------------------------------------
+      - name: Setup Node.js
+        if: ${{ matrix.language == 'node' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Python
+        if: ${{ matrix.language == 'python' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Java
+        if: ${{ matrix.language == 'java' }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Go
+        if: ${{ matrix.language == 'go' }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+
+      - name: Setup .NET
+        if: ${{ matrix.language == 'dotnet' }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      # -----------------------------------------------------------------------
+      # 3) Ensure benchmark script is present & executable.
+      #    Location: .github/scripts/cache-benchmark.sh
+      #
+      #    Implemented in:
+      #      - BrikByte-Studios/brik-pipe-examples
+      # -----------------------------------------------------------------------
+      - name: Ensure cache-benchmark.sh is executable
+        run: |
+          if [ ! -f ".github/scripts/cache-benchmark.sh" ]; then
+            echo "❌ .github/scripts/cache-benchmark.sh not found. Add it to this repo."
+            exit 1
+          fi
+
+          chmod +x .github/scripts/cache-benchmark.sh
+
+      # -----------------------------------------------------------------------
+      # 4) Run benchmark for this language
+      #    - This script:
+      #        • Runs cold + warm builds.
+      #        • Writes JSON + env file per language.
+      #        • Appends Markdown summary line.
+      #
+      #    Inputs:
+      #      - LANGUAGE
+      #      - PROJECT_PATH
+      #      - MIN_IMPROVEMENT_PCT
+      #      - REGRESSION_TOLERANCE_PCT (optional future use)
+      # -----------------------------------------------------------------------
+      - name: Run cache benchmark (cold vs warm)
+        id: run-benchmark
+        env:
+          LANGUAGE: ${{ matrix.language }}
+          PROJECT_PATH: ${{ matrix.project-path }}
+        run: |
+          set -euo pipefail
+
+          echo "🚀 Running cache benchmark for language='${LANGUAGE}', project='${PROJECT_PATH}' ..."
+          .github/scripts/cache-benchmark.sh
+
+      # -----------------------------------------------------------------------
+      # 5) Evaluate result & optionally fail + create issue
+      #    - Reads .audit/cache-benchmark/latest-<language>.env
+      #    - Fails job + creates issue when status == "FAIL".
+      # -----------------------------------------------------------------------
+      - name: Evaluate benchmark result & enforce thresholds
+        id: evaluate
+        env:
+          LANGUAGE: ${{ matrix.language }}
+        run: |
+          set -euo pipefail
+
+          LATEST_ENV="${CACHE_BENCH_OUTPUT_DIR}/latest-${LANGUAGE}.env"
+
+          if [ ! -f "${LATEST_ENV}" ]; then
+            echo "❌ Benchmark env file not found: ${LATEST_ENV}"
+            exit 1
+          fi
+
+          # shellcheck disable=SC1090
+          source "${LATEST_ENV}"
+
+          echo "📊 Benchmark summary:"
+          echo "  language          : ${LANGUAGE}"
+          echo "  cold_build_ms     : ${COLD_BUILD_MS}"
+          echo "  warm_build_ms     : ${WARM_BUILD_MS}"
+          echo "  improvement_pct   : ${IMPROVEMENT_PCT}"
+          echo "  status            : ${BENCHMARK_STATUS}"
+
+          if [ "${BENCHMARK_STATUS}" = "PASS" ]; then
+            echo "✅ Cache benchmark passed for ${LANGUAGE}."
+            exit 0
+          fi
+
+          echo "⚠️  Cache benchmark regression detected for ${LANGUAGE}."
+
+          # Optionally create a GitHub issue using the GITHUB_TOKEN + gh CLI.
+          # NOTE:
+          #   - Requires gh to be installed (GitHub-hosted runners have it).
+          #   - Requires 'issues: write' permission on this token.
+          ISSUE_TITLE="Cache benchmark regression for ${LANGUAGE}"
+          ISSUE_BODY_FILE="${CACHE_BENCH_OUTPUT_DIR}/issue-${LANGUAGE}.md"
+
+          mkdir -p "${CACHE_BENCH_OUTPUT_DIR}"
+
+          cat > "${ISSUE_BODY_FILE}" <<EOF
+Cache benchmark regression detected for **${LANGUAGE}**.
+
+**Metrics**
+- Cold build:  \`${COLD_BUILD_MS} ms\`
+- Warm build:  \`${WARM_BUILD_MS} ms\`
+- Improvement: \`${IMPROVEMENT_PCT}%\`
+- Required minimum improvement: \`${MIN_IMPROVEMENT_PCT}%\`
+
+**Status**
+- ${BENCHMARK_STATUS}
+
+Please investigate:
+- Dependency caching configuration for ${LANGUAGE}
+- Recent changes to build/test pipeline
+- Runner variability / flakiness
+
+Task: PIPE-CACHE-BENCHMARK-TEST-005
+EOF
+
+          echo "📝 Creating GitHub issue: '${ISSUE_TITLE}' ..."
+          gh issue create \
+            --title "${ISSUE_TITLE}" \
+            --body-file "${ISSUE_BODY_FILE}" \
+            --label "cache-benchmark,ci-regression" || echo "⚠️ Issue creation failed (check permissions)."
+
+          # Fail the job so regressions are visible in CI.
+          exit 1
+
+      # -----------------------------------------------------------------------
+      # 6) Upload benchmark artifacts (JSON, env, issue body)
+      # -----------------------------------------------------------------------
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-benchmark-${{ matrix.language }}
+          path: |
+            ${CACHE_BENCH_OUTPUT_DIR}
+            brik-pipe-docs/cache/cache-benchmark-history.md
+          if-no-files-found: ignore
