@@ -9,33 +9,6 @@
 #       • BrikByte-Studios/brik-pipe-examples
 #   - Referenced by workflow:
 #       • .github/workflows/ci-cache-benchmark.yml
-#
-# Purpose:
-#   For a given runtime (LANGUAGE + PROJECT_PATH), run:
-#     1) A "cold" build with caches cleared.
-#     2) A "warm" build with caches reused.
-#
-#   Then:
-#     - Compute improvement_pct = (cold - warm) / cold * 100
-#     - Classify benchmark status (PASS / FAIL).
-#     - Emit:
-#         • JSON:  .audit/cache-benchmark/<timestamp>-<language>.json
-#         • ENV:   .audit/cache-benchmark/latest-<language>.env
-#         • MD:    brik-pipe-docs/cache/cache-benchmark-history.md
-#
-# Inputs (env):
-#   LANGUAGE              → node | python | java | go | dotnet
-#   PROJECT_PATH          → path to example project (e.g. node-api-example)
-#   MIN_IMPROVEMENT_PCT   → minimum required improvement (e.g. "30")
-#   CACHE_BENCH_OUTPUT_DIR→ .audit/cache-benchmark
-#
-# Notes:
-#   - This script MUST be idempotent.
-#   - It MUST NOT rely on secrets.
-#   - It MUST exit non-zero only if:
-#       • The benchmark cannot be run (missing project/tools), OR
-#       • We explicitly want CI to fail for this job (status FAIL is handled
-#         by the caller workflow, not here).
 # =============================================================================
 
 set -euo pipefail
@@ -89,7 +62,6 @@ mkdir -p "$(dirname "${HISTORY_MD}")"
 CACHE_CLEAN_SCRIPT=".github/scripts/cache-clean.sh"
 
 run_cache_clean() {
-  # Accepts a list of cache paths as arguments.
   if [[ ! -f "${CACHE_CLEAN_SCRIPT}" ]]; then
     log "cache-clean.sh not found at ${CACHE_CLEAN_SCRIPT} — skipping cache directory cleanup."
     return 0
@@ -104,17 +76,15 @@ run_cache_clean() {
   fi
 
   log "Invoking cache-clean.sh for ${#paths[@]} path(s)..."
-  # We pass CLI args so cache-clean.sh logs each path individually.
   bash "${CACHE_CLEAN_SCRIPT}" "${paths[@]}"
   log "cache-clean.sh completed."
 }
 
 # -----------------------------------------------------------------------------#
-# 3) Language-specific: define cache paths + build command
+# 3) Language-specific: cache paths + build runner
 # -----------------------------------------------------------------------------#
 
 get_cold_cache_paths_for_language() {
-  # Echo a list of cache paths to clean for the *cold* run.
   case "${LANGUAGE}" in
     node)
       echo "${HOME}/.npm"
@@ -132,7 +102,6 @@ get_cold_cache_paths_for_language() {
       echo "${PROJECT_PATH}/build"
       ;;
     go)
-      # Use go env to discover caches (if Go/tooling is installed).
       if command -v go >/dev/null 2>&1; then
         go env GOMODCACHE || true
         go env GOCACHE || true
@@ -153,8 +122,6 @@ get_cold_cache_paths_for_language() {
 }
 
 run_ci_build_for_language() {
-  # Run the canonical "make ci" inside PROJECT_PATH for the given LANGUAGE.
-  # Assumes Makefile + language-specific tooling are already installed.
   log "▶ Running ${LANGUAGE} CI build in ${PROJECT_PATH} ..."
   if [[ ! -d "${PROJECT_PATH}" ]]; then
     die "PROJECT_PATH '${PROJECT_PATH}' does not exist."
@@ -164,25 +131,16 @@ run_ci_build_for_language() {
   fi
 
   pushd "${PROJECT_PATH}" >/dev/null
-  # Standard CI entrypoint: make ci
   make ci
   popd >/dev/null
   log "✅ ${LANGUAGE} CI build in ${PROJECT_PATH} completed."
 }
 
 # -----------------------------------------------------------------------------#
-# 4) Timing helper — measure build duration in milliseconds
+# 4) Timing helper — measure build duration in ms
 # -----------------------------------------------------------------------------#
 
 measure_build_ms() {
-  # Usage:
-  #   local result_var
-  #   measure_build_ms result_var "COLD"  [clean_caches=true|false]
-  #
-  #   This will:
-  #     - Optionally clean caches (for cold run).
-  #     - Run language-specific CI build.
-  #     - Set $result_var to <duration_ms> and log metrics.
   local __result_var="$1"
   local mode_label="$2"
   local clean_caches="${3:-false}"
@@ -199,20 +157,15 @@ measure_build_ms() {
     fi
   fi
 
-  # Use GNU date to measure time in milliseconds.
   local start_ms end_ms duration_ms
   start_ms="$(date +%s%3N)"
 
-  # Run actual CI build (logs go to STDOUT/STDERR).
   run_ci_build_for_language
 
   end_ms="$(date +%s%3N)"
   duration_ms=$((end_ms - start_ms))
 
-  # Log and return numeric duration.
   log "${mode_label} build duration: ${duration_ms} ms"
-
-  # Set caller's variable.
   printf -v "${__result_var}" '%s' "${duration_ms}"
 }
 
@@ -223,13 +176,9 @@ measure_build_ms() {
 COLD_BUILD_MS=0
 WARM_BUILD_MS=0
 
-# Cold: clear caches + run CI
 measure_build_ms COLD_BUILD_MS "COLD" "true"
-
-# Warm: do NOT clear caches; run CI again using warmed caches
 measure_build_ms WARM_BUILD_MS "WARM" "false"
 
-# Validate numeric
 if ! [[ "${COLD_BUILD_MS}" =~ ^[0-9]+$ ]]; then
   die "Cold build duration not numeric: '${COLD_BUILD_MS}'"
 fi
@@ -240,36 +189,31 @@ fi
 log "Cold ms = ${COLD_BUILD_MS}"
 log "Warm ms = ${WARM_BUILD_MS}"
 
-# Compute improvement via Python for precision:
 export COLD_BUILD_MS WARM_BUILD_MS MIN_IMPROVEMENT_PCT
 
 IMPROVEMENT_PCT="$(
 python - << 'PY'
 import os
-
 cold = float(os.environ["COLD_BUILD_MS"])
 warm = float(os.environ["WARM_BUILD_MS"])
-min_req = float(os.environ.get("MIN_IMPROVEMENT_PCT", "30"))
-
 if cold <= 0:
     improvement = 0.0
 else:
     improvement = round((cold - warm) / cold * 100.0, 2)
-
 print(improvement)
 PY
 )"
 
 log "Improvement % = ${IMPROVEMENT_PCT}"
 
-# Determine status (PASS/FAIL) based solely on improvement vs threshold.
+# 🔧 FIX: export IMPROVEMENT_PCT so the next Python block can read it.
+export IMPROVEMENT_PCT
+
 BENCHMARK_STATUS="$(
 python - << 'PY'
 import os
-
 imp = float(os.environ["IMPROVEMENT_PCT"])
 min_req = float(os.environ.get("MIN_IMPROVEMENT_PCT", "30"))
-
 if imp >= min_req:
     print("PASS")
 else:
@@ -310,7 +254,6 @@ EOF
 
 log "Wrote JSON metrics to ${JSON_FILE}"
 
-# Markdown history header (if first time)
 if [[ ! -f "${HISTORY_MD}" ]]; then
   cat > "${HISTORY_MD}" <<EOF
 # Cache Benchmark History
@@ -323,12 +266,7 @@ fi
 echo "| ${TIMESTAMP} | ${LANGUAGE} | ${COLD_BUILD_MS} | ${WARM_BUILD_MS} | ${IMPROVEMENT_PCT}% | ${BENCHMARK_STATUS} |" >> "${HISTORY_MD}"
 
 log "Appended Markdown summary to ${HISTORY_MD}"
-
 log "Benchmark script completed for LANGUAGE=${LANGUAGE}."
 
-# NOTE:
-#   We DO NOT exit non-zero here based on PASS/FAIL.
-#   The CI workflow step that calls this script will:
-#     - Source latest-<language>.env
-#     - Decide whether to fail job and create an issue.
+# Exit 0 – the caller workflow decides whether to fail based on status.
 exit 0
