@@ -28,7 +28,6 @@ jobs:
   # 2) Only run Node CI if config is valid
   node-ci:
     name: "Node: Build & Test"
-    needs: config-validate
     uses: BrikByte-Studios/.github/.github/workflows/template-node-ci.yml@main
     with:
       node-version: "20"
