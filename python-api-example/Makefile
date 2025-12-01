@@ -53,7 +53,13 @@ test: deps
 	@echo "🔧 Checking for tests..."
 	@if ls tests/test_*.py >/dev/null 2>&1; then \
 	  echo "🔧 Setting PYTHONPATH and running pytest..."; \
-	  PYTHONPATH="$$(pwd):$$PYTHONPATH" pytest --cov=my_package --cov-report=xml:coverage.xml; \
+	  PYTHONPATH="$$(pwd):$$PYTHONPATH" pytest \
+		-q \
+		--maxfail=1 \
+		--disable-warnings \
+		--cov=. \
+		--cov-report=term-missing \
+		--cov-report=xml:coverage.xml; \
 	else \
 	  echo "ℹ️ No tests found; skipping pytest."; \
 	fi
