@@ -41,7 +41,7 @@ build: restore
 	@echo "🏗️ Building .NET solution (Release)..."
 	$(DOTNET) build $(SOLUTION_FILE) --configuration $(CONFIG) --no-restore
 
-test:
+test: restore
 	@echo "🧪 Running .NET tests (Release)..."
 	$(DOTNET) test $(SOLUTION_FILE) \
 		--configuration $(CONFIG) \

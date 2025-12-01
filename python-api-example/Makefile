@@ -49,7 +49,7 @@ build:
 		echo "ℹ️ No pyproject.toml or setup.py found; skipping package build."; \
 	fi
 
-test:
+test: deps
 	@echo "🔧 Checking for tests..."
 	@if ls tests/test_*.py >/dev/null 2>&1; then \
 	  echo "🔧 Setting PYTHONPATH and running pytest..."; \

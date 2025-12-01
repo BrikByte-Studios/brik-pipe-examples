@@ -40,7 +40,7 @@ build:
 	@echo "🏗️ Building Node.js application..."
 	$(NPM) run build
 
-test:
+test: install
 	@echo "🧪 Running Node.js test suite..."
 	$(NPM) test
 
