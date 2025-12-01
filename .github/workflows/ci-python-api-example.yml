@@ -29,3 +29,9 @@ jobs:
       project-path: "python-api-example"
       force-cache-refresh: "false"
     secrets: inherit
+
+  tests:
+    uses: BrikByte-Studios/.github/.github/workflows/test-python.yml@main
+    with:
+      python-version: "3.11"
+      working-directory: "python-api-example"

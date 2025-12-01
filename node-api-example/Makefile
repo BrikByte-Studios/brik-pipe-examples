@@ -49,4 +49,4 @@ ci: clean install build test
 
 clean:
 	@echo "🧹 Cleaning build artifacts..."
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) node_modules coverage
