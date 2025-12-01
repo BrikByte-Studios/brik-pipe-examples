@@ -42,12 +42,15 @@ build: restore
 	$(DOTNET) build $(SOLUTION_FILE) --configuration $(CONFIG) --no-restore
 
 test: build
-	@echo "🧪 Running .NET tests (Release)..."
+	@echo "🧪 Running .NET tests (Release) + coverage..."
 	$(DOTNET) test $(SOLUTION_FILE) \
 		--configuration $(CONFIG) \
 		--no-build \
 		--logger "trx;LogFileName=TestResult.trx" \
-		--results-directory $(TEST_RESULTS_DIR)
+		--results-directory $(TEST_RESULTS_DIR) \
+		/p:CollectCoverage=true \
+		/p:CoverletOutput=$(TEST_RESULTS_DIR)/coverage.net. \
+		/p:CoverletOutputFormat=\"json,opencover\"
 
 ci: test
 	@echo "✅ CI pipeline (.NET) completed successfully."

@@ -25,4 +25,10 @@
     <ProjectReference Include="..\..\src\BrikByte.DotNetApiExample\BrikByte.DotNetApiExample.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
 </Project>
