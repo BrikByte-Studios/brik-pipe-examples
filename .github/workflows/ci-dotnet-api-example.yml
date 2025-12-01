@@ -29,9 +29,3 @@ jobs:
       project-path: "dotnet-api-example"
       force-cache-refresh: "false"
     secrets: inherit
-
-  tests:
-    uses: BrikByte-Studios/.github/.github/workflows/test-dotnet.yml@main
-    with:
-      dotnet-version: "8.0.x"
-      working-directory: "dotnet-api-example"

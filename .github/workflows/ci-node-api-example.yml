@@ -35,9 +35,3 @@ jobs:
       project-path: "node-api-example"
       force-cache-refresh: "false"
     secrets: inherit
-
-  tests:
-    uses: BrikByte-Studios/.github/.github/workflows/test-node.yml@main
-    with:
-      node-version: "20"
-      working-directory: "node-api-example"

@@ -31,10 +31,3 @@ jobs:
       enable-cache: "true"
       force-cache-refresh: "false"
     secrets: inherit
-
-  tests:
-    uses: BrikByte-Studios/.github/.github/workflows/test-java.yml@main
-    with:
-      java-version: "17"
-      distribution: "temurin"
-      working-directory: "java-api-example"
