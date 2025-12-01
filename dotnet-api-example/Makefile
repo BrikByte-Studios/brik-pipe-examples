@@ -41,7 +41,7 @@ build: restore
 	@echo "🏗️ Building .NET solution (Release)..."
 	$(DOTNET) build $(SOLUTION_FILE) --configuration $(CONFIG) --no-restore
 
-test:
+test: build
 	@echo "🧪 Running .NET tests (Release)..."
 	$(DOTNET) test $(SOLUTION_FILE) \
 		--configuration $(CONFIG) \
@@ -49,7 +49,7 @@ test:
 		--logger "trx;LogFileName=TestResult.trx" \
 		--results-directory $(TEST_RESULTS_DIR)
 
-ci: build test
+ci: test
 	@echo "✅ CI pipeline (.NET) completed successfully."
 
 clean:
