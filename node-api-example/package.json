@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node server.js",
     "build": "mkdir -p dist && cp -r src dist/",
-    "test": "node --test"
+    "test": "NODE_OPTIONS='--experimental-vm-modules' c8 --reporter=json --report-dir=coverage node --test"
   },
   "keywords": [
     "example",
@@ -23,6 +23,7 @@
   "devDependencies": {
     "@types/express": "^5.0.5",
     "jest": "^30.2.0",
+    "c8": "^10.1.2",
     "supertest": "^7.1.4"
   }
 }
