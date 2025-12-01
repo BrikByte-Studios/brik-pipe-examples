@@ -1,24 +1,36 @@
+/**
+ * BrikByteOS — Express App Export
+ * ---------------------------------------------------------
+ * This file exposes the Express instance WITHOUT binding to
+ * a network port. It exists so unit tests can import the app
+ * directly without starting or stopping external listeners.
+ *
+ * Used by:
+ *  - PIPE-TEST-UNIT-CI-BUILD-002
+ *  - PIPE-CONTAINER-TEST-STACKS-TEST-006 (runtime smoke)
+ */
+
 import express from "express";
 
 const app = express();
 
 /**
- * Default root response
+ * GET /
+ * Expected:
+ *  - 200 JSON
+ *  - { message: "Node API Example — BrikByteOS pipelines OK" }
  */
 app.get("/", (req, res) => {
   res.json({ message: "Node API Example — BrikByteOS pipelines OK" });
 });
 
 /**
- * Self-test health probe (for CI container-matrix)
- * Used by PIPE-CONTAINER-TEST-STACKS-TEST-006 for runtime smoke validation.
- * Returns HTTP 200 + text body to satisfy GOV-IMAGES-TAG-POLICY requirements.
+ * GET /health
+ * CI + container smoke validation endpoint.
+ * Must return 200 + plain text "OK" to satisfy runtime probe policy.
  */
 app.get("/health", (req, res) => {
   res.status(200).send("OK");
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`API running on http://localhost:${port}`);
-});
+export default app;

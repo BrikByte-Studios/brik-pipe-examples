@@ -111,4 +111,4 @@ EXPOSE 8080
 # 🏁 Entry Point
 # Modify if your entry file changes (ex: dist/index.js after TypeScript build)
 # ------------------------------------------------------------------------------
-CMD ["node", "src/index.js"]
+CMD ["node", "server.js"]
