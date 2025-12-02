@@ -23,6 +23,8 @@ jobs:
 
   # 2) Only run .NET CI if config is valid
   dotnet-ci:
+    name: ".NET: Build & CI"
+    needs: config-validate
     uses: BrikByte-Studios/.github/.github/workflows/template-dotnet-ci.yml@main
     with:
       dotnet-version: "8.0.x"
@@ -30,8 +32,22 @@ jobs:
       force-cache-refresh: "false"
     secrets: inherit
 
+  # 3) .NET Tests + Coverage
   tests:
+    name: ".NET: Unit Tests + Coverage"
+    needs: dotnet-ci
     uses: BrikByte-Studios/.github/.github/workflows/test-dotnet.yml@main
     with:
       dotnet-version: "8.0.x"
-      working-directory: "dotnet-api-example"
+      working-directory: "dotnet-api-example""
+
+  # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
+  coverage-gate:
+    name: "Coverage Governance Gate"
+    needs: tests
+    uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
+    with:
+      working-directory: "."                           # repo root
+      policy-file: ".governance/tests.yml"
+      baseline-file: ".audit/coverage-baseline.json"
+      coverage-artifact-name: "coverage-dotnet" 
