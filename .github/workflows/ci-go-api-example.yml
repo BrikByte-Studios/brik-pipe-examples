@@ -21,17 +21,34 @@ jobs:
       config-file: "brikpipe.build.yml"
       # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
 
-  # 2) Only run Go CI if config is valid
+  # 2) Go CI (build / fmt / vet etc., optional but nice)
   go-ci:
+    name: "Go: Build & CI"
+    needs: config-validate
     uses: BrikByte-Studios/.github/.github/workflows/template-go-ci.yml@main
     with:
       go-version: "1.22.x"
       project-path: "go-api-example"
+      enable-cache: "true"
       force-cache-refresh: "false"
     secrets: inherit
 
+  # 3) Go Tests + Coverage
   tests:
+    name: "Go: Unit Tests + Coverage"
+    needs: go-ci
     uses: BrikByte-Studios/.github/.github/workflows/test-go.yml@main
     with:
       go-version: "1.22.x"
       working-directory: "go-api-example"
+
+  # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
+  coverage-gate:
+    name: "Coverage Governance Gate"
+    needs: tests
+    uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
+    with:
+      working-directory: "."                          # gate runs from repo root
+      policy-file: ".governance/tests.yml"
+      baseline-file: ".audit/coverage-baseline.json"
+      coverage-artifact-name: "coverage-go"

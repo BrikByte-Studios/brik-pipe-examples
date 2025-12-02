@@ -32,8 +32,8 @@ build:
 	$(GO) build -o $(BUILD_OUT) ./...
 
 test:
-	@echo "🧪 Running Go tests..."
-	$(GO) test ./...
+	@echo "🧪 Running Go tests with coverage..."
+	$(GO) test ./... -coverprofile=coverage.out
 
 ci: build test
 	@echo "✅ CI pipeline (Go) completed successfully."
