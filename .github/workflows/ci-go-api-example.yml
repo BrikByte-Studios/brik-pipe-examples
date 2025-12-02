@@ -29,7 +29,6 @@ jobs:
     with:
       go-version: "1.22.x"
       project-path: "go-api-example"
-      enable-cache: "true"
       force-cache-refresh: "false"
     secrets: inherit
 
