@@ -91,6 +91,7 @@ WORKDIR ${APP_DIR}
 COPY --from=builder ${APP_DIR}/package*.json ./
 COPY --from=builder ${APP_DIR}/node_modules ./node_modules
 COPY --from=builder ${APP_DIR}/src ./src
+COPY --from=builder ${APP_DIR}/server.js ./server.js
 
 # ------------------------------------------------------------------------------
 # 🏷 OCI Metadata Labels (Read in Registries + SBOM Tooling)
