@@ -23,7 +23,7 @@
 name: "CI — Container Matrix Self-Test (All Stacks)"
 
 on:
-  # Run nightly to continuously validate all stacks.
+  # Run nightly to continuously validate all stacks
   schedule:
     - cron: "0 3 * * *"  # 03:00 UTC daily
 
