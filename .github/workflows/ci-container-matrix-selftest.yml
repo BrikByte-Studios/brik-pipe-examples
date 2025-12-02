@@ -151,7 +151,7 @@ jobs:
         include:
           - runtime: node
             service_key: node-api
-            port: 3000
+            port: 8000
             health_path: /health
             image_name: ghcr.io/brikbyte-studios/example-node-api-selftest
 
