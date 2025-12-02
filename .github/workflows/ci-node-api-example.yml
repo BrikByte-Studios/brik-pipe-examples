@@ -41,7 +41,7 @@ jobs:
     secrets: inherit
   
   # --------------------------------------------------------------
-  # 3) Tests — generates coverage.json + uploads artifact.
+  # 3) Tests — generates coverage.json + uploads artifact
   # --------------------------------------------------------------
   tests:
     name: "Node: Unit Tests + Coverage"
