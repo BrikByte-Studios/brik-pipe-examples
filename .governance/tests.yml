@@ -1,0 +1,34 @@
+# =============================================================================
+# BrikByteOS — Test Coverage Policy
+# -----------------------------------------------------------------------------
+# Task / WBS:
+#   - [TASK] GOV-TEST-COVERAGE-POLICY-004 — Add Governance Checks for Threshold
+#     Enforcement
+#
+# Repo:
+#   - Example: BrikByte-Studios/brik-pipe-examples (per example service)
+#   - Product repos: add this file at the repo root
+#
+# Purpose:
+#   Define minimum coverage thresholds for this repository, including stricter
+#   thresholds for critical paths.
+#
+# Notes:
+#   - coverage_min:   Overall minimum coverage (0.80 = 80%)
+#   - critical_min:   Minimum coverage for critical_paths (0.90 = 90%)
+#   - critical_paths: Paths that must maintain higher coverage
+#   - ignore_patterns:
+#       Simple substring matches; any file whose path contains one of these
+#       patterns is excluded from coverage evaluation.
+# =============================================================================
+
+coverage_min: 0.80        # 80% overall coverage
+critical_min: 0.90        # 90% for critical paths
+
+critical_paths:
+  - "core/"
+  - "domain/"
+
+ignore_patterns:
+  - "migrations/"
+  - "generated/"

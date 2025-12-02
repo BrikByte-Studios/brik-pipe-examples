@@ -17,7 +17,9 @@ on:
       - ".github/workflows/ci-node-api-example.yml"
 
 jobs:
+  # --------------------------------------------------------------
   # 1) Validate brikpipe.build.yml
+  # --------------------------------------------------------------
   config-validate:
     uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
     with:
@@ -25,18 +27,42 @@ jobs:
       config-file: "brikpipe.build.yml"
       # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
 
-  # 2) Only run Node CI if config is valid
+  # --------------------------------------------------------------
+  # 2) Node CI (build, lint, install)
+  # --------------------------------------------------------------
   node-ci:
     name: "Node: Build & Test"
     uses: BrikByte-Studios/.github/.github/workflows/template-node-ci.yml@main
+    needs: config-validate
     with:
       node-version: "20"
       project-path: "node-api-example"
       force-cache-refresh: "false"
     secrets: inherit
   
+  # --------------------------------------------------------------
+  # 3) Tests — generates coverage.json + uploads artifact
+  # --------------------------------------------------------------
   tests:
+    name: "Node: Unit Tests + Coverage"
+    needs: node-ci
     uses: BrikByte-Studios/.github/.github/workflows/test-node.yml@main
     with:
       node-version: "20"
       working-directory: "node-api-example"
+
+  # --------------------------------------------------------------
+  # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
+  # --------------------------------------------------------------
+  coverage-gate:
+    name: "Coverage Governance Gate"
+    needs: tests
+    uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
+    with:
+      working-directory: "node-api-example"
+      coverage-file: "out/coverage.json"
+      policy-file: ".governance/tests.yml"
+      baseline-file: ".audit/coverage-baseline.json"
+      # coverage-artifact-name: "coverage-node"   # <— from tests job
+
+
