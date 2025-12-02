@@ -63,6 +63,6 @@ jobs:
       coverage-file: "out/coverage.json"
       policy-file: ".governance/tests.yml"
       baseline-file: ".audit/coverage-baseline.json"
-      # coverage-artifact-name: "coverage-node"   # <— from tests job
+      coverage-artifact-name: "coverage-node"   # <— from tests job
 
 
