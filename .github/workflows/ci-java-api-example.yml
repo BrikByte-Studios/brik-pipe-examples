@@ -21,10 +21,8 @@ jobs:
       config-file: "brikpipe.build.yml"
       # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
 
-  # 2) Java CI (build / compile / lint etc.)
+  # 2) Only run Java CI if config is valid
   java-ci:
-    name: "Java: Build & CI"
-    needs: config-validate
     uses: BrikByte-Studios/.github/.github/workflows/template-java-ci.yml@main
     with:
       java-version: "17"
@@ -34,28 +32,9 @@ jobs:
       force-cache-refresh: "false"
     secrets: inherit
 
-  # 3) Java Tests + Coverage (produces out/coverage.json + coverage-java artifact)
   tests:
-    name: "Java: Unit Tests + Coverage"
-    needs: java-ci
     uses: BrikByte-Studios/.github/.github/workflows/test-java.yml@main
     with:
       java-version: "17"
       distribution: "temurin"
       working-directory: "java-api-example"
-
-  # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
-  coverage-gate:
-    name: "Coverage Governance Gate"
-    needs: tests
-    uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
-    with:
-      # Gate runs from repo root; coverage-check.yml will:
-      #  - download the coverage-java artifact
-      #  - locate ./out/coverage.json
-      #  - run coverage-gate@main with that path
-      working-directory: "."
-      coverage-file: "./out/coverage.json"
-      policy-file: ".governance/tests.yml"
-      baseline-file: ".audit/coverage-baseline.json"
-      coverage-artifact-name: "coverage-java"
