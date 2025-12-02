@@ -11,6 +11,9 @@ import (
 	"net/http"
 )
 
+// listenAndServe is a function variable to allow stubbing in tests.
+var listenAndServe = http.ListenAndServe
+
 func main() {
 	// Register HTTP routes.
 	http.HandleFunc("/health", HealthHandler)
@@ -24,7 +27,7 @@ func main() {
 	addr := ":8080"
 	log.Printf("go-api-example listening on %s", addr)
 
-	if err := http.ListenAndServe(addr, nil); err != nil {
+	if err := listenAndServe(addr, nil); err != nil {
 		log.Fatalf("server failed: %v", err)
 	}
 }
