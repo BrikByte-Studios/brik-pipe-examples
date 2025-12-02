@@ -47,7 +47,7 @@ jobs:
     needs: tests
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
-      working-directory: "."                           # repo root
+      working-directory: "."                         
       policy-file: ".governance/tests.yml"
       baseline-file: ".audit/coverage-baseline.json"
       coverage-artifact-name: "coverage-dotnet" 
