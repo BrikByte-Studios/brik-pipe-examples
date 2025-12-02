@@ -13,25 +13,29 @@ on:
       - ".github/workflows/ci-python-api-example.yml"
 
 jobs:
-  # 1) Validate brikpipe.build.yml.
+  # 1) Validate brikpipe.build.yml (optional, same pattern as Node)
   config-validate:
     uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
     with:
       project-path: "python-api-example"
       config-file: "brikpipe.build.yml"
-      # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
 
-  # 2) Only run Python CI if config is valid
-  python-ci:
-    uses: BrikByte-Studios/.github/.github/workflows/template-python-ci.yml@main
-    with:
-      python-version: "3.11"
-      project-path: "python-api-example"
-      force-cache-refresh: "false"
-    secrets: inherit
-
+  # 2) Python tests + coverage
   tests:
+    name: "Python: Unit Tests + Coverage"
+    needs: config-validate
     uses: BrikByte-Studios/.github/.github/workflows/test-python.yml@main
     with:
       python-version: "3.11"
       working-directory: "python-api-example"
+
+  # 3) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
+  coverage-gate:
+    name: "Coverage Governance Gate"
+    needs: tests
+    uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
+    with:
+      working-directory: "."                          # gate runs from repo root
+      policy-file: ".governance/tests.yml"
+      baseline-file: ".audit/coverage-baseline.json"
+      coverage-artifact-name: "coverage-python"
