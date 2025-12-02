@@ -1,7 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
@@ -17,12 +19,5 @@
     </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
   </ItemGroup>
-
-  <!-- If you have existing references (e.g. to the web project), keep them here -->
-  <!--
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\BrikByte.DotNetApiExample\BrikByte.DotNetApiExample.csproj" />
-  </ItemGroup>
-  -->
 
 </Project>
