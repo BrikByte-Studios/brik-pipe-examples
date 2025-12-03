@@ -21,7 +21,7 @@ jobs:
       config-file: "brikpipe.build.yml"
       # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
 
-  # 2) Only run .NET CI if config is valid.
+  # 2) Only run .NET CI if config is valid
   dotnet-ci:
     name: ".NET: Build & CI"
     needs: config-validate
