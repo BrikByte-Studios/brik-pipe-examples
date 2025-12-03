@@ -17,7 +17,7 @@ MVN          ?= mvn
 POM_FILE     := pom.xml
 TARGET_DIR   := target
 
-.PHONY: help build test ci clean
+.PHONY: help build test ci clean deps post-test
 
 help:
 	@echo "Java API Example — Make targets"
@@ -30,20 +30,24 @@ build:
 	@echo "🏗️ Building Java project with Maven..."
 	$(MVN) -B clean package
 
-test:
+deps:
+	@echo "📦 Resolving Maven dependencies..."
+	$(MVN) -B dependency:resolve
+
+test: deps
 	@echo "🧪 Running Maven tests..."
-	mkdir -p out
-	$(MVN) -B \
-	  -DskipTests=false \
-	  -Dsurefire.printSummary=true \
-	  -Dsurefire.reportFormat=xml \
-	  -Dsurefire.reportsDirectory=out \
-	  test
-	$(MAKE) post-test
+	$(MVN) -B test
+	@$(MAKE) post-test
 
 post-test:
-	@echo "🔧 Merging JUnit XML into out/junit.xml..."
-	@cat out/TEST-*.xml > out/junit.xml
+	@echo "🔧 Merging Surefire JUnit XML into out/junit.xml..."
+	@mkdir -p out
+	@if ls target/surefire-reports/TEST-*.xml >/dev/null 2>&1; then \
+	  cat target/surefire-reports/TEST-*.xml > out/junit.xml; \
+	  echo "✅ Wrote out/junit.xml from target/surefire-reports/TEST-*.xml"; \
+	else \
+	  echo "⚠️ No TEST-*.xml files found under target/surefire-reports; skipping JUnit merge."; \
+	fi
 
 ci:
 	@echo "🚦 Running CI pipeline (Maven clean verify)..."
