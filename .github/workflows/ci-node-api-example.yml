@@ -84,7 +84,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: coverage-node
-          path: .
+          path: node-api-example
 
       - name: Export unit test audit bundle
         if: always()
