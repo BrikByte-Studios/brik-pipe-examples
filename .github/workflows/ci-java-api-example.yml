@@ -44,7 +44,7 @@ jobs:
       distribution: "temurin"
       working-directory: "java-api-example"
 
-    # --------------------------------------------------------------
+  # --------------------------------------------------------------
   # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
   # --------------------------------------------------------------
   coverage-gate:
@@ -64,3 +64,44 @@ jobs:
 
       # Artifact name produced by test-java.yml
       coverage-artifact-name: "coverage-java"
+
+  # --------------------------------------------------------------
+  # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
+  # --------------------------------------------------------------
+  unit-test-audit:
+    name: "Unit Test Audit Export"
+    needs: tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Download coverage + JUnit artifacts (from test-java.yml)
+      - name: Download coverage + JUnit artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-java
+          path: java-api-example
+
+      - name: Export unit test audit bundle
+        if: always()
+        uses: BrikByte-Studios/.github/.github/actions/audit-export@main
+        with:
+          working-directory: java-api-example
+          junit: out/junit.xml
+          coverage: out/coverage.json
+          audit-root: .audit
+          runtime: java@17
+          duration-seconds: ""
+
+      - name: Upload unit test audit bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-tests-audit-java
+          path: java-api-example/.audit/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          compression-level: 6
+          overwrite: false
