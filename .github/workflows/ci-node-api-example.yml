@@ -92,7 +92,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: coverage-node
-          path: node-api-example/out
+          path: .
 
       - name: Export unit test audit bundle
         if: always()
@@ -103,6 +103,7 @@ jobs:
           coverage: out/coverage.json
           audit-root: .audit
           runtime: node@20
+          duration-seconds: ""
           # If you later plumb a measured duration from tests, pass it here:
           # duration-seconds: ${{ env.TEST_DURATION_SECONDS }}
 
