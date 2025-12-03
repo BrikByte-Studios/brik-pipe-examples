@@ -59,7 +59,7 @@ jobs:
     needs: tests
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
-      working-directory: "."
+      working-directory: "node-api-example"
       coverage-file: "./out/coverage.json"
       policy-file: ".governance/tests.yml"
       baseline-file: ".audit/coverage-baseline.json"
@@ -92,7 +92,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: coverage-node
-          path: .
+          path: node-api-example
 
       - name: Export unit test audit bundle
         if: always()
