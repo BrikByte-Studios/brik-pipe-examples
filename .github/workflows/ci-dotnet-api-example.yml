@@ -79,7 +79,7 @@ jobs:
           name: coverage-dotnet
           path: dotnet-api-example
 
-      # Export audit bundle.
+      # Export audit bundle
       - name: Export unit test audit bundle
         if: always()
         uses: BrikByte-Studios/.github/.github/actions/audit-export@main
