@@ -98,7 +98,7 @@ jobs:
           duration-seconds: ""
           upload-artifact: "true"
           artifact-name: "unit-tests-audit-node"
-          upload-to-blob: "false"             # set "true" once blob sync exists
+          upload-to-blob: "true"             # set "true" once blob sync exists
           blob-target: "s3://brikbyte-audit/unit-tests/node-api-example"
 
 
