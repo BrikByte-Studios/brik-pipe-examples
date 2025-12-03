@@ -69,11 +69,6 @@ jobs:
   
   # --------------------------------------------------------------
   # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
-  #    - Uses composite action:
-  #        BrikByte-Studios/.github/.github/actions/audit-export@main
-  #    - Repos:
-  #        • Implemented in: BrikByte-Studios/.github
-  #        • Consumed by:   BrikByte-Studios/brik-pipe-examples
   # --------------------------------------------------------------
   unit-test-audit:
     name: "Unit Test Audit Export"
@@ -84,16 +79,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Download coverage + (optionally) JUnit into node-api-example/out/
-      # The tests workflow should upload an artifact named "coverage-node"
-      # containing at least:
-      #   node-api-example/out/coverage.json
-      #   node-api-example/out/junit.xml   (if JUnit is produced)
+      # Download coverage + JUnit artifacts into repo root
       - name: Download coverage + JUnit artifacts
         uses: actions/download-artifact@v4
         with:
           name: coverage-node
-          path: node-api-example
+          path: .
 
       - name: Export unit test audit bundle
         if: always()
@@ -105,8 +96,6 @@ jobs:
           audit-root: .audit
           runtime: node@20
           duration-seconds: ""
-          # If you later plumb a measured duration from tests, pass it here:
-          # duration-seconds: ${{ env.TEST_DURATION_SECONDS }}
 
       - name: Upload unit test audit bundle
         if: always()
