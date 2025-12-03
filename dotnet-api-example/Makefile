@@ -58,16 +58,22 @@ test: build
 
 	@echo "📄 Converting TRX → JUnit XML for audit-export..."
 	@mkdir -p $(OUT_DIR)
-	# 🔧 If out/junit.xml somehow exists as a directory from a previous run, fix it.
-	@if [ -d "$(JUNIT_FILE)" ]; then \
-	  echo "⚠️ Found '$(JUNIT_FILE)' as a directory. Removing so we can write JUnit XML file..."; \
-	  rm -rf "$(JUNIT_FILE)"; \
-	fi; \
-	if ! command -v trx2junit >/dev/null 2>&1; then \
+	# Always clean any previous junit.xml file or directory
+	@rm -rf "$(JUNIT_FILE)"
+
+	@if ! command -v trx2junit >/dev/null 2>&1; then \
 	  echo "📦 Installing trx2junit dotnet tool..."; \
 	  dotnet tool install -g trx2junit; \
 	fi; \
-	PATH="$$PATH:$$HOME/.dotnet/tools" trx2junit "$(TRX_FILE)" --output "$(JUNIT_FILE)"
+	PATH="$$PATH:$$HOME/.dotnet/tools" trx2junit "$(TRX_FILE)" --output "$(OUT_DIR)"; \
+	JUNIT_CANDIDATE=$$(find "$(OUT_DIR)" -maxdepth 1 -name '*.xml' | head -n 1); \
+	if [ -z "$$JUNIT_CANDIDATE" ]; then \
+	  echo "❌ No JUnit XML produced by trx2junit in $(OUT_DIR)"; \
+	  ls -R "$(OUT_DIR)"; \
+	  exit 1; \
+	fi; \
+	echo "ℹ️ Using JUnit file: $$JUNIT_CANDIDATE"; \
+	mv "$$JUNIT_CANDIDATE" "$(JUNIT_FILE)"
 
 	@echo "✅ JUnit report written to $(JUNIT_FILE)"
 
