@@ -75,7 +75,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Download Go coverage + JUnit artifacts (produced in test-go.yml)
+      # Download Go coverage + JUnit artifacts (produced in test-go.yml).
       - name: Download coverage + JUnit artifacts
         uses: actions/download-artifact@v4
         with:
