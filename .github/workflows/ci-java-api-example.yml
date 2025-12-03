@@ -94,14 +94,7 @@ jobs:
           audit-root: .audit
           runtime: java@17
           duration-seconds: ""
-
-      - name: Upload unit test audit bundle
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-tests-audit-java
-          path: java-api-example/.audit/
-          include-hidden-files: true
-          if-no-files-found: ignore
-          compression-level: 6
-          overwrite: false
+          upload-artifact: "true"
+          artifact-name: "unit-tests-audit-java"
+          upload-to-blob: "true"             # set "true" once blob sync exists
+          blob-target: "s3://brikbyte-audit/unit-tests/java-api-example"

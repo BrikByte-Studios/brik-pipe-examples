@@ -91,14 +91,7 @@ jobs:
           audit-root: .audit
           runtime: python@3.11
           duration-seconds: ""
-
-      - name: Upload unit test audit bundle
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-tests-audit-python
-          path: python-api-example/.audit/
-          include-hidden-files: true      # REQUIRED (because .audit is hidden)
-          if-no-files-found: ignore       # RECOMMENDED
-          compression-level: 6
-          overwrite: false
+          upload-artifact: "true"
+          artifact-name: "unit-tests-audit-python"
+          upload-to-blob: "true"             # set "true" once blob sync exists
+          blob-target: "s3://brikbyte-audit/unit-tests/python-api-example"

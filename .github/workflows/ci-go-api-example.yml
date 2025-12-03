@@ -93,15 +93,7 @@ jobs:
           audit-root: .audit
           runtime: go@1.22
           duration-seconds: ""
-
-      # Upload .audit/<ts>/unit-tests/*
-      - name: Upload unit test audit bundle
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-tests-audit-go
-          path: go-api-example/.audit/
-          if-no-files-found: ignore   # or "error" if you want strict enforcement
-          include-hidden-files: true  # IMPORTANT: required because `.audit` is hidden
-          compression-level: 6
-          overwrite: false
+          upload-artifact: "true"
+          artifact-name: "unit-tests-audit-go"
+          upload-to-blob: "true"             # set "true" once blob sync exists
+          blob-target: "s3://brikbyte-audit/unit-tests/go-api-example"
