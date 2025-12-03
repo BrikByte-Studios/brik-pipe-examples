@@ -2,34 +2,38 @@ name: "CI — Python API Example"
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
     paths:
       - "python-api-example/**"
       - ".github/workflows/ci-python-api-example.yml"
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
     paths:
       - "python-api-example/**"
       - ".github/workflows/ci-python-api-example.yml"
 
+env:
+  PYTHON_VERSION: "3.11"
+  PROJECT_PATH: "python-api-example"
+  COVERAGE_ARTIFACT: "coverage-python"
+
 jobs:
-  # 1) Validate brikpipe.build.yml (optional, same pattern as Node)
+  # 1) Validate brikpipe.build.yml
   config-validate:
+    name: "Config: brikpipe.build.yml"
     uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
     with:
-      project-path: "python-api-example"
+      project-path: ${{ env.PROJECT_PATH }}
       config-file: "brikpipe.build.yml"
 
-  # --------------------------------------------------------------
   # 2) Python CI (build, lint, install)
-  # --------------------------------------------------------------
   python-ci:
-    name: "Python: Build & Test"
-    uses: BrikByte-Studios/.github/.github/workflows/template-python-ci.yml@main
+    name: "Python: Build & Lint"
     needs: config-validate
+    uses: BrikByte-Studios/.github/.github/workflows/template-python-ci.yml@main
     with:
-      python-version: "3.11"
-      project-path: "python-api-example"
+      python-version: ${{ env.PYTHON_VERSION }}
+      project-path: ${{ env.PROJECT_PATH }}
       force-cache-refresh: "false"
     secrets: inherit
 
@@ -39,8 +43,8 @@ jobs:
     needs: python-ci
     uses: BrikByte-Studios/.github/.github/workflows/test-python.yml@main
     with:
-      python-version: "3.11"
-      working-directory: "python-api-example"
+      python-version: ${{ env.PYTHON_VERSION }}
+      working-directory: ${{ env.PROJECT_PATH }}
 
   # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
   coverage-gate:
@@ -48,23 +52,13 @@ jobs:
     needs: tests
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
-      # Governance gate runs from repo root
-      working-directory: "python-api-example"
-      # coverage.json produced by test-python.yml:
+      working-directory: ${{ env.PROJECT_PATH }}
       coverage-file: "./out/coverage.json"
-
-      # point to policy above python-api-example/
       policy-file: "../.governance/tests.yml"
-
-      # baseline also lives above python-api-example/
       baseline-file: "../.audit/coverage-baseline.json"
+      coverage-artifact-name: ${{ env.COVERAGE_ARTIFACT }}
 
-      # artifact name produced in test-python.yml
-      coverage-artifact-name: "coverage-python"
-
-  # --------------------------------------------------------------
   # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
-  # --------------------------------------------------------------
   unit-test-audit:
     name: "Unit Test Audit Export"
     needs: tests
@@ -74,24 +68,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Download coverage + JUnit (or equivalent) artifacts into repo root
       - name: Download coverage + JUnit artifacts
         uses: actions/download-artifact@v4
         with:
-          name: coverage-python
-          path: python-api-example
+          name: ${{ env.COVERAGE_ARTIFACT }}
+          path: ${{ env.PROJECT_PATH }}
 
       - name: Export unit test audit bundle
         if: always()
         uses: BrikByte-Studios/.github/.github/actions/audit-export@main
         with:
-          working-directory: python-api-example
-          junit: out/junit.xml
-          coverage: out/coverage.json
-          audit-root: .audit
-          runtime: python@3.11
+          working-directory: ${{ env.PROJECT_PATH }}
+          junit: "out/junit.xml"
+          coverage: "out/coverage.json"
+          audit-root: ".audit"
+          runtime: "python@${{ env.PYTHON_VERSION }}"
           duration-seconds: ""
           upload-artifact: "true"
           artifact-name: "unit-tests-audit-python"
-          upload-to-blob: "true"             # set "true" once blob sync exists
+          upload-to-blob: "true"
           blob-target: "s3://brikbyte-audit/unit-tests/python-api-example"

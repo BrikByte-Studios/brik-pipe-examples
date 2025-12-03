@@ -2,63 +2,77 @@ name: "CI — .NET API Example"
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
     paths:
       - "dotnet-api-example/**"
       - ".github/workflows/ci-dotnet-api-example.yml"
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
     paths:
       - "dotnet-api-example/**"
       - ".github/workflows/ci-dotnet-api-example.yml"
 
+env:
+  DOTNET_VERSION: "8.0.x"
+  PROJECT_PATH: "dotnet-api-example"
+  COVERAGE_ARTIFACT: "coverage-dotnet"
+
 jobs:
-  # 1) Validate brikpipe.build.yml.
+  # --------------------------------------------------------------
+  # 1) Validate brikpipe.build.yml
+  # --------------------------------------------------------------
   config-validate:
+    name: "Config: brikpipe.build.yml"
     uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
     with:
-      project-path: "dotnet-api-example"
+      project-path: ${{ env.PROJECT_PATH }}
       config-file: "brikpipe.build.yml"
       # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
 
-  # 2) Only run .NET CI if config is valid.
+  # --------------------------------------------------------------
+  # 2) .NET CI (build / restore / lint)
+  # --------------------------------------------------------------
   dotnet-ci:
     name: ".NET: Build & CI"
     needs: config-validate
     uses: BrikByte-Studios/.github/.github/workflows/template-dotnet-ci.yml@main
     with:
-      dotnet-version: "8.0.x"
-      project-path: "dotnet-api-example"
+      dotnet-version: ${{ env.DOTNET_VERSION }}
+      project-path: ${{ env.PROJECT_PATH }}
       force-cache-refresh: "false"
     secrets: inherit
 
+  # --------------------------------------------------------------
   # 3) .NET Tests + Coverage
+  # --------------------------------------------------------------
   tests:
     name: ".NET: Unit Tests + Coverage"
     needs: dotnet-ci
     uses: BrikByte-Studios/.github/.github/workflows/test-dotnet.yml@main
     with:
-      dotnet-version: "8.0.x"
-      working-directory: "dotnet-api-example"
+      dotnet-version: ${{ env.DOTNET_VERSION }}
+      working-directory: ${{ env.PROJECT_PATH }}
 
+  # --------------------------------------------------------------
   # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
+  # --------------------------------------------------------------
   coverage-gate:
     name: "Coverage Governance Gate"
     needs: tests
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
       # Gate runs from the .NET project folder
-      working-directory: "dotnet-api-example"
+      working-directory: ${{ env.PROJECT_PATH }}
 
       # coverage.json is relative to working-directory
       coverage-file: "./out/coverage.json"
 
-      # Policy + baseline live at repo root → step one level up
+      # Policy + baseline live at repo root → one level up
       policy-file: "../.governance/tests.yml"
       baseline-file: "../.audit/coverage-baseline.json"
 
       # Must match artifact name from test-dotnet.yml
-      coverage-artifact-name: "coverage-dotnet"
+      coverage-artifact-name: ${{ env.COVERAGE_ARTIFACT }}
 
   # --------------------------------------------------------------
   # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
@@ -76,21 +90,21 @@ jobs:
       - name: Download coverage + JUnit artifacts
         uses: actions/download-artifact@v4
         with:
-          name: coverage-dotnet
-          path: dotnet-api-example
+          name: ${{ env.COVERAGE_ARTIFACT }}
+          path: ${{ env.PROJECT_PATH }}
 
       # Export audit bundle.
       - name: Export unit test audit bundle
         if: always()
         uses: BrikByte-Studios/.github/.github/actions/audit-export@main
         with:
-          working-directory: dotnet-api-example
-          junit: out/junit.xml
-          coverage: out/coverage.json
-          audit-root: .audit
-          runtime: dotnet@8
+          working-directory: ${{ env.PROJECT_PATH }}
+          junit: "out/junit.xml"
+          coverage: "out/coverage.json"
+          audit-root: ".audit"
+          runtime: "dotnet@8"
           duration-seconds: ""
           upload-artifact: "true"
           artifact-name: "unit-tests-audit-dotnet"
-          upload-to-blob: "true"             # set "true" once blob sync exists
+          upload-to-blob: "true"
           blob-target: "s3://brikbyte-audit/unit-tests/dotnet-api-example"

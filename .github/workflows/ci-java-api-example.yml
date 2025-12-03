@@ -2,47 +2,61 @@ name: "CI — Java API Example"
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
     paths:
       - "java-api-example/**"
       - ".github/workflows/ci-java-api-example.yml"
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
     paths:
       - "java-api-example/**"
       - ".github/workflows/ci-java-api-example.yml"
 
+env:
+  JAVA_VERSION: "17"
+  JAVA_DISTRIBUTION: "temurin"
+  PROJECT_PATH: "java-api-example"
+  COVERAGE_ARTIFACT: "coverage-java"
+
 jobs:
+  # --------------------------------------------------------------
   # 1) Validate brikpipe.build.yml
+  # --------------------------------------------------------------
   config-validate:
+    name: "Config: brikpipe.build.yml"
     uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
     with:
-      project-path: "java-api-example"
+      project-path: ${{ env.PROJECT_PATH }}
       config-file: "brikpipe.build.yml"
       # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
 
+  # --------------------------------------------------------------
   # 2) Java CI (build / compile / lint etc.)
+  # --------------------------------------------------------------
   java-ci:
     name: "Java: Build & CI"
     needs: config-validate
     uses: BrikByte-Studios/.github/.github/workflows/template-java-ci.yml@main
     with:
-      java-version: "17"
-      distribution: "temurin"
-      project-path: "java-api-example"
+      java-version: ${{ env.JAVA_VERSION }}
+      distribution: ${{ env.JAVA_DISTRIBUTION }}
+      project-path: ${{ env.PROJECT_PATH }}
       enable-cache: "true"
       force-cache-refresh: "false"
     secrets: inherit
 
-  # 3) Java Tests + Coverage (produces out/coverage.json + coverage-java artifact)
+  # --------------------------------------------------------------
+  # 3) Java Tests + Coverage
+  #    (produces out/coverage.json + coverage-java artifact)
+  # --------------------------------------------------------------
   tests:
     name: "Java: Unit Tests + Coverage"
     needs: java-ci
     uses: BrikByte-Studios/.github/.github/workflows/test-java.yml@main
     with:
-      java-version: "17"
-      distribution: "temurin"
-      working-directory: "java-api-example"
+      java-version: ${{ env.JAVA_VERSION }}
+      distribution: ${{ env.JAVA_DISTRIBUTION }}
+      working-directory: ${{ env.PROJECT_PATH }}
 
   # --------------------------------------------------------------
   # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
@@ -53,7 +67,7 @@ jobs:
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
       # Gate evaluates coverage from inside the Java example folder
-      working-directory: "java-api-example"
+      working-directory: ${{ env.PROJECT_PATH }}
 
       # coverage.json produced by test-java.yml:
       coverage-file: "./out/coverage.json"
@@ -63,7 +77,7 @@ jobs:
       baseline-file: "../.audit/coverage-baseline.json"
 
       # Artifact name produced by test-java.yml
-      coverage-artifact-name: "coverage-java"
+      coverage-artifact-name: ${{ env.COVERAGE_ARTIFACT }}
 
   # --------------------------------------------------------------
   # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
@@ -81,20 +95,20 @@ jobs:
       - name: Download coverage + JUnit artifacts
         uses: actions/download-artifact@v4
         with:
-          name: coverage-java
-          path: java-api-example
+          name: ${{ env.COVERAGE_ARTIFACT }}
+          path: ${{ env.PROJECT_PATH }}
 
       - name: Export unit test audit bundle
         if: always()
         uses: BrikByte-Studios/.github/.github/actions/audit-export@main
         with:
-          working-directory: java-api-example
-          junit: out/junit.xml
-          coverage: out/coverage.json
-          audit-root: .audit
-          runtime: java@17
+          working-directory: ${{ env.PROJECT_PATH }}
+          junit: "out/junit.xml"
+          coverage: "out/coverage.json"
+          audit-root: ".audit"
+          runtime: "java@${{ env.JAVA_VERSION }}"
           duration-seconds: ""
           upload-artifact: "true"
           artifact-name: "unit-tests-audit-java"
-          upload-to-blob: "true"             # set "true" once blob sync exists
+          upload-to-blob: "true"
           blob-target: "s3://brikbyte-audit/unit-tests/java-api-example"

@@ -2,44 +2,45 @@ name: "CI — Node API Example"
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [main, master]
     paths:
       - "node-api-example/**"
       - ".github/workflows/ci-node-api-example.yml"
   pull_request:
-    branches:
-      - main
-      - master
+    branches: [main, master]
     paths:
       - "node-api-example/**"
       - ".github/workflows/ci-node-api-example.yml"
+
+env:
+  NODE_VERSION: "20"
+  PROJECT_PATH: "node-api-example"
+  COVERAGE_ARTIFACT: "coverage-node"
 
 jobs:
   # --------------------------------------------------------------
   # 1) Validate brikpipe.build.yml
   # --------------------------------------------------------------
   config-validate:
+    name: "Config: brikpipe.build.yml"
     uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
     with:
-      project-path: "node-api-example"
+      project-path: ${{ env.PROJECT_PATH }}
       config-file: "brikpipe.build.yml"
-      # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
 
   # --------------------------------------------------------------
   # 2) Node CI (build, lint, install)
   # --------------------------------------------------------------
   node-ci:
-    name: "Node: Build & Test"
-    uses: BrikByte-Studios/.github/.github/workflows/template-node-ci.yml@main
+    name: "Node: Build & Lint"
     needs: config-validate
+    uses: BrikByte-Studios/.github/.github/workflows/template-node-ci.yml@main
     with:
-      node-version: "20"
-      project-path: "node-api-example"
+      node-version: ${{ env.NODE_VERSION }}
+      project-path: ${{ env.PROJECT_PATH }}
       force-cache-refresh: "false"
     secrets: inherit
-  
+
   # --------------------------------------------------------------
   # 3) Tests — generates coverage.json + uploads artifact.
   # --------------------------------------------------------------
@@ -48,8 +49,8 @@ jobs:
     needs: node-ci
     uses: BrikByte-Studios/.github/.github/workflows/test-node.yml@main
     with:
-      node-version: "20"
-      working-directory: "node-api-example"
+      node-version: ${{ env.NODE_VERSION }}
+      working-directory: ${{ env.PROJECT_PATH }}
 
   # --------------------------------------------------------------
   # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
@@ -59,16 +60,17 @@ jobs:
     needs: tests
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
-      working-directory: "node-api-example"
+      working-directory: ${{ env.PROJECT_PATH }}
       coverage-file: "./out/coverage.json"
-      # policy & baseline live at repo root, so go one level up
+
+      # policy & baseline live at repo root
       policy-file: "../.governance/tests.yml"
       baseline-file: "../.audit/coverage-baseline.json"
-      coverage-artifact-name: "coverage-node"
 
-  
+      coverage-artifact-name: ${{ env.COVERAGE_ARTIFACT }}
+
   # --------------------------------------------------------------
-  # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
+  # 5) Unit Test Audit Export
   # --------------------------------------------------------------
   unit-test-audit:
     name: "Unit Test Audit Export"
@@ -79,26 +81,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Download coverage + JUnit artifacts into repo root
       - name: Download coverage + JUnit artifacts
         uses: actions/download-artifact@v4
         with:
-          name: coverage-node
-          path: node-api-example
+          name: ${{ env.COVERAGE_ARTIFACT }}
+          path: ${{ env.PROJECT_PATH }}
 
       - name: Export unit test audit bundle
         if: always()
         uses: BrikByte-Studios/.github/.github/actions/audit-export@main
         with:
-          working-directory: node-api-example
-          junit: out/junit.xml
-          coverage: out/coverage.json
-          audit-root: .audit
-          runtime: node@20
+          working-directory: ${{ env.PROJECT_PATH }}
+          junit: "out/junit.xml"
+          coverage: "out/coverage.json"
+          audit-root: ".audit"
+          runtime: "node@${{ env.NODE_VERSION }}"
           duration-seconds: ""
           upload-artifact: "true"
           artifact-name: "unit-tests-audit-node"
-          upload-to-blob: "true"             # set "true" once blob sync exists
+          upload-to-blob: "true"
           blob-target: "s3://brikbyte-audit/unit-tests/node-api-example"
-
-
