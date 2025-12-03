@@ -48,8 +48,16 @@ jobs:
     needs: tests
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
-      working-directory: "."                    # gate runs from repo root
+      # Governance gate runs from repo root
+      working-directory: "python-api-example"
+      # coverage.json produced by test-python.yml:
       coverage-file: "./out/coverage.json"
-      policy-file: ".governance/tests.yml"
-      baseline-file: ".audit/coverage-baseline.json"
+
+      # point to policy above python-api-example/
+      policy-file: "../.governance/tests.yml"
+
+      # baseline also lives above python-api-example/
+      baseline-file: "../.audit/coverage-baseline.json"
+
+      # artifact name produced in test-python.yml
       coverage-artifact-name: "coverage-python"

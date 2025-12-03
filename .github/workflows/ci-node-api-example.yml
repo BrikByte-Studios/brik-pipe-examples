@@ -93,19 +93,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: coverage-node
-          path: .
+          path: node-api-example
 
       - name: Export unit test audit bundle
         if: always()
         uses: BrikByte-Studios/.github/.github/actions/audit-export@main
         with:
-          # ⬇️ Run from repo root
-          working-directory: .
-          # ⬇️ Explicit paths into node-api-example
-          junit: node-api-example/out/junit.xml
-          coverage: node-api-example/out/coverage.json
-          # ⬇️ Tell the action exactly where to place the bundle
-          audit-root: node-api-example/.audit
+          working-directory: node-api-example
+          junit: out/junit.xml
+          coverage: out/coverage.json
+          audit-root: .audit
           runtime: node@20
           duration-seconds: ""
           # If you later plumb a measured duration from tests, pass it here:
