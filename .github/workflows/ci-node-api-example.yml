@@ -103,6 +103,9 @@ jobs:
         with:
           name: unit-tests-audit-node
           path: node-api-example/.audit/
-          if-no-files-found: ignore
+          include-hidden-files: true      # REQUIRED (because .audit is hidden)
+          if-no-files-found: ignore       # RECOMMENDED
+          compression-level: 6
+          overwrite: false
 
 
