@@ -32,7 +32,18 @@ build:
 
 test:
 	@echo "🧪 Running Maven tests..."
-	$(MVN) -B test
+	mkdir -p out
+	$(MVN) -B \
+	  -DskipTests=false \
+	  -Dsurefire.printSummary=true \
+	  -Dsurefire.reportFormat=xml \
+	  -Dsurefire.reportsDirectory=out \
+	  test
+	$(MAKE) post-test
+
+post-test:
+	@echo "🔧 Merging JUnit XML into out/junit.xml..."
+	@cat out/TEST-*.xml > out/junit.xml
 
 ci:
 	@echo "🚦 Running CI pipeline (Maven clean verify)..."
