@@ -96,16 +96,9 @@ jobs:
           audit-root: .audit
           runtime: node@20
           duration-seconds: ""
-
-      - name: Upload unit test audit bundle
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: unit-tests-audit-node
-          path: node-api-example/.audit/
-          include-hidden-files: true      # REQUIRED (because .audit is hidden)
-          if-no-files-found: ignore       # RECOMMENDED
-          compression-level: 6
-          overwrite: false
+          upload-artifact: "true"
+          artifact-name: "unit-tests-audit-node"
+          upload-to-blob: "false"             # set "true" once blob sync exists
+          blob-target: "s3://brikbyte-audit/unit-tests/node-api-example"
 
 
