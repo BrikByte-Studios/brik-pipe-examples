@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node server.js",
     "build": "mkdir -p dist && cp -r src dist/",
-    "test": "NODE_OPTIONS='--experimental-vm-modules' c8 --reporter=json --reporter=json-summary --report-dir=coverage node --test"
+    "test": "mkdir -p out && NODE_OPTIONS='--experimental-vm-modules' c8 --reporter=json --reporter=json-summary --report-dir=coverage node --test --test-reporter=junit --test-reporter-destination=out/junit.xml"
   },
   "keywords": [
     "example",
