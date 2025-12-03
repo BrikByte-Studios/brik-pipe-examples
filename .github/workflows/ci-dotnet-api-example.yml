@@ -59,3 +59,44 @@ jobs:
 
       # Must match artifact name from test-dotnet.yml
       coverage-artifact-name: "coverage-dotnet"
+
+  # --------------------------------------------------------------
+  # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
+  # --------------------------------------------------------------
+  unit-test-audit:
+    name: "Unit Test Audit Export"
+    needs: tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Download coverage + JUnit artifacts into project folder
+      - name: Download coverage + JUnit artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-dotnet
+          path: dotnet-api-example
+
+      # Export audit bundle
+      - name: Export unit test audit bundle
+        if: always()
+        uses: BrikByte-Studios/.github/.github/actions/audit-export@main
+        with:
+          working-directory: dotnet-api-example
+          junit: out/junit.xml
+          coverage: out/coverage.json
+          audit-root: .audit
+          runtime: dotnet@8
+          duration-seconds: ""
+
+      # Upload generated audit bundle
+      - name: Upload unit test audit bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-tests-audit-dotnet
+          path: dotnet-api-example/.audit/
+          include-hidden-files: true
+          if-no-files-found: ignore

@@ -23,6 +23,10 @@ SOLUTION_FILE := dotnet-api-example.sln
 CONFIG        := Release
 TEST_RESULTS_DIR := TestResults
 
+OUT_DIR         ?= out
+TRX_FILE        ?= $(TEST_RESULTS_DIR)/TestResult.trx
+JUNIT_FILE      ?= $(OUT_DIR)/junit.xml
+
 .PHONY: help restore build test ci clean
 
 help:
@@ -51,6 +55,16 @@ test: build
 		/p:CollectCoverage=true \
 		/p:CoverletOutput=$(TEST_RESULTS_DIR)/coverage.net. \
 		/p:CoverletOutputFormat=\"json,opencover\"
+
+	@echo "📄 Converting TRX → JUnit XML for audit-export..."
+	@mkdir -p $(OUT_DIR)
+	@if ! command -v trx2junit >/dev/null 2>&1; then \
+	  echo "📦 Installing trx2junit dotnet tool..."; \
+	  dotnet tool install -g trx2junit; \
+	fi; \
+	PATH="$$PATH:$$HOME/.dotnet/tools" trx2junit "$(TRX_FILE)" --output "$(JUNIT_FILE)"
+
+	@echo "✅ JUnit report written to $(JUNIT_FILE)"
 
 ci: test
 	@echo "✅ CI pipeline (.NET) completed successfully."
