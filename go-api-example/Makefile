@@ -33,7 +33,9 @@ build:
 
 test:
 	@echo "🧪 Running Go tests with coverage..."
-	$(GO) test ./... -coverprofile=coverage.out
+	mkdir -p out
+	$(GO) test ./... -coverprofile=coverage.out -json > out/test-report.json
+	go-junit-report < out/test-report.json > out/junit.xml
 
 ci: build test
 	@echo "✅ CI pipeline (Go) completed successfully."
