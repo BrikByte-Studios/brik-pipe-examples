@@ -58,7 +58,12 @@ test: build
 
 	@echo "📄 Converting TRX → JUnit XML for audit-export..."
 	@mkdir -p $(OUT_DIR)
-	@if ! command -v trx2junit >/dev/null 2>&1; then \
+	# 🔧 If out/junit.xml somehow exists as a directory from a previous run, fix it.
+	@if [ -d "$(JUNIT_FILE)" ]; then \
+	  echo "⚠️ Found '$(JUNIT_FILE)' as a directory. Removing so we can write JUnit XML file..."; \
+	  rm -rf "$(JUNIT_FILE)"; \
+	fi; \
+	if ! command -v trx2junit >/dev/null 2>&1; then \
 	  echo "📦 Installing trx2junit dotnet tool..."; \
 	  dotnet tool install -g trx2junit; \
 	fi; \
