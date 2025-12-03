@@ -55,13 +55,14 @@ test: deps
 	  echo "🔧 Setting PYTHONPATH and running pytest..."; \
 	  mkdir -p out; \
 	  PYTHONPATH="$$(pwd):$$PYTHONPATH" pytest \
-		-q \
-		--maxfail=1 \
-		--disable-warnings \
-		--junitxml=out/junit.xml \
-		--cov=. \
-		--cov-report=term-missing \
-		--cov-report=json:out/coverage.json; \
+	    -q \
+	    --maxfail=1 \
+	    --disable-warnings \
+	    --junitxml=out/junit.xml \
+	    --cov=. \
+	    --cov-report=term-missing \
+	    --cov-report=xml:coverage.xml \
+	    --cov-report=json:out/coverage.json; \
 	else \
 	  echo "ℹ️ No tests found; skipping pytest."; \
 	fi
