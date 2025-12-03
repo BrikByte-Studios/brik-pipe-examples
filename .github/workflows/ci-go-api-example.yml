@@ -41,13 +41,23 @@ jobs:
       go-version: "1.22.x"
       working-directory: "go-api-example"
 
+  # --------------------------------------------------------------
   # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
+  # --------------------------------------------------------------
   coverage-gate:
     name: "Coverage Governance Gate"
     needs: tests
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
-      working-directory: "."                          # gate runs from repo root
-      policy-file: ".governance/tests.yml"
-      baseline-file: ".audit/coverage-baseline.json"
+      # Coverage gate MUST run inside the Go project folder
+      working-directory: "go-api-example"
+
+      # Path is relative to working-directory
+      coverage-file: "./out/coverage.json"
+
+      # Policy and baseline are at repo root → go one level up
+      policy-file: "../.governance/tests.yml"
+      baseline-file: "../.audit/coverage-baseline.json"
+
+      # Artifact uploaded by test-go.yml
       coverage-artifact-name: "coverage-go"

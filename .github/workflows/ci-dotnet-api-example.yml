@@ -47,7 +47,15 @@ jobs:
     needs: tests
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
-      working-directory: "."                         
-      policy-file: ".governance/tests.yml"
-      baseline-file: ".audit/coverage-baseline.json"
-      coverage-artifact-name: "coverage-dotnet" 
+      # Gate runs from the .NET project folder
+      working-directory: "dotnet-api-example"
+
+      # coverage.json is relative to working-directory
+      coverage-file: "./out/coverage.json"
+
+      # Policy + baseline live at repo root → step one level up
+      policy-file: "../.governance/tests.yml"
+      baseline-file: "../.audit/coverage-baseline.json"
+
+      # Must match artifact name from test-dotnet.yml
+      coverage-artifact-name: "coverage-dotnet"

@@ -44,18 +44,23 @@ jobs:
       distribution: "temurin"
       working-directory: "java-api-example"
 
+    # --------------------------------------------------------------
   # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
+  # --------------------------------------------------------------
   coverage-gate:
     name: "Coverage Governance Gate"
     needs: tests
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
-      # Gate runs from repo root; coverage-check.yml will:
-      #  - download the coverage-java artifact
-      #  - locate ./out/coverage.json
-      #  - run coverage-gate@main with that path
-      working-directory: "."
+      # Gate evaluates coverage from inside the Java example folder
+      working-directory: "java-api-example"
+
+      # coverage.json produced by test-java.yml:
       coverage-file: "./out/coverage.json"
-      policy-file: ".governance/tests.yml"
-      baseline-file: ".audit/coverage-baseline.json"
+
+      # Policy + baseline live at repo root, so we go one level up.
+      policy-file: "../.governance/tests.yml"
+      baseline-file: "../.audit/coverage-baseline.json"
+
+      # Artifact name produced by test-java.yml
       coverage-artifact-name: "coverage-java"
