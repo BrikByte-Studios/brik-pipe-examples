@@ -1,0 +1,39 @@
+# Node API Example — Integration Tests
+# This workflow delegates to the reusable integration-test workflow
+# in BrikByte-Studios/.github and is scoped to node-api-example/ changes.
+
+name: "Node API — Integration Tests"
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "node-api-example/**"
+      - ".github/workflows/node-api-integration.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "node-api-example/**"
+      - ".github/workflows/node-api-integration.yml"
+
+jobs:
+  integration:
+    # Reuse the central workflow from the .github repo.
+    # Use @main until you create a v1 tag.
+    uses: BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
+    secrets: inherit  # pass caller secrets (including GITHUB_TOKEN) to the reusable workflow
+    with:
+      image: ghcr.io/brikbyte-studios/node-api-example:sha-${{ github.sha }}
+      dockerfile: node-api-example/Dockerfile
+      context: node-api-example
+      db_image: postgres:16
+      cache_image: redis:7
+      enable_cache_service: true
+      test_language: "node"
+      # Either rely on default (npm test / npm run test:integration)
+      # or be explicit:
+      # test_command: "npm run test:integration"
+      healthcheck_path: "/health"
+      healthcheck_timeout: "60"
+      app_port: "3000"
+      db_port: "5432"
