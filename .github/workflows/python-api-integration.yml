@@ -67,5 +67,5 @@ jobs:
       healthcheck_timeout: "60"
 
       # Network ports
-      app_port: "8000"   # Adjust to your Python service port (8000 for FastAPI by default)
+      app_port: "8080"   # Adjust to your Python service port (8000 for FastAPI by default)
       db_port: "5432"
