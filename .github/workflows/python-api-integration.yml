@@ -60,7 +60,7 @@ jobs:
       # Test execution
       test_language: "python"
       # Optional: override to a custom command if you don't use pytest -m integration:
-      # test_command: "pytest tests/integration -m 'integration'"
+      # test_command: "pytest tests/integration -m 'integration'".
 
       # Health checks
       healthcheck_path: "/health"
