@@ -34,7 +34,7 @@ jobs:
   integration:
     name: "Python API — Containerized Integration Tests"
     # Reuse the central workflow from the .github governance repo.
-    # Use @main until you create a version tag (e.g. @v1).
+    # Use @main until you create a version tag (e.g. @v1)
     uses: BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
     secrets: inherit
 
