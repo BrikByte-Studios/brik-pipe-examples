@@ -23,7 +23,7 @@ jobs:
     uses: BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
     secrets: inherit  # pass caller secrets (including GITHUB_TOKEN) to the reusable workflow
     with:
-      image: ghcr.io/brikbyte-studios/node-api-example:sha-${{ github.sha }}
+      image: ghcr.io/brikbyte-studios/example-node-api:sha-${{ github.sha }}
       dockerfile: node-api-example/Dockerfile
       context: node-api-example
       db_image: postgres:16
