@@ -19,7 +19,7 @@ on:
 jobs:
   integration:
     # Reuse the central workflow from the .github repo.
-    # Use @main until you create a v1 tag.
+    # Use @main until you create a v1 tag
     uses: BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
     secrets: inherit  # pass caller secrets (including GITHUB_TOKEN) to the reusable workflow
     with:
