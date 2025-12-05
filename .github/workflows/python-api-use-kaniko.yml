@@ -50,7 +50,7 @@ jobs:
         v0.1.0
         sha-${{ github.sha }}
 
-      # Optional build arguments for the Docker build
+      # Optional build arguments for the Docker build.
       build_args: |
         PYTHONUNBUFFERED=1
         APP_ENV=production
