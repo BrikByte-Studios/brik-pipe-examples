@@ -8,14 +8,6 @@ import (
 	"time"
 )
 
-type rootResponse struct {
-	Message string `json:"message"`
-}
-
-type healthResponse struct {
-	Status string `json:"status"`
-}
-
 // baseURL reads APP_BASE_URL (in CI it's http://app:8080) or falls back to localhost.
 func baseURL(t *testing.T) string {
 	t.Helper()
@@ -48,7 +40,7 @@ func TestIntegration_RootEndpoint(t *testing.T) {
 		t.Fatalf("expected status 200, got %d", resp.StatusCode)
 	}
 
-	var body rootResponse
+	var body rootResponse // from production code
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		t.Fatalf("failed to decode JSON: %v", err)
 	}
@@ -73,7 +65,7 @@ func TestIntegration_HealthEndpoint(t *testing.T) {
 		t.Fatalf("expected status 200, got %d", resp.StatusCode)
 	}
 
-	var body healthResponse
+	var body healthResponse // from production code
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		t.Fatalf("failed to decode JSON: %v", err)
 	}
