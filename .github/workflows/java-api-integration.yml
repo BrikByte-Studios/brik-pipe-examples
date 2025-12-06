@@ -90,7 +90,7 @@ jobs:
       # Health checks & ports
       # ----------------------------------------------------------
       # Java / Spring Boot services often expose actuator health here.
-      healthcheck_path: "/actuator/health"
+      healthcheck_path: "/health"
 
       # Max seconds to wait for DB + app readiness before failing
       healthcheck_timeout: "60"
