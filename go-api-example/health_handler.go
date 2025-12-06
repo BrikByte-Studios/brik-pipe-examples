@@ -13,7 +13,7 @@ import (
 )
 
 // HealthResponse represents the JSON payload returned by the /health endpoint.
-type HealthResponse struct {
+type healthResponse struct {
 	Status  string `json:"status"`
 	Service string `json:"service"`
 	Version string `json:"version"`
@@ -34,7 +34,7 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := HealthResponse{
+	resp := healthResponse{
 		Status:  "ok",
 		Service: "go-api-example",
 		Version: "1.0.0",
