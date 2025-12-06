@@ -16,7 +16,7 @@ const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
 describe("Integration: external payment flow (mocked)", () => {
   beforeAll(async () => {
     await startMockServer();
-    // Point the service to the mock base URL (e.g. it reads ENV)
+    // Point the service to the mock base URL (e.g. it reads ENV).
     process.env.EXTERNAL_API_BASE_URL = `http://host.docker.internal:${MOCK_PORT}`;
   });
 
