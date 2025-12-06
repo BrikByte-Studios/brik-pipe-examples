@@ -30,7 +30,7 @@ func TestHealthHandler_OK(t *testing.T) {
 	}
 
 	// 3) Assert JSON body.
-	var resp HealthResponse
+	var resp healthResponse
 	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
