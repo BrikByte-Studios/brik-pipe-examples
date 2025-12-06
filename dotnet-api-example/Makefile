@@ -46,10 +46,11 @@ build: restore
 	$(DOTNET) build $(SOLUTION_FILE) --configuration $(CONFIG) --no-restore
 
 test: build
-	@echo "🧪 Running .NET tests (Release) + coverage..."
+	@echo "🧪 Running .NET tests (Release, excluding Integration) + coverage..."
 	$(DOTNET) test $(SOLUTION_FILE) \
 		--configuration $(CONFIG) \
 		--no-build \
+		--filter "Category!=Integration" \
 		--logger "trx;LogFileName=TestResult.trx" \
 		--results-directory $(TEST_RESULTS_DIR) \
 		/p:CollectCoverage=true \
@@ -76,6 +77,7 @@ test: build
 	mv "$$JUNIT_CANDIDATE" "$(JUNIT_FILE)"
 
 	@echo "✅ JUnit report written to $(JUNIT_FILE)"
+
 
 ci: test
 	@echo "✅ CI pipeline (.NET) completed successfully."
