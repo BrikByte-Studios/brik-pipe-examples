@@ -1,0 +1,64 @@
+# BrikPipe — Go API Integration Tests
+# -----------------------------------
+# Uses the shared containerized integration-test workflow from
+# BrikByte-Studios/.github to:
+#   - Ensure the Go service image builds or pulls correctly.
+#   - Spin up app + Postgres on a dedicated Docker network.
+#   - Run Go integration tests via the generic test runner
+#     (TEST_LANGUAGE=go) inside the integration-test-runner image.
+#
+# Assumptions:
+#   - Service directory      : go-api-example/
+#   - Dockerfile             : go-api-example/Dockerfile
+#   - Exposed app port       : 8080
+#   - Health endpoint        : GET /health
+#   - Registry image naming  : ghcr.io/brikbyte-studios/example-go-api:sha-<GITHUB_SHA>
+#
+# Triggers:
+#   - Pushes & PRs that touch go-api-example/** or this workflow.
+#   - Manual runs via workflow_dispatch.
+
+name: "Go API — Integration Tests"
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "go-api-example/**"
+      - ".github/workflows/go-api-integration.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "go-api-example/**"
+      - ".github/workflows/go-api-integration.yml"
+  workflow_dispatch: {}
+
+jobs:
+  integration:
+    name: "Go API — Containerized Integration Tests"
+    uses: BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
+    secrets: inherit
+    with:
+      # Service image under test (built via Kaniko elsewhere and pushed to GHCR).
+      image: ghcr.io/brikbyte-studios/example-go-api:sha-${{ github.sha }}
+
+      # How to build the image locally if pull fails (first-run fallback).
+      dockerfile: go-api-example/Dockerfile
+      context: go-api-example
+
+      # Infra sidecars for integration tests.
+      db_image: postgres:16
+      cache_image: redis:7
+      enable_cache_service: false  # flip to true if/when Go example uses Redis
+
+      # Healthcheck + ports
+      healthcheck_path: "/health"
+      healthcheck_timeout: "60"
+      app_port: "8080"
+      db_port: "5432"
+
+      # Test runner behaviour
+      test_language: "go"
+      # Optional: override default Go behaviour (see run-integration-tests.sh: run_go_tests)
+      # e.g. "go test ./integration/..." or "go test ./... -run Integration"
+      test_command: ""
