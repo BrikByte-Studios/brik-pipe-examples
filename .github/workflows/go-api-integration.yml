@@ -12,7 +12,7 @@
 #   - Dockerfile             : go-api-example/Dockerfile
 #   - Exposed app port       : 8080
 #   - Health endpoint        : GET /health
-#   - Registry image naming  : ghcr.io/brikbyte-studios/example-go-api:sha-<GITHUB_SHA>
+#   - Registry image naming  : ghcr.io/brikbyte-studios/example-go-api:sha-<GITHUB_SHA>.
 #
 # Triggers:
 #   - Pushes & PRs that touch go-api-example/** or this workflow.
