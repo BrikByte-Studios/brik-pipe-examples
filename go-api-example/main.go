@@ -1,8 +1,6 @@
-// main.go
-//
 // Entry point for the go-api-example service.
 // This file wires up the HTTP server and delegates request
-// handling to functions in health_handler.go.
+// handling to functions in handler files (e.g. health_handler.go, root_handler.go).
 
 package main
 
@@ -16,6 +14,7 @@ var listenAndServe = http.ListenAndServe
 
 func main() {
 	// Register HTTP routes.
+	http.HandleFunc("/", RootHandler)
 	http.HandleFunc("/health", HealthHandler)
 
 	// Start the HTTP server on port 8080.
