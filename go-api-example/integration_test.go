@@ -1,3 +1,14 @@
+//go:build integration
+// +build integration
+
+// integration_test.go
+//
+// Containerized integration tests for go-api-example,
+// driven by the BrikPipe integration test runner.
+//
+// These tests hit the *running container* over HTTP, using APP_BASE_URL
+// (e.g., http://app:8080 in CI) as configured by the pipeline.
+
 package main
 
 import (
@@ -8,7 +19,29 @@ import (
 	"time"
 )
 
-// baseURL reads APP_BASE_URL (in CI it's http://app:8080) or falls back to localhost.
+// Local test DTOs to avoid clashing with production structs.
+//
+// GET /
+// {
+//   "message": "Go API Example — BrikByteOS pipelines OK"
+// }
+type rootPayload struct {
+	Message string `json:"message"`
+}
+
+// GET /health
+// {
+//   "status":  "ok",
+//   "service": "go-api-example",
+//   "version": "1.0.0"
+// }
+type healthPayload struct {
+	Status  string `json:"status"`
+	Service string `json:"service"`
+	Version string `json:"version"`
+}
+
+// baseURL reads APP_BASE_URL (e.g. http://app:8080 in CI) or falls back to localhost.
 func baseURL(t *testing.T) string {
 	t.Helper()
 
@@ -24,8 +57,7 @@ func httpClient() *http.Client {
 	}
 }
 
-// NOTE: function name contains "Integration" → picked up by `-run Integration`.
-
+// NOTE: name contains "Integration" → matched by `-run Integration`.
 func TestIntegration_RootEndpoint(t *testing.T) {
 	client := httpClient()
 	url := baseURL(t) + "/"
@@ -40,7 +72,7 @@ func TestIntegration_RootEndpoint(t *testing.T) {
 		t.Fatalf("expected status 200, got %d", resp.StatusCode)
 	}
 
-	var body rootResponse // from production code
+	var body rootPayload
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		t.Fatalf("failed to decode JSON: %v", err)
 	}
@@ -65,12 +97,18 @@ func TestIntegration_HealthEndpoint(t *testing.T) {
 		t.Fatalf("expected status 200, got %d", resp.StatusCode)
 	}
 
-	var body healthResponse // from production code
+	var body healthPayload
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		t.Fatalf("failed to decode JSON: %v", err)
 	}
 
 	if body.Status != "ok" {
 		t.Fatalf("unexpected status: got %q, want %q", body.Status, "ok")
+	}
+	if body.Service != "go-api-example" {
+		t.Fatalf("unexpected service: got %q, want %q", body.Service, "go-api-example")
+	}
+	if body.Version != "1.0.0" {
+		t.Fatalf("unexpected version: got %q, want %q", body.Version, "1.0.0")
 	}
 }
