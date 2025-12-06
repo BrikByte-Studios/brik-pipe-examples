@@ -1,0 +1,10 @@
+{
+  "table": "users",
+  "rows": [
+    {
+      "id": 2,
+      "email": "fixture.user@example.com",
+      "name": "Fixture User"
+    }
+  ]
+}
