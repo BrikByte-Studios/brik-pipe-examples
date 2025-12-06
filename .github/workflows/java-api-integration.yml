@@ -83,7 +83,7 @@ jobs:
 
       # Optional explicit command:
       #   e.g. "./mvnw -B verify -Pintegration-tests"
-      # Leave empty to use the defaults in run-integration-tests.sh.
+      # Leave empty to use the defaults in run-integration-tests.sh
       test_command: ""
 
       # ----------------------------------------------------------
