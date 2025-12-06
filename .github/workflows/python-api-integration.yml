@@ -55,7 +55,7 @@ jobs:
       # If this sample also uses Redis / MQ, set cache_image and enable_cache_service to true.
       # For a simple Python API sample, you can leave cache disabled (false)
       cache_image: redis:7
-      enable_cache_service: false
+      enable_cache_service: true
 
       # Test execution
       test_language: "python"
