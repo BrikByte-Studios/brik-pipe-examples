@@ -1,0 +1,59 @@
+# BrikPipe — .NET API Example Integration Tests
+# ---------------------------------------------
+# This workflow:
+#   - Builds (or pulls) the example .NET API image.
+#   - Spins up app + Postgres in a dedicated Docker network.
+#   - Uses the shared BrikPipe integration-test reusable workflow.
+#   - Runs .NET integration tests via the generic runner (TEST_LANGUAGE=dotnet).
+#
+# Service assumptions:
+#   - Project lives under: dotnet-api-example/
+#   - Dockerfile:          dotnet-api-example/Dockerfile
+#   - App port:            8080
+#   - Health endpoint:     GET /health → 200 OK
+#
+# Image naming convention:
+#   ghcr.io/brikbyte-studios/example-dotnet-api:sha-${{ github.sha }}
+
+name: "BrikPipe — .NET API Integration"
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "dotnet-api-example/**"
+      - ".github/workflows/dotnet-api-integration.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "dotnet-api-example/**"
+      - ".github/workflows/dotnet-api-integration.yml"
+
+jobs:
+  integration:
+    name: ".NET API — Containerized Integration Tests"
+    uses: BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
+    secrets: inherit
+    with:
+      # Service image under test (Kaniko / CI build should push this tag)
+      image: ghcr.io/brikbyte-studios/example-dotnet-api:sha-${{ github.sha }}
+
+      # How to build the service image if the pull fails
+      dockerfile: dotnet-api-example/Dockerfile
+      context: dotnet-api-example
+
+      # Infra containers
+      db_image: postgres:16
+      cache_image: redis:7
+      enable_cache_service: false
+
+      # Test runner language hint (drives default test command selection)
+      test_language: "dotnet"
+      # Optional explicit command (leave empty to use defaults in run-integration-tests.sh)
+      test_command: ""
+
+      # Health + readiness config
+      healthcheck_path: "/health"
+      healthcheck_timeout: "60"
+      app_port: "8080"
+      db_port: "5432"
