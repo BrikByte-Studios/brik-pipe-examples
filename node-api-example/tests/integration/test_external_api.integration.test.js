@@ -25,7 +25,7 @@ describe("Integration: external payment flow (mocked)", () => {
   });
 
   it("creates payment using mocked provider", async () => {
-    // Assume service has /payments route that calls EXTERNAL_API_BASE_URL.
+    // Assume service has /payments route that calls EXTERNAL_API_BASE_URL
     const res = await axios.post(`${APP_BASE_URL}/payments`, {
       amount: 100,
       currency: "ZAR",
