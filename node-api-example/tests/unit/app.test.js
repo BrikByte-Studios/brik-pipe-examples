@@ -7,10 +7,10 @@
  * Test Runner executed via:
  *   make test → npm test → jest
  */
-import test, { describe, it } from "node:test";
+import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import request from "supertest";
-import app from "../src/index.js";
+import app from "../../src/index.js";
 
 describe("GET /", () => {
   it("should return BrikByteOS OK JSON response", async () => {
