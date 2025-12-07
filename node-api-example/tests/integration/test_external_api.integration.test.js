@@ -1,10 +1,12 @@
+// File: tests/integration/test_external_api.integration.test.js
+
 /**
  * Integration test verifying that our service calls a mocked external API
  * instead of the real provider.
  */
 
 import axios from "axios";
-import { describe, it } from "node:test";
+import test, { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 
 import {
@@ -13,20 +15,28 @@ import {
   MOCK_PORT,
 } from "./mocks/mock-external-api.js";
 
+// Base URL for the app under test
 const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
 
-describe("Integration: external payment flow (mocked)", async (t) => {
-  // Proper lifecycle hooks in Node 20
+// 🔧 Global integration hooks for this file
+before(async () => {
+  // Start mock external API server
   await startMockServer();
 
-  // Point the service to the mock base URL
+  // Point the service to the mock base URL (if it reads this at runtime)
+  // NOTE: This only affects *this process*; if your app reads EXTERNAL_API_BASE_URL
+  // at startup, you should also set this in the app container env in your workflow.
   process.env.EXTERNAL_API_BASE_URL = `http://host.docker.internal:${MOCK_PORT}`;
+});
 
-  t.after(async () => {
-    await stopMockServer();
-  });
+after(async () => {
+  // Stop mock external API server
+  await stopMockServer();
+});
 
+describe("Integration: external payment flow (mocked)", () => {
   it("creates payment using mocked provider", async () => {
+    // Assume service exposes /payments that calls EXTERNAL_API_BASE_URL
     const res = await axios.post(`${APP_BASE_URL}/payments`, {
       amount: 100,
       currency: "ZAR",
