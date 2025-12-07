@@ -16,14 +16,14 @@
 
 import http from "http";
 
-const MOCK_PORT = process.env.MOCK_PORT || 18080;
+export const MOCK_PORT = process.env.MOCK_PORT || 18080;
 
 let server;
 
 /**
  * Starts a lightweight HTTP mock server that returns JSON for a few routes.
  */
-function startMockServer() {
+export function startMockServer() {
   return new Promise((resolve) => {
     if (server) {
       return resolve();
@@ -57,7 +57,7 @@ function startMockServer() {
 /**
  * Stops the mock server.
  */
-function stopMockServer() {
+export function stopMockServer() {
   return new Promise((resolve) => {
     if (!server) return resolve();
     server.close(() => {
@@ -67,9 +67,3 @@ function stopMockServer() {
     });
   });
 }
-
-module.exports = {
-  startMockServer,
-  stopMockServer,
-  MOCK_PORT,
-};
