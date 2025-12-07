@@ -4,6 +4,9 @@
  */
 
 import axios from "axios";
+import { describe, it } from "node:test";
+import assert from "node:assert";
+
 
 import {
   startMockServer,
@@ -31,8 +34,10 @@ describe("Integration: external payment flow (mocked)", () => {
       currency: "ZAR",
     });
 
-    expect(res.status).toBe(200);
-    expect(res.data).toHaveProperty("providerStatus", "approved");
-    expect(res.data).toHaveProperty("transactionId", "mock-tx-123");
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.data, {
+      status: "approved",
+      transactionId: "mock-tx-123",
+    });
   });
 });
