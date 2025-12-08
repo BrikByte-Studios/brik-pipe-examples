@@ -18,6 +18,12 @@
 
     <!-- ASP.NET Core test host to spin up the API -->
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.6" />
+
+    <!-- DB access (Postgres) -->
+    <PackageReference Include="Npgsql" Version="8.0.3" />
+
+    <!-- HTTP mocking for external provider -->
+    <PackageReference Include="WireMock.Net" Version="1.5.39" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,7 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- ✅ Switch to MSBuild-based Coverlet -->
+    <!-- Switch to MSBuild-based Coverlet -->
     <PackageReference Include="coverlet.msbuild" Version="6.0.0" />
   </ItemGroup>
 
