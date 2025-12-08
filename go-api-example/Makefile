@@ -31,11 +31,20 @@ build:
 	mkdir -p $(BIN_DIR)
 	$(GO) build -o $(BUILD_OUT) ./...
 
-test:
-	@echo "🧪 Running Go tests with coverage..."
+test-unit:
+	@echo "🧪 Running Go UNIT tests..."
 	mkdir -p out
-	$(GO) test ./... -coverprofile=coverage.out -json > out/test-report.json
+	$(GO) test ./... -run '^(?!TestIntegration_)' -coverprofile=coverage.out -json > out/test-report.json
 	go-junit-report < out/test-report.json > out/junit.xml
+
+test: test-unit
+
+test-integration:
+	@echo "🧪 Running Go INTEGRATION tests..."
+	mkdir -p out
+	$(GO) test ./... -tags=integration -json > out/test-integration-report.json
+	go-junit-report < out/test-integration-report.json > out/junit-integration.xml
+
 
 ci: build test
 	@echo "✅ CI pipeline (Go) completed successfully."

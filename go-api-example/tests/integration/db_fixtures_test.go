@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 // -----------------------------------------------------------------------------
 // Sanity check that DB fixtures were applied (PIPE-INTEG-FIXTURES-CONFIG-002).
 // Assumes fixtures created a "payments" table with at least one row.
