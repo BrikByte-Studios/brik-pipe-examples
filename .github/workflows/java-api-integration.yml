@@ -72,7 +72,7 @@ jobs:
       # Optional cache / message broker (e.g. Redis, RabbitMQ).
       # Set enable_cache_service: true if your Java service needs it.
       cache_image: redis:7
-      enable_cache_service: false
+      enable_cache_service: true
 
       # ----------------------------------------------------------
       # Test runner configuration
