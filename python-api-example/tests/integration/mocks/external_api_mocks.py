@@ -11,30 +11,36 @@ Usage (pytest):
         ...
 """
 
-import os
+import re
+
 import responses
 
+EXTERNAL_API_BASE_URL = "https://api.example.com"
 
-def _external_base_url() -> str:
-    """
-    Returns the external API base URL used by the service.
 
-    In CI, this might come from ENV; default is a placeholder
-    that matches what the app under test uses.
+def configure_passthrough_for_app():
     """
-    return os.getenv("EXTERNAL_API_BASE_URL", "https://api.example.com")
+    Allow real HTTP calls to the app under test (localhost:8080)
+    to bypass 'responses' mocking.
+    """
+    # Any request starting with http://localhost:8080 should NOT be mocked.
+    responses.add_passthru(re.compile(r"^http://localhost:8080/"))
 
 
 def mock_external_payment():
     """
-    Registers a mocked /external/payment endpoint on the responses
-    mocker with an approved payment response.
-    """
-    base_url = _external_base_url()
-    url = f"{base_url}/external/payment"
+    Register a mock for the external payment provider endpoint.
 
-    responses.post(
-        url,
-        json={"status": "approved", "transaction_id": "mock-tx-123"},
+    The application under test should call:
+      POST {EXTERNAL_API_BASE_URL}/external/payment
+    using the EXTERNAL_API_BASE_URL env var.
+    """
+    configure_passthrough_for_app()
+
+    responses.add(
+        method=responses.POST,
+        url=f"{EXTERNAL_API_BASE_URL}/external/payment",
+        json={"status": "approved", "transactionId": "mock-tx-123"},
         status=200,
+        content_type="application/json",
     )

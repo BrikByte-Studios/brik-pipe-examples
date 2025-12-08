@@ -1,4 +1,6 @@
 import os
+
+import pytest
 import requests
 import responses
 
@@ -7,19 +9,20 @@ from tests.integration.mocks.external_api_mocks import mock_external_payment
 APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:8080")
 
 
+@pytest.mark.integration
 @responses.activate
 def test_integration_payment_uses_mocked_provider():
     """
     Integration-style test that verifies the Python service uses
     the mocked external payment provider instead of a real API.
     """
-    # Ensure service under test points at the same base URL we will mock.
+    # Service under test should read this env var.
     os.environ["EXTERNAL_API_BASE_URL"] = "https://api.example.com"
 
-    # Register mock.
+    # Register the external provider mock + passthrough config.
     mock_external_payment()
 
-    # Call into our service under test.
+    # Call the service under test (this should pass through).
     resp = requests.post(
         f"{APP_BASE_URL}/payments",
         json={"amount": 100, "currency": "ZAR"},
@@ -27,6 +30,7 @@ def test_integration_payment_uses_mocked_provider():
     )
 
     assert resp.status_code == 200
-    body = resp.json()
-    assert body["provider_status"] == "approved"
-    assert body["transaction_id"] == "mock-tx-123"
+    assert resp.json() == {
+        "status": "approved",
+        "transactionId": "mock-tx-123",
+    }
