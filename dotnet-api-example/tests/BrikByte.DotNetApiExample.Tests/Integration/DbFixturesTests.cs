@@ -5,6 +5,7 @@ using Xunit;
 
 namespace DotNetApiExample.IntegrationTests
 {
+    [Trait("Category", "Integration")]
     public class DbFixturesTests
     {
         private static string BuildConnectionString()
