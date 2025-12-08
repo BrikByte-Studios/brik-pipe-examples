@@ -58,13 +58,14 @@ build:
 # Unit tests (default "test")
 # -----------------------------
 test-unit: deps
-	@echo "🧪 Running Python UNIT tests (excluding 'integration' mark)..."
+	@echo "🧪 Running Python UNIT tests (excluding 'integration' mark, ignoring tests/integration)..."
 	@if ls $(TEST_DIR)/test_*.py >/dev/null 2>&1; then \
 	  mkdir -p out; \
 	  PYTHONPATH="$$(pwd):$$PYTHONPATH" pytest \
 	    -q \
 	    $(TEST_DIR) \
 	    -m "not integration" \
+	    --ignore=$(TEST_DIR)/integration \
 	    --maxfail=1 \
 	    --disable-warnings \
 	    --junitxml=out/junit-unit.xml \
@@ -73,28 +74,26 @@ test-unit: deps
 	    --cov-report=xml:coverage-unit.xml \
 	    --cov-report=json:out/coverage-unit.json; \
 	else \
-	  echo "ℹ️ No tests found; skipping unit pytest."; \
+	  echo "ℹ️ No unit tests found; skipping pytest."; \
 	fi
 
 # Backwards-compatible alias
 test: test-unit
 
-# -----------------------------
-# Integration tests
-# -----------------------------
 test-integration: deps
 	@echo "🌐 Running Python INTEGRATION tests (marked 'integration')..."
-	@if ls $(TEST_DIR) >/dev/null 2>&1; then \
+	@if ls $(TEST_DIR)/integration >/dev/null 2>&1; then \
 	  mkdir -p out; \
 	  PYTHONPATH="$$(pwd):$$PYTHONPATH" pytest \
-	    $(TEST_DIR) \
+	    $(TEST_DIR)/integration \
 	    -m "integration" \
 	    --maxfail=1 \
 	    --disable-warnings \
 	    --junitxml=out/junit-integration.xml; \
 	else \
-	  echo "ℹ️ No tests directory found; skipping integration pytest."; \
+	  echo "ℹ️ No integration tests directory found; skipping integration pytest."; \
 	fi
+
 
 ci: deps build test-unit
 	@echo "✅ CI pipeline (Python) completed successfully."
