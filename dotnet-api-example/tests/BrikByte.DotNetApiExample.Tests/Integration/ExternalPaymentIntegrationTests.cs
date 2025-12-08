@@ -23,6 +23,7 @@ namespace BrikByte.DotNetApiExample.Tests.Integration
     ///   - Test calls APP_BASE_URL/payments
     ///   - Service should call external provider and return approved transaction
     /// </summary>
+    [Trait("Category", "Integration")]
     public class ExternalPaymentIntegrationTests : IDisposable
     {
         private readonly WireMockServer _mockServer;

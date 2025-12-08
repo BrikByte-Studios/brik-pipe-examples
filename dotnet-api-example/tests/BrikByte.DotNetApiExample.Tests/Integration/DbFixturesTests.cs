@@ -15,6 +15,7 @@ namespace DotNetApiExample.IntegrationTests
     ///       DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
     ///   - SQL fixtures created a "payments" table with at least 1 row.
     /// </summary>
+    [Trait("Category", "Integration")]
     public class DbFixturesTests
     {
         [Fact]
