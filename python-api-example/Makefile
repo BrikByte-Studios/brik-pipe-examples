@@ -71,8 +71,8 @@ test-unit: deps
 	    --junitxml=out/junit-unit.xml \
 	    --cov=. \
 	    --cov-report=term-missing \
-	    --cov-report=xml:coverage-unit.xml \
-	    --cov-report=json:out/coverage-unit.json; \
+	    --cov-report=xml:coverage.xml \
+	    --cov-report=json:out/coverage.json; \
 	else \
 	  echo "ℹ️ No unit tests found; skipping pytest."; \
 	fi
