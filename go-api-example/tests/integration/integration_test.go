@@ -9,7 +9,7 @@
 // These tests hit the *running container* over HTTP, using APP_BASE_URL
 // (e.g., http://app:8080 in CI) as configured by the pipeline.
 
-package main
+package integration
 
 import (
 	"encoding/json"
