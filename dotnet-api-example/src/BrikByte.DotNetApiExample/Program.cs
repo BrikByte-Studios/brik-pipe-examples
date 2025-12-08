@@ -12,10 +12,6 @@ using BrikByte.DotNetApiExample;
 /// </summary>
 var builder = WebApplication.CreateBuilder(args);
 
-// If you have controllers, keep them:
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
 var app = builder.Build();
 
 
