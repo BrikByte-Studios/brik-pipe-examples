@@ -1,15 +1,15 @@
 using System;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
 using Xunit;
 
-namespace DotNetApiExample.IntegrationTests
+namespace BrikByte.DotNetApiExample.Tests.Integration
 {
     /// <summary>
     /// PIPE-INTEG-FIXTURES-CONFIG-002
@@ -68,6 +68,7 @@ namespace DotNetApiExample.IntegrationTests
                 Currency = "ZAR"
             };
 
+            // Call the running service’s /payments endpoint
             var response = await _httpClient.PostAsJsonAsync("/payments", request);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -77,8 +78,13 @@ namespace DotNetApiExample.IntegrationTests
             Assert.Equal("approved", body!.Status);
             Assert.Equal("mock-tx-123", body.TransactionId);
 
-            // Optional: verify WireMock observed at least one call
-            _mockServer.LogEntries.Should().NotBeNull(); // if using FluentAssertions, else skip
+            // Optional: verify WireMock actually saw traffic (no FluentAssertions)
+            var logs = _mockServer.LogEntries;
+            Assert.NotNull(logs);
+            Assert.True(
+                logs.Any(),
+                "Expected WireMock to receive at least one request to /external/payment."
+            );
         }
 
         public void Dispose()
@@ -96,19 +102,13 @@ namespace DotNetApiExample.IntegrationTests
 
         private sealed class PaymentRequest
         {
-            [JsonPropertyName("amount")]
             public int Amount { get; set; }
-
-            [JsonPropertyName("currency")]
             public string Currency { get; set; } = "ZAR";
         }
 
         private sealed class PaymentResponse
         {
-            [JsonPropertyName("status")]
             public string Status { get; set; } = string.Empty;
-
-            [JsonPropertyName("transactionId")]
             public string TransactionId { get; set; } = string.Empty;
         }
     }
