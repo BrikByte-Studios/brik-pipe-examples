@@ -34,8 +34,8 @@ build:
 test-unit:
 	@echo "🧪 Running Go UNIT tests..."
 	mkdir -p out
-	$(GO) test ./... -run '^(?!TestIntegration_)' -coverprofile=coverage.out -json > out/test-report.json
-	go-junit-report < out/test-report.json > out/junit.xml
+	$(GO) test ./... -coverprofile=coverage-unit.out -json > out/test-unit-report.json
+	go-junit-report < out/test-unit-report.json > out/junit-unit.xml
 
 test: test-unit
 
