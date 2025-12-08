@@ -2,37 +2,37 @@ package com.brikbyte.example.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.mockserver.client.MockServerClient;
+import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
-import org.testcontainers.containers.MockServerContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * ExternalApiIntegrationTest
  * --------------------------
- * Verifies that the Java service calls a MockServer instance instead
- * of a real external API.
+ * Verifies that the Java service can talk to an embedded MockServer
+ * instead of a real external API.
  *
- * The app should read EXTERNAL_API_BASE_URL from environment variables.
+ * The app should read external.api.base-url (e.g. from env/property)
+ * and use that as the base URL for outbound calls.
  */
-@Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ExternalApiIntegrationTest {
 
-    @Container
-    static MockServerContainer mockServer =
-            new MockServerContainer("mockserver/mockserver:5.15.0");
-
+    private ClientAndServer mockServer;
     private MockServerClient mockClient;
 
     @BeforeAll
     void setupMocks() {
-        mockClient = new MockServerClient(mockServer.getHost(), mockServer.getServerPort());
+        // Start embedded MockServer on a random free port
+        mockServer = ClientAndServer.startClientAndServer();
+        int port = mockServer.getLocalPort();
+
+        mockClient = new MockServerClient("localhost", port);
 
         // Configure stub for /external/payment
         mockClient
@@ -47,19 +47,24 @@ class ExternalApiIntegrationTest {
                     .withBody("{\"status\":\"approved\",\"transactionId\":\"mock-tx-123\"}")
             );
 
-        // Log base URL for CI debugging
-        String baseUrl = String.format("http://%s:%d",
-                mockServer.getHost(), mockServer.getServerPort());
-        System.out.printf("[MOCK] MockServer base URL: %s%n", baseUrl);
+        String baseUrl = String.format("http://localhost:%d", port);
+        System.out.printf("[MOCK] Embedded MockServer base URL: %s%n", baseUrl);
 
-        // In a real system, you'd set this into the app config before
-        // starting the application under test.
+        // In a real system, wire this into Spring config (env/props).
+        // For the example app, a simple system property is enough.
         System.setProperty("external.api.base-url", baseUrl);
+    }
+
+    @AfterAll
+    void tearDown() {
+        if (mockServer != null) {
+            mockServer.stop();
+        }
     }
 
     @Test
     void contextLoadsAndMocksAreReachable() {
-        // Sanity check: verify mockServer is reachable.
+        // Sanity check: embedded server is up
         assertThat(mockServer.isRunning()).isTrue();
     }
 }
