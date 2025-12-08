@@ -24,7 +24,12 @@
 
     <properties>
         <java.version>17</java.version>
+
+        <!-- Keep infra versions explicit + centralized -->
+        <testcontainers.version>1.20.4</testcontainers.version>
         <mockserver.version>5.15.0</mockserver.version>
+        <maven.surefire.version>3.2.5</maven.surefire.version>
+        <maven.failsafe.version>3.2.5</maven.failsafe.version>
     </properties>
 
     <dependencies>
@@ -34,28 +39,30 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Spring Boot test stack (JUnit 5, AssertJ, MockMvc, etc.) -->
+        <!-- Tests: Spring Boot JUnit 5 stack -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Testcontainers: core + JUnit 5 integration -->
+        <!-- Testcontainers: JUnit 5 integration -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
 
-        <!-- Testcontainers: MockServer container support -->
+        <!-- Testcontainers: MockServer support (for external API mocks) -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>mockserver</artifactId>
+            <version>${testcontainers.version}</version>
             <scope>test</scope>
         </dependency>
 
-        <!-- MockServer client + model (HttpRequest / HttpResponse, etc.) -->
+        <!-- MockServer client (HttpRequest/HttpResponse, etc.) -->
         <dependency>
             <groupId>org.mock-server</groupId>
             <artifactId>mockserver-client-java</artifactId>
@@ -72,7 +79,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
 
-            <!-- JaCoCo coverage for BrikPipe coverage-gate -->
+            <!-- JaCoCo coverage for unit tests -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -92,7 +99,73 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- UNIT TESTS (Surefire) -->
+            <!--
+                 Runs on: mvn test / mvn clean package
+                 Policy:
+                   - Includes: **/*Test.java by default
+                   - Excludes: **/*IT.java and **/*IntegrationTest.java
+                 This prevents Docker / Testcontainers ITs from running
+                 during the image build in the Dockerfile.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven.surefire.version}</version>
+                <configuration>
+                    <excludes>
+                        <!-- Treat these as "integration" tests, not unit tests -->
+                        <exclude>**/*IT.java</exclude>
+                        <exclude>**/*IntegrationTest.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
+            <!-- INTEGRATION TESTS (Failsafe) -->
+            <!--
+                 Only runs when you explicitly invoke a phase that
+                 triggers failsafe goals (integration-test/verify)
+                 and (optionally) enable the integration profile.
+
+                 * NOT run during Dockerfile build step (mvn clean package).
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${maven.failsafe.version}</version>
+                <executions>
+                    <execution>
+                        <id>integration-tests</id>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/*IT.java</include>
+                                <include>**/*IntegrationTest.java</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
+    <!-- Optional profile if you want to explicitly gate ITs -->
+    <profiles>
+        <profile>
+            <id>integration-tests</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <!--
+                Nothing special here yet, but you can:
+                  - override properties,
+                  - select different DB URLs, etc.
+                The important part is that Failsafe is wired above.
+            -->
+        </profile>
+    </profiles>
 </project>
