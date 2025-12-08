@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using BrikByte.DotNetApiExample;
 
 /// <summary>
 /// Entry point for the minimal .NET API example used by BrikByteOS CI templates.
@@ -11,9 +12,9 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 var builder = WebApplication.CreateBuilder(args);
 
-// Existing services (Controllers, etc.)
-builder.Services.AddControllers();
-builder.Services.AddHttpClient("ExternalPayments");
+// If you have controllers, keep them:
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
@@ -47,6 +48,9 @@ app.MapGet("/health", (ILoggerFactory loggerFactory) =>
         service = "dotnet-api-example"
     });
 });
+
+// New payments endpoint for integration tests
+app.MapPaymentsEndpoints();
 
 app.Run();
 
