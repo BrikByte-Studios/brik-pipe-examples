@@ -34,17 +34,21 @@ build:
 test-unit:
 	@echo "🧪 Running Go UNIT tests..."
 	mkdir -p out
-	$(GO) test ./... -coverprofile=coverage-unit.out -json > out/test-unit-report.json
+	$(GO) test ./... \
+		-coverprofile=coverage.out \
+		-json > out/test-unit-report.json
 	go-junit-report < out/test-unit-report.json > out/junit-unit.xml
 
-test: test-unit
-
+# Optional: integration tests (only when explicitly run)
 test-integration:
 	@echo "🧪 Running Go INTEGRATION tests..."
 	mkdir -p out
-	$(GO) test ./... -tags=integration -json > out/test-integration-report.json
+	$(GO) test ./... \
+		-tags=integration \
+		-json > out/test-integration-report.json
 	go-junit-report < out/test-integration-report.json > out/junit-integration.xml
 
+test: test-unit
 
 ci: build test
 	@echo "✅ CI pipeline (Go) completed successfully."
