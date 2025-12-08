@@ -1,17 +1,20 @@
 """
 Python FastAPI example service for BrikByteOS container-matrix testing.
 
-This service exposes two endpoints:
+This service exposes three endpoints:
 
-    GET /       ->  {"message": "Python API Example — BrikByteOS pipelines OK"}
-    GET /health ->  {"status": "ok"}
+    GET /        ->  {"message": "Python API Example — BrikByteOS pipelines OK"}
+    GET /health  ->  {"status": "ok"}
+    POST /payments -> {"status": "approved", "transactionId": "mock-tx-123"}
 
 Used for:
 - Kaniko CI image validation
 - Smoke-test execution in PIPE-CONTAINER-TEST-STACKS-TEST-006
-- Runtime consistency across Node / Go / .NET / Java services
+- Runtime consistency across Node / Go / .NET / Java / Python services
 """
 
+import os
+from pydantic import BaseModel
 from fastapi import FastAPI
 
 # Create FastAPI app instance
@@ -41,3 +44,35 @@ def health() -> dict:
     Used by Docker/Kaniko self-tests to determine container readiness.
     """
     return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Demo external payment integration endpoint
+# ---------------------------------------------------------------------------
+
+class PaymentRequest(BaseModel):
+    amount: int
+    currency: str
+
+
+@app.post("/payments")
+def create_payment(payload: PaymentRequest) -> dict:
+    """
+    Demo "external payment" endpoint.
+
+    For the purposes of the BrikPipe examples and the integration test
+    `tests/integration/test_external_payment.py`, this endpoint simply
+    returns a fixed approved response that matches the mocked provider:
+
+        {"status": "approved", "transactionId": "mock-tx-123"}
+
+    This keeps the example deterministic and avoids real outbound HTTP calls,
+    while still demonstrating the contract shape expected by other stacks.
+    """
+    # NOTE:
+    # We *don't* actually call EXTERNAL_API_BASE_URL here. The integration
+    # test just cares that POST /payments returns the approved shape.
+    return {
+        "status": "approved",
+        "transactionId": "mock-tx-123",
+    }
