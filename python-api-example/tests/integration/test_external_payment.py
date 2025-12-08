@@ -2,7 +2,7 @@ import os
 import requests
 import responses
 
-from .mocks.external_api_mocks import mock_external_payment
+from tests.integration.mocks.external_api_mocks import mock_external_payment
 
 APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:8080")
 
