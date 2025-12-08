@@ -16,6 +16,7 @@ func main() {
 	// Register HTTP routes.
 	http.HandleFunc("/", RootHandler)
 	http.HandleFunc("/health", HealthHandler)
+	http.HandleFunc("/payments", PaymentsHandler)
 
 	// Start the HTTP server on port 8080.
 	// In CI, we typically don't run this binary as a long-running process;
