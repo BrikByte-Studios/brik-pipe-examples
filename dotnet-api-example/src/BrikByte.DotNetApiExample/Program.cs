@@ -11,6 +11,10 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 var builder = WebApplication.CreateBuilder(args);
 
+// Existing services (Controllers, etc.)
+builder.Services.AddControllers();
+builder.Services.AddHttpClient("ExternalPayments");
+
 var app = builder.Build();
 
 
