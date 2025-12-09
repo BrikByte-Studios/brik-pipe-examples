@@ -63,7 +63,7 @@ test-unit: ensure-go-junit-report
 	go-junit-report < out/test-unit-report.json > out/junit-unit.xml
 	@echo "✅ UNIT JUnit report written to out/junit-unit.xml"
 
-# Optional: integration tests (only when explicitly run, and typically
+# Optional: integration tests (only when explicitly run, and typically.
 # driven by the BrikPipe integration-test runner with -tags=integration).
 test-integration: ensure-go-junit-report
 	@echo "🧪 Running Go INTEGRATION tests..."
