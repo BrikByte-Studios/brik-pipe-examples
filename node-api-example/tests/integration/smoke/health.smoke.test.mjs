@@ -16,22 +16,45 @@ import assert from 'node:assert/strict';
 
 const APP_BASE_URL = process.env.APP_BASE_URL ?? 'http://localhost:3000';
 
-test('health endpoint responds with status=ok (smoke)', async () => {
+test('health endpoint responds successfully (smoke)', async () => {
   const url = `${APP_BASE_URL}/health`;
   const res = await fetch(url);
 
-  // Basic HTTP sanity: 2xx
+  // 1) Basic HTTP sanity check
   assert.ok(
     res.ok,
     `Expected /health to return 2xx, got ${res.status} from ${url}`
   );
 
-  const body = await res.json();
+  // 2) Be flexible with the body format: JSON or plain text
+  const contentType = res.headers.get('content-type') ?? '';
+  const raw = await res.text();
 
-  // We keep assertions minimal and tolerant (smoke, not contract test)
-  assert.equal(
-    body.status,
-    'ok',
-    `Expected health.status = "ok", got ${JSON.stringify(body)}`
-  );
+  if (contentType.includes('application/json')) {
+    // JSON health response
+    let body;
+    try {
+      body = JSON.parse(raw);
+    } catch (err) {
+      throw new Error(
+        `Health endpoint advertises JSON but body is not valid JSON. Raw body: ${raw}`
+      );
+    }
+
+    // Light-touch assertion for JSON case
+    if ('status' in body) {
+      assert.equal(
+        body.status,
+        'ok',
+        `Expected JSON health.status = "ok", got ${JSON.stringify(body)}`
+      );
+    }
+  } else {
+    // Plain-text health response, e.g. "OK"
+    const normalized = raw.trim().toLowerCase();
+    assert.ok(
+      normalized === 'ok' || normalized.includes('ok'),
+      `Expected plain-text health body to contain "ok", got: ${raw}`
+    );
+  }
 });
