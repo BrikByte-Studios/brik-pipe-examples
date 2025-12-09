@@ -28,7 +28,7 @@ jobs:
       enable_cache_service: false
 
       test_language: "java"
-      test_command: "./mvn -B verify -Pintegration-tests -Dtest='*SmokeIT'"
+      test_command: "./mvnw -B verify -Pintegration-tests -Dtest='*SmokeIT'"
 
 
       healthcheck_path: "/health"
