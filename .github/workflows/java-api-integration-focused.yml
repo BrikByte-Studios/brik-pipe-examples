@@ -1,0 +1,37 @@
+name: "Java API — Focused Integration (Smoke)"
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "java-api-example/**"
+      - ".github/workflows/java-api-integration-focused.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "java-api-example/**"
+      - ".github/workflows/java-api-integration-focused.yml"
+
+jobs:
+  integration:
+    name: "Java API — Focused Smoke Integration"
+    uses: BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
+    secrets: inherit
+
+    with:
+      image: ghcr.io/brikbyte-studios/example-java-api:sha-${{ github.sha }}
+      dockerfile: java-api-example/Dockerfile
+      context: java-api-example
+
+      db_image: postgres:16
+      cache_image: redis:7
+      enable_cache_service: false
+
+      test_language: "java"
+      test_command: "./mvnw -B verify -Pintegration-tests -Dtest='*SmokeIT'"
+
+
+      healthcheck_path: "/health"
+      healthcheck_timeout: "60"
+      app_port: "8080"
+      db_port: "5432"
