@@ -27,7 +27,11 @@ lerna-debug.log*
 
 # Local environment files
 .env
-.env.*
+!.env.integ.example
+# Integration env (generated / local-only)
+.env.integ.runtime
+.env.integ.local
+
 !.env.example
 
 # PM2 logs
