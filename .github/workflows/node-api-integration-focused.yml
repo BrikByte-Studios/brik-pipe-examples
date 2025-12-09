@@ -32,7 +32,7 @@ jobs:
     name: "Node API — Focused Containerized Integration Tests"
 
     # Contingency: allow emergency opt-out via PR label.
-    # If the PR has label "skip-integ-tests", this job is skipped.
+    # If the PR has label "skip-integ-tests", this job is skipped
     if: >
       github.event_name != 'pull_request' ||
       !contains(github.event.pull_request.labels.*.name, 'skip-integ-tests')
