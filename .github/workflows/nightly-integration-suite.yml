@@ -1,0 +1,92 @@
+# BrikPipe — Nightly Full Integration Suite
+# -----------------------------------------
+# Purpose:
+#   - Run full, potentially slower integration suites for all example services:
+#       * node-api-example
+#       * python-api-example
+#       * java-api-example
+#       * go-api-example
+#       * dotnet-api-example
+#   - Keeps PR CI fast (focused workflows), but still provides deep coverage daily.
+#
+# Mitigations implemented:
+#   - Mitigation 2: full suites reserved for nightly cron, not PRs.
+#   - Safeguards: each service runs as a separate matrix job (clear isolation).
+#   - Timeouts: enforced inside reusable integration-test.yml (5 minutes/job).
+
+name: "BrikPipe — Nightly Full Integration Suite"
+
+on:
+  schedule:
+    # Every night at 22:00 UTC (~00:00 SAST) – adjust as you prefer
+    - cron: "0 22 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  nightly-integration:
+    name: "Nightly Integration — ${{ matrix.service_name }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service_name: "node-api-example"
+            image: ghcr.io/brikbyte-studios/example-node-api:sha-${{ github.sha }}
+            dockerfile: node-api-example/Dockerfile
+            context: node-api-example
+            app_port: "3000"
+            test_language: "node"
+            test_command: ""  # full suite: defaults (e.g., npm run test:integration)
+
+          - service_name: "python-api-example"
+            image: ghcr.io/brikbyte-studios/example-python-api:sha-${{ github.sha }}
+            dockerfile: python-api-example/Dockerfile
+            context: python-api-example
+            app_port: "8080"
+            test_language: "python"
+            test_command: ""  # full suite: pytest -m integration
+
+          - service_name: "java-api-example"
+            image: ghcr.io/brikbyte-studios/example-java-api:sha-${{ github.sha }}
+            dockerfile: java-api-example/Dockerfile
+            context: java-api-example
+            app_port: "8080"
+            test_language: "java"
+            test_command: ""  # full suite: maven/gradle defaults
+
+          - service_name: "go-api-example"
+            image: ghcr.io/brikbyte-studios/example-go-api:sha-${{ github.sha }}
+            dockerfile: go-api-example/Dockerfile
+            context: go-api-example
+            app_port: "8080"
+            test_language: "go"
+            test_command: ""  # full suite: go test -tags=integration ./... -run Integration
+
+          - service_name: "dotnet-api-example"
+            image: ghcr.io/brikbyte-studios/example-dotnet-api:sha-${{ github.sha }}
+            dockerfile: dotnet-api-example/Dockerfile
+            context: dotnet-api-example
+            app_port: "8080"
+            test_language: "dotnet"
+            test_command: ""  # full suite: dotnet test (integration+unit as configured)
+
+    uses: BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
+    secrets: inherit
+
+    with:
+      image: ${{ matrix.image }}
+      dockerfile: ${{ matrix.dockerfile }}
+      context: ${{ matrix.context }}
+
+      db_image: postgres:16
+      cache_image: redis:7
+      # You can tune cache usage per service if needed:
+      enable_cache_service: ${{ matrix.service_name == 'node-api-example' || matrix.service_name == 'java-api-example' }}
+
+      test_language: ${{ matrix.test_language }}
+      test_command: ${{ matrix.test_command }}
+
+      healthcheck_path: "/health"
+      healthcheck_timeout: "60"
+
+      app_port: ${{ matrix.app_port }}
+      db_port: "5432"
