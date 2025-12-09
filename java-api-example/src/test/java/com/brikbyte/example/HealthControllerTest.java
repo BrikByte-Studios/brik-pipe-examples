@@ -1,14 +1,15 @@
 package com.brikbyte.example;
 
-import com.brikbyte.example.controller.HealthController;
-import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+
+import com.brikbyte.example.controller.RootAndPaymentsController;
 
 public class HealthControllerTest {
 
     @Test
     void healthEndpointReturnsOK() {
-        HealthController controller = new HealthController();
-        assertThat(controller.health()).isEqualTo("OK");
+        RootAndPaymentsController controller = new RootAndPaymentsController();
+        assertThat(controller.health().get("status")).isEqualTo("ok");
     }
 }
