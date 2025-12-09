@@ -10,95 +10,161 @@ import (
 	"testing"
 )
 
-// stubRoundTripper allows us to fake outbound HTTP calls
-type stubRoundTripper struct {
-	fn func(req *http.Request) (*http.Response, error)
-}
+// Helper to reset global state between tests
+func resetEnvAndClient(t *testing.T, originalClient *http.Client, originalBaseURL string) {
+	t.Helper()
 
-func (s *stubRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	return s.fn(req)
-}
+	httpClient = originalClient
 
-func stubHTTPClient(fn func(req *http.Request) (*http.Response, error)) {
-	httpClient = &http.Client{
-		Transport: &stubRoundTripper{fn: fn},
+	if originalBaseURL == "" {
+		_ = os.Unsetenv("EXTERNAL_API_BASE_URL")
+	} else {
+		_ = os.Setenv("EXTERNAL_API_BASE_URL", originalBaseURL)
 	}
 }
 
-func resetHTTPClient() {
-	httpClient = http.DefaultClient
-}
+// --- Test: method not allowed (non-POST) ------------------------------------
 
-func TestPayments_OK_WithMockedExternalAPI(t *testing.T) {
-	defer resetHTTPClient()
-	os.Setenv("EXTERNAL_API_BASE_URL", "http://mock-api")
-	defer os.Unsetenv("EXTERNAL_API_BASE_URL")
-
-	// ✅ Mock external provider response
-	stubHTTPClient(func(req *http.Request) (*http.Response, error) {
-		body := io.NopCloser(bytes.NewBufferString(`
-			{"status":"approved","transactionId":"mock-tx-123"}
-		`))
-
-		return &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       body,
-			Header:     make(http.Header),
-		}, nil
-	})
-
-	reqBody := `{"amount":100,"currency":"ZAR"}`
-	req := httptest.NewRequest(http.MethodPost, "/payments", bytes.NewBufferString(reqBody))
-	rec := httptest.NewRecorder()
-
-	PaymentsHandler(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
-	}
-
-	var resp PaymentResponse
-	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
-		t.Fatal(err)
-	}
-
-	if resp.Status != "approved" {
-		t.Fatalf("unexpected status: %s", resp.Status)
-	}
-}
-
-func TestPayments_Fails_WithoutExternalBaseURL(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "/payments", bytes.NewBufferString(`{}`))
-	rec := httptest.NewRecorder()
-
-	PaymentsHandler(rec, req)
-
-	if rec.Code != http.StatusInternalServerError {
-		t.Fatalf("expected 500, got %d", rec.Code)
-	}
-}
-
-func TestPayments_Rejects_InvalidJSON(t *testing.T) {
-	os.Setenv("EXTERNAL_API_BASE_URL", "http://mock")
-	defer os.Unsetenv("EXTERNAL_API_BASE_URL")
-
-	req := httptest.NewRequest(http.MethodPost, "/payments", bytes.NewBufferString(`invalid`))
-	rec := httptest.NewRecorder()
-
-	PaymentsHandler(rec, req)
-
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", rec.Code)
-	}
-}
-
-func TestPayments_Rejects_WrongMethod(t *testing.T) {
+func TestPaymentsHandler_MethodNotAllowed(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/payments", nil)
-	rec := httptest.NewRecorder()
+	rr := httptest.NewRecorder()
 
-	PaymentsHandler(rec, req)
+	PaymentsHandler(rr, req)
 
-	if rec.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("expected 405, got %d", rec.Code)
+	if rr.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected status %d, got %d", http.StatusMethodNotAllowed, rr.Code)
+	}
+}
+
+// --- Test: invalid JSON body -----------------------------------------------
+
+func TestPaymentsHandler_InvalidJSON(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/payments", bytes.NewBufferString("not-json"))
+	rr := httptest.NewRecorder()
+
+	PaymentsHandler(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, rr.Code)
+	}
+	if body := rr.Body.String(); body == "" {
+		t.Fatalf("expected an error body, got empty string")
+	}
+}
+
+// --- Test: missing EXTERNAL_API_BASE_URL ------------------------------------
+
+func TestPaymentsHandler_MissingBaseURL(t *testing.T) {
+	// Save and restore state
+	origClient := httpClient
+	origBaseURL := os.Getenv("EXTERNAL_API_BASE_URL")
+	defer resetEnvAndClient(t, origClient, origBaseURL)
+
+	_ = os.Unsetenv("EXTERNAL_API_BASE_URL")
+
+	payload := PaymentRequest{Amount: 100, Currency: "ZAR"}
+	body, _ := json.Marshal(&payload)
+
+	req := httptest.NewRequest(http.MethodPost, "/payments", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+
+	PaymentsHandler(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status %d, got %d", http.StatusInternalServerError, rr.Code)
+	}
+	if got := rr.Body.String(); got == "" {
+		t.Fatalf("expected error message body, got empty")
+	}
+}
+
+// --- Test: external provider returns non-200 --------------------------------
+
+type failingRoundTripper struct{}
+
+func (f *failingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Simulate provider returning 500
+	return &http.Response{
+		StatusCode: http.StatusInternalServerError,
+		Body:       io.NopCloser(bytes.NewBufferString("boom")),
+		Header:     make(http.Header),
+	}, nil
+}
+
+func TestPaymentsHandler_ExternalFailure(t *testing.T) {
+	origClient := httpClient
+	origBaseURL := os.Getenv("EXTERNAL_API_BASE_URL")
+	defer resetEnvAndClient(t, origClient, origBaseURL)
+
+	_ = os.Setenv("EXTERNAL_API_BASE_URL", "http://fake-provider")
+
+	// Inject a client that always returns 500
+	httpClient = &http.Client{
+		Transport: &failingRoundTripper{},
+	}
+
+	payload := PaymentRequest{Amount: 100, Currency: "ZAR"}
+	body, _ := json.Marshal(&payload)
+
+	req := httptest.NewRequest(http.MethodPost, "/payments", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	PaymentsHandler(rr, req)
+
+	if rr.Code != http.StatusBadGateway {
+		t.Fatalf("expected status %d, got %d", http.StatusBadGateway, rr.Code)
+	}
+}
+
+// --- Test: happy-path external provider success -----------------------------
+
+type successRoundTripper struct{}
+
+func (s *successRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	respBody := `{"status":"approved","transactionId":"unit-test-tx-123"}`
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewBufferString(respBody)),
+		Header:     make(http.Header),
+	}, nil
+}
+
+func TestPaymentsHandler_Success(t *testing.T) {
+	origClient := httpClient
+	origBaseURL := os.Getenv("EXTERNAL_API_BASE_URL")
+	defer resetEnvAndClient(t, origClient, origBaseURL)
+
+	_ = os.Setenv("EXTERNAL_API_BASE_URL", "http://fake-provider")
+
+	httpClient = &http.Client{
+		Transport: &successRoundTripper{},
+	}
+
+	payload := PaymentRequest{Amount: 100, Currency: "ZAR"}
+	body, _ := json.Marshal(&payload)
+
+	req := httptest.NewRequest(http.MethodPost, "/payments", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	PaymentsHandler(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, rr.Code)
+	}
+
+	var parsed PaymentResponse
+	if err := json.Unmarshal(rr.Body.Bytes(), &parsed); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	if parsed.Status != "approved" {
+		t.Fatalf("expected status 'approved', got %q", parsed.Status)
+	}
+	if parsed.TransactionID == "" {
+		t.Fatalf("expected non-empty transaction ID")
 	}
 }
