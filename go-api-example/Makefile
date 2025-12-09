@@ -37,7 +37,7 @@ help:
 	@echo "  make clean           - Remove $(BIN_DIR)/ directory"
 
 # Internal helper: ensure go-junit-report is installed on PATH.
-# This is used by both test-unit and test-integration.
+# This is used by both test-unit and test-integration
 ensure-go-junit-report:
 	@echo "🔎 Checking for go-junit-report..."
 	@if ! command -v go-junit-report >/dev/null 2>&1; then \
