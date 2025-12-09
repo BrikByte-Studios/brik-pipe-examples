@@ -1,0 +1,35 @@
+name: "Go API — Focused Integration (Smoke)"
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "go-api-example/**"
+      - ".github/workflows/go-api-integration-focused.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "go-api-example/**"
+      - ".github/workflows/go-api-integration-focused.yml"
+
+jobs:
+  integration:
+    name: "Go API — Focused Smoke Integration"
+    uses: BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
+    secrets: inherit
+
+    with:
+      image: ghcr.io/brikbyte-studios/example-go-api:sha-${{ github.sha }}
+      dockerfile: go-api-example/Dockerfile
+      context: go-api-example
+
+      db_image: postgres:16
+      enable_cache_service: false
+
+      test_language: "go"
+      test_command: "go test ./... -tags=smoke -run Smoke"
+
+      healthcheck_path: "/health"
+      healthcheck_timeout: "45"
+      app_port: "8080"
+      db_port: "5432"
