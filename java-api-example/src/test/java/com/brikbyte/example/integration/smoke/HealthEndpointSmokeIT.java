@@ -1,6 +1,8 @@
 package com.brikbyte.example.integration.smoke;
 
-import com.brikbyte.example.JavaApiExampleApplication;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,9 +11,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.ResponseEntity;
 
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import com.brikbyte.example.JavaApiExampleApplication;
 
 /**
  * SMOKE IT: Minimal verification that the service is up and reporting healthy.
@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * Naming convention:
  *   - Ends with "IT" so Maven Failsafe picks it up as an integration test:
- *       **/*IT.java
+ *     
  */
 @SpringBootTest(
         classes = JavaApiExampleApplication.class,
