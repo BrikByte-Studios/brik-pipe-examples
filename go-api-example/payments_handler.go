@@ -10,7 +10,7 @@ import (
 
 // Align with smoke test payload:
 //   { "amount": 100.0, "currency": "ZAR", "source": "smoke-test" }
-type PaymentRequest struct struct {
+type PaymentRequest struct {
 	Amount   float64 `json:"amount"`           // use float64 to accept 100.0
 	Currency string  `json:"currency"`
 	Source   string  `json:"source,omitempty"` // optional, but present in smoke tests
