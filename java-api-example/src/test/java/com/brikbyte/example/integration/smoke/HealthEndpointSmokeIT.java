@@ -18,7 +18,7 @@ import com.brikbyte.example.JavaApiExampleApplication;
  *
  * Runs as a Spring Boot integration test using a random port, so it:
  *   - Boots the full application context.
- *   - Issues a real HTTP GET to /health.
+ *   - Issues a real HTTP GET to /health
  *
  * Naming convention:
  *   - Ends with "IT" so Maven Failsafe picks it up as an integration test:
