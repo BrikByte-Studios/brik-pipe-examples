@@ -8,12 +8,10 @@ import (
 	"os"
 )
 
-// Align with smoke test payload:
-//   { "amount": 100.0, "currency": "ZAR", "source": "smoke-test" }
 type PaymentRequest struct {
-	Amount   float64 `json:"amount"`           // use float64 to accept 100.0
+	Amount   float64 `json:"amount"`           // accept 100.0
 	Currency string  `json:"currency"`
-	Source   string  `json:"source,omitempty"` // optional, but present in smoke tests
+	Source   string  `json:"source,omitempty"` // used by smoke tests
 }
 
 type PaymentResponse struct {
@@ -37,19 +35,18 @@ func PaymentsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	baseURL := os.Getenv("EXTERNAL_API_BASE_URL")
+	stubMode := os.Getenv("EXTERNAL_API_STUB_MODE") == "true"
 
 	// -----------------------------------------------------------------
-	// Smoke-friendly behaviour:
-	// If EXTERNAL_API_BASE_URL is NOT configured, return a stubbed 200.
-	// This lets focused integration/smoke tests pass without wiring
-	// the real external provider.
+	// Smoke-friendly path:
+	// If EXTERNAL_API_BASE_URL is missing BUT stub mode is enabled,
+	// return a deterministic approved response instead of 500.
 	// -----------------------------------------------------------------
-	if baseURL == "" {
-		log.Println("[SMOKE] EXTERNAL_API_BASE_URL not configured; returning stub approval response")
+	if baseURL == "" && stubMode {
+		log.Println("[SMOKE] EXTERNAL_API_BASE_URL not set; returning stub approval response")
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-
 		_ = json.NewEncoder(w).Encode(PaymentResponse{
 			Status:        "approved",
 			TransactionID: "smoke-tx-123",
@@ -58,9 +55,13 @@ func PaymentsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// -----------------------------------------------------------------
-	// Real external provider path:
-	// Only executed when EXTERNAL_API_BASE_URL is set (e.g. full ITs).
+	// Original behaviour for normal runs / unit tests:
 	// -----------------------------------------------------------------
+	if baseURL == "" {
+		http.Error(w, "EXTERNAL_API_BASE_URL not configured", http.StatusInternalServerError)
+		return
+	}
+
 	jsonBody, _ := json.Marshal(req)
 
 	resp, err := httpClient.Post(
