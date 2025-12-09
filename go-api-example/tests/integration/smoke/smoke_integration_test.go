@@ -31,7 +31,7 @@ func newHTTPClient() *http.Client {
 // TestHealthEndpointSmoke
 // ------------------------
 // Smoke-level check that the /health endpoint responds with 2xx.
-// We *do not* assume JSON here, only that the service is alive.
+// We *do not* assume JSON here, only that the service is alive
 func TestHealthEndpointSmoke(t *testing.T) {
 	t.Helper()
 
