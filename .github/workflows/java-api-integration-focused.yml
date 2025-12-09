@@ -15,6 +15,13 @@ on:
 jobs:
   integration:
     name: "Java API — Focused Smoke Integration"
+
+    # Contingency: allow emergency opt-out via PR label.
+    # If the PR has label "skip-integ-tests", this job is skipped.
+    if: >
+      github.event_name != 'pull_request' ||
+      !contains(github.event.pull_request.labels.*.name, 'skip-integ-tests')
+      
     uses: BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
     secrets: inherit
 
