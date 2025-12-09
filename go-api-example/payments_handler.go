@@ -19,7 +19,7 @@ type PaymentResponse struct {
 	TransactionID string `json:"transactionId"`
 }
 
-// httpClient is injectable for unit tests
+// httpClient is injectable for unit tests.
 var httpClient = http.DefaultClient
 
 func PaymentsHandler(w http.ResponseWriter, r *http.Request) {
