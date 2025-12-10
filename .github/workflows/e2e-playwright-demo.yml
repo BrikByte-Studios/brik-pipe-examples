@@ -1,0 +1,50 @@
+# E2E Playwright workflow scoped to the node-ui-example service.
+#
+# Responsibilities:
+# - Trigger Playwright E2E tests whenever node-ui-example changes.
+# - Delegate actual E2E execution to the reusable workflow in BrikByte-Studios/.github.
+# - Target the staging/base URL for UI flows via E2E_TARGET_URL.
+#
+# Assumptions:
+# - Reusable workflow exists at:
+#     BrikByte-Studios/.github/.github/workflows/e2e-playwright.yml
+# - That workflow defines an input `service_workdir` and uses it as the working directory
+#   when running `npm install` and `npx playwright test`.
+
+name: "E2E - Playwright (node-ui-example)"
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    # Only run when the node-ui-example app or this workflow changes
+    paths:
+      - "node-ui-example/**"
+      - ".github/workflows/e2e-playwright-node-ui.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "node-ui-example/**"
+      - ".github/workflows/e2e-playwright-node-ui.yml"
+
+jobs:
+  e2e-ui:
+    name: "E2E UI (node-ui-example)"
+    # Reuse the org-level Playwright workflow
+    uses: BrikByte-Studios/.github/.github/workflows/e2e-playwright.yml@v1
+    with:
+      # Base URL for the UI under test (staging or local env fronted by CI).
+      # Update this to whatever your node-ui-example staging URL is.
+      target_url: "https://practicetestautomation.com"
+
+      # Browser coverage – start with Chromium + Firefox, WebKit optional.
+      enable_firefox: true
+      enable_webkit: false
+
+      # Parallelism and flake handling
+      workers: "50%"
+      retries: 1
+      trace_mode: "on-first-retry"
+
+      # IMPORTANT: tell the reusable workflow to operate inside node-ui-example/
+      # (so npm install & Playwright use that package.json + tests).
+      service_workdir: "node-ui-example"
