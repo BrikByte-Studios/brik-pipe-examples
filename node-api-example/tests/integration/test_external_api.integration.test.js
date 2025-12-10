@@ -1,8 +1,9 @@
-// File: tests/integration/test_external_api.integration.test.js
-
 /**
  * Integration test verifying that our service calls a mocked external API
  * instead of the real provider.
+ *
+ * This test validates the full flow:
+ * App → Mocked External Provider → App → Client
  */
 
 import test, { describe, it, before, after } from "node:test";
@@ -22,9 +23,10 @@ before(async () => {
   // Start mock external API server
   await startMockServer();
 
-  // Point the service to the mock base URL (if it reads this at runtime)
-  // NOTE: This only affects *this process*; if your app reads EXTERNAL_API_BASE_URL
-  // at startup, you should also set this in the app container env in your workflow.
+  // Point the service to the mock base URL (runtime override for this process)
+  // NOTE:
+  // If your app reads EXTERNAL_API_BASE_URL only at container startup,
+  // this must also be set in the CI workflow environment.
   process.env.EXTERNAL_API_BASE_URL = `http://host.docker.internal:${MOCK_PORT}`;
 });
 
@@ -35,15 +37,25 @@ after(async () => {
 
 describe("Integration: external payment flow (mocked)", () => {
   it("creates payment using mocked provider", async () => {
+    // Act: call the service endpoint that triggers an external API call
     const response = await fetch(`${APP_BASE_URL}/payments`, {
-      amount: 100,
-      currency: "ZAR",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        amount: 100,
+        currency: "ZAR",
+      }),
     });
-    // Assume service exposes /payments that calls EXTERNAL_API_BASE_URL
+
+    // Transport-level assertion (HTTP)
+    assert.equal(response.status, 200, "HTTP status should be 200");
+
     const data = await response.json();
 
-    assert.equal(data.status, 200);
-    assert.deepEqual(data.data, {
+    // Business-level assertion (mocked provider response)
+    assert.deepEqual(data, {
       status: "approved",
       transactionId: "mock-tx-123",
     });
