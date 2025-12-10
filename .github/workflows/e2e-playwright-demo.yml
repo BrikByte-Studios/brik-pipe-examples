@@ -19,12 +19,12 @@ on:
     # Only run when the node-ui-example app or this workflow changes
     paths:
       - "node-ui-example/**"
-      - ".github/workflows/e2e-playwright-node-ui.yml"
+      - ".github/workflows/e2e-playwright-demo.yml"
   push:
     branches: [ main ]
     paths:
       - "node-ui-example/**"
-      - ".github/workflows/e2e-playwright-node-ui.yml"
+      - ".github/workflows/e2e-playwright-demo.yml"
 
 jobs:
   e2e-ui:
