@@ -5,7 +5,6 @@
  * instead of the real provider.
  */
 
-import axios from "axios";
 import test, { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 
@@ -36,14 +35,15 @@ after(async () => {
 
 describe("Integration: external payment flow (mocked)", () => {
   it("creates payment using mocked provider", async () => {
-    // Assume service exposes /payments that calls EXTERNAL_API_BASE_URL
-    const res = await axios.post(`${APP_BASE_URL}/payments`, {
+    const response = await fetch(`${APP_BASE_URL}/payments`, {
       amount: 100,
       currency: "ZAR",
     });
+    // Assume service exposes /payments that calls EXTERNAL_API_BASE_URL
+    const data = await response.json();
 
-    assert.equal(res.status, 200);
-    assert.deepEqual(res.data, {
+    assert.equal(data.status, 200);
+    assert.deepEqual(data.data, {
       status: "approved",
       transactionId: "mock-tx-123",
     });
