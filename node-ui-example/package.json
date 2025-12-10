@@ -1,0 +1,29 @@
+{
+  "name": "node-ui-example",
+  "version": "1.0.0",
+  "description": "Minimal Node.js UI example for validating BrikByteOS Playwright E2E workflows.",
+  "type": "module",
+  "private": true,
+
+  "scripts": {
+    "dev": "node src/server.mjs",
+    "start": "node src/server.mjs",
+
+    "test:e2e": "npx playwright test",
+    "test:e2e:ui": "E2E_TARGET_URL=http://localhost:3000 npx playwright test",
+
+    "playwright:install": "npx playwright install --with-deps"
+  },
+
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  },
+
+  "engines": {
+    "node": ">=20"
+  }
+}

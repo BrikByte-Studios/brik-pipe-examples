@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: node-ui-example-app
+    ports:
+      - "3000:3000"         # Local access via http://localhost:3000
+    environment:
+      - PORT=3000
+    # For CI you usually don't need volumes; keep it deterministic.
+    # volumes:
+    #   - ./node-ui-example:/usr/src/app

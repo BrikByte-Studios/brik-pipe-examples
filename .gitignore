@@ -211,3 +211,13 @@ $RECYCLE.BIN/
 *.log
 
 coverage.out
+
+
+# --------------------------------------------------
+# Playwright E2E Artifacts (LOCAL ONLY)
+# --------------------------------------------------
+# Human-readable HTML reports
+playwright-report/
+
+# Raw test outputs: traces, screenshots, videos
+test-results/

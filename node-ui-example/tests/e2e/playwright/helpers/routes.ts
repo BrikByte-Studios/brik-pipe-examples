@@ -1,6 +1,8 @@
 // Centralised route helpers to avoid scattering hard-coded paths.
+//
+// This allows us to change paths in one place and keeps tests readable.
 
 export const routes = {
-  login: '/practice-test-login',
-  dashboard: '/logged-in-successfully',
-};
+  login: "/login",
+  dashboard: "/dashboard"
+} as const;

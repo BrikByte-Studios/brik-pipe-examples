@@ -9,7 +9,7 @@
  *
  * Conventions used here:
  * - Selectors use data-testid attributes where possible (stable, not tied to text).
- * - The test relies on the baseURL set in playwright.config.ts.
+ * - The test relies on the baseURL set in playwright.config.ts (E2E_TARGET_URL).
  * - Routes and users are imported from centralized helpers/fixtures.
  * - Retries for this suite can be tuned independently via describe.configure.
  */
@@ -39,13 +39,13 @@ test.describe("Authentication flow", () => {
     // 2) Fill in credentials using centralized test user fixture.
     // This avoids leaking hard-coded credentials inside the test body.
     // ---------------------------------------------------------------------
-    await page.getByTestId("username").fill(defaultStagingUser.userName);
-    await page.getByTestId("password").fill(defaultStagingUser.password);
+    await page.getByTestId("login-email").fill(defaultStagingUser.email);
+    await page.getByTestId("login-password").fill(defaultStagingUser.password);
 
     // ---------------------------------------------------------------------
     // 3) Submit the login form.
     // ---------------------------------------------------------------------
-    await page.getByTestId("submit").click();
+    await page.getByTestId("login-submit").click();
 
     // ---------------------------------------------------------------------
     // 4) Assert that we land on the dashboard.
@@ -55,26 +55,26 @@ test.describe("Authentication flow", () => {
     // ---------------------------------------------------------------------
     // 5) Validate that a key dashboard element is visible.
     // ---------------------------------------------------------------------
-    // await expect(page.getByTestId("dashboard-welcome")).toBeVisible();
+    await expect(page.getByTestId("dashboard-welcome")).toBeVisible();
 
     // ---------------------------------------------------------------------
-    // 6) Perform logout.
+    // 6) Perform logout via the "user menu".
     // NOTE:
-    // - These selectors assume a user menu abstraction.
-    // - Adjust as needed if your UI uses a simpler logout button.
+    // - The server renders both user-menu-toggle and user-menu-logout.
+    // - In a richer UI, toggle might open a dropdown; here it's always clickable.
     // ---------------------------------------------------------------------
-    // await page.getByTestId("user-menu-toggle").click();
-    // await page.getByTestId("user-menu-logout").click();
+    await page.getByTestId("user-menu-toggle").click();
+    await page.getByTestId("user-menu-logout").click();
 
-    // // ---------------------------------------------------------------------
-    // // 7) Assert that the user is redirected back to the login page.
-    // // ---------------------------------------------------------------------
-    // await expect(page).toHaveURL(new RegExp(`${routes.login}$`));
+    // ---------------------------------------------------------------------
+    // 7) Assert that the user is redirected back to the login page.
+    // ---------------------------------------------------------------------
+    await expect(page).toHaveURL(new RegExp(`${routes.login}$`));
 
-    // // ---------------------------------------------------------------------
-    // // 8) Optional: Validate that the login form is visible again.
-    // // This confirms a clean logout and ready state for the next test.
-    // // ---------------------------------------------------------------------
-    // await expect(page.getByTestId("username")).toBeVisible();
+    // ---------------------------------------------------------------------
+    // 8) Optional: Validate that the login form is visible again.
+    // This confirms a clean logout and ready state for the next test.
+    // ---------------------------------------------------------------------
+    await expect(page.getByTestId("login-email")).toBeVisible();
   });
 });
