@@ -30,7 +30,7 @@ jobs:
   e2e-ui:
     name: "E2E UI (node-ui-example)"
     # Reuse the org-level Playwright workflow
-    uses: BrikByte-Studios/.github/.github/workflows/e2e-playwright.yml@v1
+    uses: BrikByte-Studios/.github/.github/workflows/e2e-playwright.yml@main
     with:
       # Base URL for the UI under test (staging or local env fronted by CI).
       # Update this to whatever your node-ui-example staging URL is.
