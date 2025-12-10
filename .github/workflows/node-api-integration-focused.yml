@@ -50,7 +50,7 @@ jobs:
       cache_image: redis:7
       enable_cache_service: true
 
-      # Language & test scope
+      # Language & test scope.
       test_language: "node"
 
       # FOCUSED/SCOPE: only smoke / critical integration tests
