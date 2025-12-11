@@ -1,0 +1,53 @@
+# --------------------------------------------------------------------
+# CODEOWNERS for node-ui-example E2E Playwright stack
+#
+# Purpose:
+# - Automatically request reviews from:
+#     * QA Automation Lead
+#     * DevOps Engineer
+#     * Frontend Lead
+#   whenever the E2E workflow, Playwright config, or E2E tests change.
+#
+# NOTE:
+# - Replace @org/teams or @user handles with your real GitHub teams/users.
+# --------------------------------------------------------------------
+
+# E2E workflow wiring for node-ui-example
+.github/workflows/e2e-playwright-demo.yml \
+  @BrikByte-Studios/qa-automation @BrikByte-Studios/devops
+
+# Playwright config and helpers for node-ui-example
+node-ui-example/playwright.config.ts \
+  @BrikByte-Studios/qa-automation @BrikByte-Studios/devops
+
+node-ui-example/tests/e2e/playwright/** \
+  @BrikByte-Studios/qa-automation @BrikByte-Studios/devops
+node-ui-example/tests/e2e/playwright/helpers/** \
+  @BrikByte-Studios/qa-automation @BrikByte-Studios/devops
+node-ui-example/tests/e2e/playwright/fixtures/** \
+  @BrikByte-Studios/qa-automation @BrikByte-Studios/devops
+
+# -------------------------------
+# Integration Tests (ALL LANGUAGES)
+# -------------------------------
+**/tests/integration/**         @BrikByte-Studios/qa-automation @BrikByte-Studios/platform-leads
+
+# -------------------------------
+# E2E / Playwright Tests
+# -------------------------------
+**/tests/e2e/**                 @BrikByte-Studios/qa-automation @BrikByte-Studios/platform-leads
+**/tests/e2e/playwright/**      @BrikByte-Studios/qa-automation @BrikByte-Studios/platform-leads
+
+# -------------------------------
+# CI / Pipeline Governance
+# -------------------------------
+.github/workflows/**           @BrikByte-Studios/platform-leads
+.github/policy.yml             @BrikByte-Studios/platform-leads
+
+# -------------------------------
+# Audit & Compliance Evidence
+# -------------------------------
+.audit/**                      @BrikByte-Studios/platform-leads @BrikByte-Studios/devops
+
+# Catch-all (REQUIRED and must be last)
+*                                    @BrikByte-Studios/platform-leads @BrikByte-Studios/sre
