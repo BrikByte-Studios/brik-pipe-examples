@@ -5,18 +5,17 @@
 # - Demonstrate that sharded runs achieve ≥ 30% faster wall-clock time
 #   compared to a baseline single-worker run.
 #
-# Notes:
-# - Uses the reusable Playwright workflow in BrikByte-Studios/.github.
-# - Baseline job: workers = 1 (no sharding).
-# - Sharded job:  workers = 50% (parallelism enabled).
-# - Compare job:  downloads .audit artifacts and verifies ≥ 30% reduction.
+# This is NOT meant to run on every PR; think of it as:
+# - manual trigger, or
+# - scheduled once in a while to validate assumptions
 
 name: "Benchmark - E2E Playwright Sharding (node-ui-example)"
 
 on:
   workflow_dispatch: {}
+  # or schedule:
   schedule:
-    - cron: "0 3 * * 0" # Sundays at 03:00 UTC
+    - cron: "0 3 * * 0"  # Sundays at 03:00 UTC
 
 jobs:
   baseline:
@@ -30,7 +29,7 @@ jobs:
       retries: 0
       trace_mode: "off"
       service_workdir: "node-ui-example"
-      artifact_suffix: "-baseline"
+      artifact_suffix: "-baseline"  
 
   sharded:
     name: "Sharded E2E (workers=50%)"
@@ -43,7 +42,7 @@ jobs:
       retries: 0
       trace_mode: "off"
       service_workdir: "node-ui-example"
-      artifact_suffix: "-sharded"
+      artifact_suffix: "-sharded" 
 
   compare:
     name: "Compare baseline vs sharded duration"
@@ -54,76 +53,33 @@ jobs:
       - name: "Checkout repo"
         uses: actions/checkout@v4
 
-      - name: "Download baseline audit artifact"
+      # Download the E2E audit slices produced by the reusable workflow
+      - name: "Download baseline E2E audit slice"
         uses: actions/download-artifact@v4
         with:
-          # From baseline job:
-          # e2e-audit-node-ui-example-chromium-workers-1-baseline
+          # Must match upload name from reusable workflow:
+          # e2e-audit-<service_workdir>-<browser>-workers-<workers><artifact_suffix>
           name: "e2e-audit-node-ui-example-chromium-workers-1-baseline"
           path: "audit-baseline"
 
-      - name: "Download sharded audit artifact"
+      - name: "Download sharded E2E audit slice"
         uses: actions/download-artifact@v4
         with:
-          # From sharded job:
-          # e2e-audit-node-ui-example-chromium-workers-50%-sharded
           name: "e2e-audit-node-ui-example-chromium-workers-50%-sharded"
           path: "audit-sharded"
 
       - name: "Compute sharding impact"
         run: |
-          set -euo pipefail
+            set -euo pipefail
 
-          echo "Scanning audit-baseline & audit-sharded for metadata.json..."
+            BASELINE_META=$(find audit-baseline -name "metadata.json" | head -n1)
+            SHARDED_META=$(find audit-sharded -name "metadata.json" | head -n1)
 
-          # Find metadata.json in each downloaded artifact
-          BASELINE_META=$(find audit-baseline -name "metadata.json" -print | head -n1 || true)
-          SHARDED_META=$(find audit-sharded -name "metadata.json" -print | head -n1 || true)
+            echo "Baseline metadata: ${BASELINE_META}"
+            echo "Sharded metadata: ${SHARDED_META}"
 
-          echo "Baseline metadata: ${BASELINE_META}"
-          echo "Sharded metadata: ${SHARDED_META}"
+            python .github/scripts/compute_sharding.py "${BASELINE_META}" "${SHARDED_META}"
 
-          if [ ! -f "${BASELINE_META}" ] || [ ! -f "${SHARDED_META}" ]; then
-            echo "ERROR: Could not locate both baseline and sharded metadata.json."
-            exit 1
-          fi
 
-          BASELINE_SEC=$(jq -r '.duration_seconds' "${BASELINE_META}")
-          SHARDED_SEC=$(jq -r '.duration_seconds' "${SHARDED_META}")
 
-          echo "Baseline duration (s): ${BASELINE_SEC}"
-          echo "Sharded  duration (s): ${SHARDED_SEC}"
 
-          if [ "${BASELINE_SEC}" -le 0 ] || [ "${SHARDED_SEC}" -le 0 ]; then
-            echo "ERROR: Invalid durations in metadata."
-            exit 1
-          fi
-
-          # Compute reduction percentage:
-          REDUCTION=$(
-            python - "$BASELINE_SEC" "$SHARDED_SEC" << 'EOF'
-import sys
-baseline = float(sys.argv[1])
-sharded = float(sys.argv[2])
-reduction = (baseline - sharded) / baseline * 100.0
-print(f"{reduction:.2f}")
-EOF
-          )
-
-          echo "Sharding reduction (%): ${REDUCTION}"
-
-          # Pass/fail threshold: ≥ 30% reduction
-          PASS=$(
-            python - "$REDUCTION" << 'EOF'
-import sys
-reduction = float(sys.argv[1])
-print("1" if reduction >= 30.0 else "0")
-EOF
-          )
-
-          if [ "${PASS}" = "1" ]; then
-            echo "✅ Sharding impact meets target (≥ 30% faster)."
-          else
-            echo "❌ Sharding impact below target (< 30% faster)."
-            exit 1
-          fi
