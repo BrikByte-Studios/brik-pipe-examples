@@ -7,7 +7,7 @@
 #
 # This is NOT meant to run on every PR; think of it as:
 # - manual trigger, or
-# - scheduled once in a while to validate assumptions
+# - scheduled once in a while to validate assumptions.
 
 name: "Benchmark - E2E Playwright Sharding (node-ui-example)"
 
