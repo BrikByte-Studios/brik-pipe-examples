@@ -108,7 +108,7 @@ const enableWebkit: boolean = process.env.PW_ENABLE_WEBKIT === '1';
 const workersEnv: string | undefined = process.env.PW_WORKERS;
 const retriesEnv: string | undefined = process.env.PW_RETRIES;
 
-// ✅ FIX: convert env string into number or percentage string
+// convert env string into number or percentage string
 const workers: number | string = resolveWorkers(workersEnv);
 const retries: number = parseIntEnv(retriesEnv, 1);
 
