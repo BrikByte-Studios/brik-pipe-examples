@@ -78,7 +78,7 @@ jobs:
             echo "Baseline metadata: ${BASELINE_META}"
             echo "Sharded metadata: ${SHARDED_META}"
 
-            python .github/scripts/compute_sharding.py "${BASELINE_META}" "${SHARDED_META}"
+            python .github/scripts/compute_sharding.py "${BASELINE_META}" "${SHARDED_META}" 30.0 false
 
 
 

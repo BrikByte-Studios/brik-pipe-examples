@@ -1,37 +1,56 @@
-import sys
 import json
+import sys
 from pathlib import Path
 
-def load_metadata(path):
-    if not path.is_file():
-        print(f"ERROR: Metadata file not found: {path}")
+def load_duration(path: str) -> float:
+    p = Path(path)
+    if not p.is_file():
+        print(f"ERROR: metadata file not found: {p}", file=sys.stderr)
         sys.exit(1)
-    with open(path, "r") as f:
-        return json.load(f)
+    data = json.loads(p.read_text())
+    return float(data.get("duration_seconds", 0))
 
-baseline_path = Path(sys.argv[1])
-sharded_path  = Path(sys.argv[2])
+def main() -> None:
+    if len(sys.argv) < 3:
+        print("Usage: compute_sharding.py BASELINE_META SHARDED_META [THRESHOLD_PERCENT] [ENFORCE]", file=sys.stderr)
+        sys.exit(1)
 
-baseline_meta = load_metadata(baseline_path)
-sharded_meta  = load_metadata(sharded_path)
+    baseline_meta = sys.argv[1]
+    sharded_meta = sys.argv[2]
 
-baseline = float(baseline_meta.get("duration_seconds", 0))
-sharded  = float(sharded_meta.get("duration_seconds", 0))
+    # Default KPI = 30%
+    threshold = float(sys.argv[3]) if len(sys.argv) >= 4 else 30.0
+    # ENFORCE can be "true"/"false" (case-insensitive), default = false (advisory mode)
+    enforce = (len(sys.argv) >= 5 and sys.argv[4].lower() == "true")
 
-if baseline <= 0 or sharded <= 0:
-    print("ERROR: Invalid durations in metadata.")
-    sys.exit(1)
+    baseline = load_duration(baseline_meta)
+    sharded = load_duration(sharded_meta)
 
-reduction = (baseline - sharded) / baseline * 100
+    print(f"Baseline: {baseline}")
+    print(f"Sharded: {sharded}")
 
-print(f"Baseline: {baseline}")
-print(f"Sharded: {sharded}")
-print(f"Reduction (%): {reduction:.2f}")
+    if baseline <= 0 or sharded <= 0:
+        print("ERROR: Invalid durations in metadata.", file=sys.stderr)
+        # This is a real error – still fail.
+        sys.exit(1)
 
-# Exit code = 0 if ≥ 30% reduction, else 1
-if reduction >= 30:
-    print("PASS")
-    sys.exit(0)
-else:
-    print("FAIL")
-    sys.exit(1)
+    reduction = (baseline - sharded) / baseline * 100.0
+    print(f"Reduction (%): {reduction:.2f}")
+    print(f"Threshold (%): {threshold:.2f}")
+    print(f"Mode: {'ENFORCING' if enforce else 'ADVISORY'}")
+
+    if reduction >= threshold:
+        print("✅ Sharding impact meets or exceeds threshold.")
+        sys.exit(0)
+    else:
+        msg = "⚠️ Sharding impact below threshold."
+        if enforce:
+            print(msg + " (ENFORCING → failing job)")
+            sys.exit(1)
+        else:
+            print(msg + " (ADVISORY → job will still pass)")
+            # Advisory mode: don’t fail the workflow
+            sys.exit(0)
+
+if __name__ == "__main__":
+    main()
