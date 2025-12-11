@@ -70,57 +70,58 @@ jobs:
 
       - name: "Compute sharding impact"
         run: |
-          set -euo pipefail
+            set -euo pipefail
 
-          echo "Scanning audit-baseline & audit-sharded for metadata.json..."
+            echo "Scanning audit-baseline & audit-sharded for metadata.json..."
 
-          # Find metadata.json in each downloaded artifact
-          BASELINE_META=$(find audit-baseline -name "metadata.json" -print | head -n1 || true)
-          SHARDED_META=$(find audit-sharded -name "metadata.json" -print | head -n1 || true)
+            # Find metadata.json in each downloaded artifact
+            BASELINE_META=$(find audit-baseline -name "metadata.json" -print | head -n1 || true)
+            SHARDED_META=$(find audit-sharded -name "metadata.json" -print | head -n1 || true)
 
-          echo "Baseline metadata: ${BASELINE_META}"
-          echo "Sharded metadata: ${SHARDED_META}"
+            echo "Baseline metadata: ${BASELINE_META}"
+            echo "Sharded metadata: ${SHARDED_META}"
 
-          if [ ! -f "${BASELINE_META}" ] || [ ! -f "${SHARDED_META}" ]; then
+            if [ ! -f "${BASELINE_META}" ] || [ ! -f "${SHARDED_META}" ]; then
             echo "ERROR: Could not locate both baseline and sharded metadata.json."
             exit 1
-          fi
+            fi
 
-          BASELINE_SEC=$(jq -r '.duration_seconds' "${BASELINE_META}")
-          SHARDED_SEC=$(jq -r '.duration_seconds' "${SHARDED_META}")
+            BASELINE_SEC=$(jq -r '.duration_seconds' "${BASELINE_META}")
+            SHARDED_SEC=$(jq -r '.duration_seconds' "${SHARDED_META}")
 
-          echo "Baseline duration (s): ${BASELINE_SEC}"
-          echo "Sharded  duration (s): ${SHARDED_SEC}"
+            echo "Baseline duration (s): ${BASELINE_SEC}"
+            echo "Sharded  duration (s): ${SHARDED_SEC}"
 
-          if [ "${BASELINE_SEC}" -le 0 ] || [ "${SHARDED_SEC}" -le 0 ]; then
+            if [ "${BASELINE_SEC}" -le 0 ] || [ "${SHARDED_SEC}" -le 0 ]; then
             echo "ERROR: Invalid durations in metadata."
             exit 1
-          fi
+            fi
 
-          # Compute reduction percentage:
-          REDUCTION=$(python - << 'EOF'
-          import sys
-          baseline = float(sys.argv[1])
-          sharded = float(sys.argv[2])
-          reduction = (baseline - sharded) / baseline * 100.0
-          print(f"{reduction:.2f}")
-          EOF
-          "${BASELINE_SEC}" "${SHARDED_SEC}")
+            # Compute reduction percentage:
+            REDUCTION=$(python - "$BASELINE_SEC" "$SHARDED_SEC" << 'EOF'
+        import sys
+        baseline = float(sys.argv[1])
+        sharded = float(sys.argv[2])
+        reduction = (baseline - sharded) / baseline * 100.0
+        print(f"{reduction:.2f}")
+        EOF
+        )
 
-          echo "Sharding reduction (%): ${REDUCTION}"
+            echo "Sharding reduction (%): ${REDUCTION}"
 
-          # Pass/fail threshold: ≥ 30% reduction
-          PASS=$(python - << 'EOF'
-          import sys
-          reduction = float(sys.argv[1])
-          print("1" if reduction >= 30.0 else "0")
-          EOF
-          "${REDUCTION}")
+            # Pass/fail threshold: ≥ 30% reduction
+            PASS=$(python - "$REDUCTION" << 'EOF'
+        import sys
+        reduction = float(sys.argv[1])
+        print("1" if reduction >= 30.0 else "0")
+        EOF
+        )
 
-          if [ "${PASS}" = "1" ]; then
+            if [ "${PASS}" = "1" ]; then
             echo "✅ Sharding impact meets target (≥ 30% faster)."
-          else
+            else
             echo "❌ Sharding impact below target (< 30% faster)."
             exit 1
-          fi
+            fi
+
 
