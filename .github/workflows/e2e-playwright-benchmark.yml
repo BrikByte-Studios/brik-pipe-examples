@@ -53,17 +53,30 @@ jobs:
       - name: "Checkout repo"
         uses: actions/checkout@v4
 
+      # Download the E2E audit slices produced by the reusable workflow
+      - name: "Download baseline E2E audit slice"
+        uses: actions/download-artifact@v4
+        with:
+          # Must match upload name from reusable workflow:
+          # e2e-audit-<service_workdir>-<browser>-workers-<workers><artifact_suffix>
+          name: "e2e-audit-node-ui-example-chromium-workers-1-baseline"
+          path: "audit-baseline"
+
+      - name: "Download sharded E2E audit slice"
+        uses: actions/download-artifact@v4
+        with:
+          name: "e2e-audit-node-ui-example-chromium-workers-50%-sharded"
+          path: "audit-sharded"
+
       - name: "Compute sharding impact"
         run: |
-          # GitHub exposes reusable workflow outputs on the job-level `outputs` map.
-          # We stored duration_seconds in `.audit/metadata.json`, but for this simple
-          # benchmark we read it from the E2E audit slices by globbing.
+          set -euo pipefail
 
-          echo "Scanning .audit for baseline & sharded runs..."
+          echo "Scanning audit-baseline & audit-sharded for metadata.json..."
 
-          # Collect latest baseline + sharded metadata by simple heuristics:
-          BASELINE_META=$(find . -path "*/PIPE-E2E/*playwright-e2e-chromium*/metadata.json" -print | sort | tail -n1 || true)
-          SHARDED_META=$(find . -path "*/PIPE-E2E/*playwright-e2e-chromium*/metadata.json" -print | sort | tail -n1 || true)
+          # Find metadata.json in each downloaded artifact
+          BASELINE_META=$(find audit-baseline -name "metadata.json" -print | head -n1 || true)
+          SHARDED_META=$(find audit-sharded -name "metadata.json" -print | head -n1 || true)
 
           echo "Baseline metadata: ${BASELINE_META}"
           echo "Sharded metadata: ${SHARDED_META}"
@@ -77,7 +90,7 @@ jobs:
           SHARDED_SEC=$(jq -r '.duration_seconds' "${SHARDED_META}")
 
           echo "Baseline duration (s): ${BASELINE_SEC}"
-          echo "Sharded duration (s): ${SHARDED_SEC}"
+          echo "Sharded  duration (s): ${SHARDED_SEC}"
 
           if [ "${BASELINE_SEC}" -le 0 ] || [ "${SHARDED_SEC}" -le 0 ]; then
             echo "ERROR: Invalid durations in metadata."
@@ -110,3 +123,4 @@ jobs:
             echo "❌ Sharding impact below target (< 30% faster)."
             exit 1
           fi
+
