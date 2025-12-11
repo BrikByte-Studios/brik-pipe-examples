@@ -29,6 +29,7 @@ jobs:
       retries: 0
       trace_mode: "off"
       service_workdir: "node-ui-example"
+      artifact_suffix: "-baseline"  
 
   sharded:
     name: "Sharded E2E (workers=50%)"
@@ -41,6 +42,7 @@ jobs:
       retries: 0
       trace_mode: "off"
       service_workdir: "node-ui-example"
+      artifact_suffix: "-sharded" 
 
   compare:
     name: "Compare baseline vs sharded duration"
