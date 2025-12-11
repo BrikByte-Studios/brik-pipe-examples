@@ -1,5 +1,3 @@
-// node-ui-example/playwright.config.ts
-//
 // Baseline Playwright configuration for BrikByteOS E2E tests.
 // This file is designed to be:
 // - Shared and copy-pastable across product repos.
@@ -38,7 +36,9 @@ function parseIntEnv(envVarValue: string | undefined, defaultValue: number): num
  * - "retain-on-failure"
  * - "off"
  */
-function getTraceModeFromEnv(envValue: string | undefined): 'on' | 'on-first-retry' | 'retain-on-failure' | 'off' {
+function getTraceModeFromEnv(
+  envValue: string | undefined,
+): 'on' | 'on-first-retry' | 'retain-on-failure' | 'off' {
   switch (envValue) {
     case 'on':
     case 'on-first-retry':
@@ -51,13 +51,47 @@ function getTraceModeFromEnv(envValue: string | undefined): 'on' | 'on-first-ret
 }
 
 /**
+ * Utility: resolve workers from env into a form Playwright accepts.
+ *
+ * Rules:
+ * - If value ends with "%", treat it as a percentage string (e.g. "50%").
+ * - Otherwise try to parse it as a positive integer (e.g. "1" -> 1).
+ * - If parsing fails or value is invalid, fall back to "50%".
+ *
+ * Playwright requires workers to be:
+ * - a number, or
+ * - a percentage string (e.g. "50%").
+ */
+function resolveWorkers(envVal: string | undefined): number | string {
+  const raw = envVal?.trim();
+
+  // No value provided → default to "50%" as a sensible CI default.
+  if (!raw) {
+    return '50%';
+  }
+
+  // Percentage-based parallelism, e.g. "50%"
+  if (raw.endsWith('%')) {
+    return raw;
+  }
+
+  // Numeric workers, e.g. "1", "4"
+  const num = Number(raw);
+  if (!Number.isNaN(num) && num > 0) {
+    return num;
+  }
+
+  // Fallback if invalid
+  return '50%';
+}
+
+/**
  * Base URL for all tests.
  * - Controlled via E2E_TARGET_URL, which is set by the GitHub Actions workflow.
  * - Default points to a generic staging environment; individual repos can
  *   override this in CI or locally via .env files.
  */
-const baseURL: string =
-  process.env.E2E_TARGET_URL ?? 'https://staging.example.com';
+const baseURL: string = process.env.E2E_TARGET_URL ?? 'https://staging.example.com';
 
 /**
  * Flags that determine which browser projects are enabled.
@@ -74,7 +108,8 @@ const enableWebkit: boolean = process.env.PW_ENABLE_WEBKIT === '1';
 const workersEnv: string | undefined = process.env.PW_WORKERS;
 const retriesEnv: string | undefined = process.env.PW_RETRIES;
 
-const workers: number | string = workersEnv ?? '50%';
+// ✅ FIX: convert env string into number or percentage string
+const workers: number | string = resolveWorkers(workersEnv);
 const retries: number = parseIntEnv(retriesEnv, 1);
 
 const traceMode = getTraceModeFromEnv(process.env.PW_TRACE_MODE);
@@ -124,7 +159,7 @@ const config: PlaywrightTestConfig = defineConfig({
   },
   /* Global retries for tests – tuned via PW_RETRIES. */
   retries,
-  /* Parallel workers – tuned via PW_WORKERS. */
+  /* Parallel workers – tuned via PW_WORKERS (number or "NN%"). */
   workers,
   /* Reporter configuration:
    * - "list" for human-readable CI logs.
