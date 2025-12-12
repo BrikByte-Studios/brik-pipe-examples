@@ -56,7 +56,7 @@ jobs:
 
       # IMPORTANT:
       # Selenium *nodes* run in containers. To reach the host-published app port (3000),
-      # they must use host.docker.internal:3000. On Linux runners we ensure this mapping.
+      # they must use host.docker.internal:3000. On Linux runners we ensure this mapping
       E2E_TARGET_URL: "http://host.docker.internal:3000"
 
       ENABLE_EDGE: "false"
@@ -110,7 +110,7 @@ jobs:
 
           echo "[APP] ✅ UI is healthy."
 
-          
+
       - name: "Debug: list compose files"
         run: |
             set -euo pipefail
