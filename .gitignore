@@ -221,3 +221,6 @@ playwright-report/
 
 # Raw test outputs: traces, screenshots, videos
 test-results/
+
+**/tests/e2e/cypress/videos/
+**/tests/e2e/cypress/screenshots/
