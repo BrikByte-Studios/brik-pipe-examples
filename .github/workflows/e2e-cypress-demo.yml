@@ -16,14 +16,10 @@ jobs:
   e2e-cypress:
     uses: BrikByte-Studios/.github/.github/workflows/e2e-cypress.yml@main
     with:
-      # IMPORTANT: inside docker network, NOT localhost.
+      start_with_docker: true
+      docker_image_name: node-ui-example-app
+      docker_port: 3000
       target_url: "http://app:3000"
       health_path: "/health"
       service_workdir: "node-ui-example"
-
       cypress_image: "cypress/included:13.12.0"
-      artifact_name: "cypress-artifacts-node-ui-example"
-
-      start_with_docker: true
-      docker_image_name: "node-ui-example-app"
-      docker_port: 3000
