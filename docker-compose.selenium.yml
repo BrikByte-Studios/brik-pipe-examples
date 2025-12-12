@@ -18,23 +18,24 @@
 #       4444 (WebDriver + status)
 #       4442/4443 (event bus)
 #
+version: "3.9"
+
 services:
   selenium-hub:
-    image: selenium/hub:4.24.0
+    image: selenium/hub:4.21.0
     container_name: selenium-hub
     ports:
-      - "4444:4444"
       - "4442:4442"
       - "4443:4443"
+      - "4444:4444"
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:4444/status >/dev/null || exit 1"]
+      test: ["CMD", "curl", "-f", "http://localhost:4444/status"]
       interval: 5s
       timeout: 3s
-      retries: 30
+      retries: 20
 
   chrome:
-    image: selenium/node-chrome:4.24.0
-    container_name: chrome
+    image: selenium/node-chrome:4.21.0
     shm_size: 2gb
     depends_on:
       selenium-hub:
@@ -45,8 +46,7 @@ services:
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
 
   firefox:
-    image: selenium/node-firefox:4.24.0
-    container_name: firefox
+    image: selenium/node-firefox:4.21.0
     shm_size: 2gb
     depends_on:
       selenium-hub:
@@ -57,12 +57,9 @@ services:
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
 
   edge:
-    # Optional: only runs when workflow passes enable_edge=true
-    # and the reusable workflow starts compose with --profile edge
-    profiles: ["edge"]
-    image: selenium/node-edge:4.24.0
-    container_name: edge
+    image: selenium/node-edge:4.21.0
     shm_size: 2gb
+    profiles: ["edge"]
     depends_on:
       selenium-hub:
         condition: service_healthy
