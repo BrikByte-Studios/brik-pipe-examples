@@ -3,7 +3,7 @@
 # Responsibilities:
 # - Trigger Cypress E2E on PRs and main pushes.
 # - Delegate the actual test run to the reusable org-level workflow.
-# - Provide target URL + health path + working directory.
+# - Provide target URL + health path + working directory
 
 name: "E2E - Cypress (node-ui-example)"
 
