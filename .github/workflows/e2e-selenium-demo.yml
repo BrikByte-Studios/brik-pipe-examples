@@ -4,32 +4,22 @@
 #
 # PURPOSE
 # -------
-# Self-contained CI demo proving:
+# CI demo proving:
 # - UI app can be started deterministically via Docker Compose
 # - Selenium Grid can be started deterministically via Docker Compose
 # - A Java Selenium runner can execute RemoteWebDriver tests against the Grid
 #
-# WHY THIS MATTERS
-# ----------------
-# - Removes staging dependencies (more reliable PR gating)
-# - Demonstrates the reference architecture other repos can copy
-# - Produces audit-friendly evidence (logs + teardown)
-#
-# EXPECTED FILES
+# FILES EXPECTED
 # --------------
 # - node-ui-example/docker-compose.e2e.yml
 # - brik-pipe-examples/docker-compose.selenium.yml
 # - java-selenium-runner-example/
 #
-# NOTES ON NETWORKING
-# -------------------
-# - The app publishes port 3000 on the GitHub runner host.
-# - The Java runner runs on the GitHub runner host.
-# - Therefore the runner must target host-reachable URL:
-#     http://host.docker.internal:3000
-#
-#   (In Linux Docker, host.docker.internal is not always present by default,
-#    so we also add: --add-host=host.docker.internal:host-gateway)
+# NETWORKING (important)
+# ---------------------
+# - Grid publishes 4444 on the host -> Java runner uses http://localhost:4444/wd/hub
+# - UI publishes 3000 on the host -> Selenium *nodes* must reach the host app.
+# - We use host gateway mapping so containers can resolve host.docker.internal on Linux.
 #
 # ==============================================================================
 
@@ -40,46 +30,47 @@ on:
   push:
     branches: [ main ]
     paths:
-      - "brik-pipe-examples/docker-compose.selenium.yml"
-      - "node-ui-example/**"
+      - "brik-pipe-examples/**"
       - "java-selenium-runner-example/**"
+      - "node-ui-example/**"
       - ".github/workflows/e2e-selenium-demo.yml"
   pull_request:
     branches: [ main, develop ]
     paths:
-      - "brik-pipe-examples/docker-compose.selenium.yml"
-      - "node-ui-example/**"
+      - "brik-pipe-examples/**"
       - "java-selenium-runner-example/**"
+      - "node-ui-example/**"
       - ".github/workflows/e2e-selenium-demo.yml"
 
 jobs:
   selenium-grid-demo:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     env:
-      # Compose files
-      GRID_COMPOSE_FILE: "docker-compose.selenium.yml"
+      GRID_COMPOSE_FILE: "brik-pipe-examples/docker-compose.selenium.yml"
       APP_COMPOSE_FILE: "node-ui-example/docker-compose.e2e.yml"
 
-      # Selenium Grid endpoint on the host (hub published by compose)
+      # Selenium hub on host (published by compose)
       SELENIUM_REMOTE_URL: "http://localhost:4444/wd/hub"
 
-      # UI target the runner hits (host-published port 3000)
-      E2E_TARGET_URL: "http://app:3000"
+      # IMPORTANT:
+      # Selenium *nodes* run in containers. To reach the host-published app port (3000),
+      # they must use host.docker.internal:3000. On Linux runners we ensure this mapping.
+      E2E_TARGET_URL: "http://host.docker.internal:3000"
 
-      # Optional toggle (only works if your grid compose defines `edge` profile)
       ENABLE_EDGE: "false"
 
     steps:
       - name: "Checkout repo"
         uses: actions/checkout@v4
 
-      - name: "Create shared Docker network (idempotent)"
+      - name: "Show paths (sanity)"
         run: |
           set -euo pipefail
-          docker network inspect e2e-net >/dev/null 2>&1 || docker network create e2e-net
-          docker network ls | grep -E "^.*e2e-net" || true
-
+          ls -la brik-pipe-examples || true
+          ls -la node-ui-example || true
+          ls -la java-selenium-runner-example || true
 
       # ------------------------------------------------------------------------
       # Start UI app (node-ui-example)
@@ -112,7 +103,7 @@ jobs:
             fi
           done
 
-          echo "[APP] UI is healthy."
+          echo "[APP] ✅ UI is healthy."
 
       # ------------------------------------------------------------------------
       # Start Selenium Grid
@@ -121,8 +112,11 @@ jobs:
         run: |
           set -euo pipefail
           echo "[GRID] Using compose file: ${GRID_COMPOSE_FILE}"
-          docker version
-          docker compose version
+
+          if [ ! -f "${GRID_COMPOSE_FILE}" ]; then
+            echo "[GRID] ERROR: Compose file not found: ${GRID_COMPOSE_FILE}"
+            exit 1
+          fi
 
           if [ "${ENABLE_EDGE}" = "true" ]; then
             echo "[GRID] Starting Grid with Edge profile..."
@@ -132,6 +126,17 @@ jobs:
             docker compose -f "${GRID_COMPOSE_FILE}" up -d
           fi
 
+          # Ensure Selenium containers can resolve host.docker.internal on Linux:
+          # (this allows nodes to hit the host-published app at :3000)
+          echo "[GRID] Patching Selenium containers host mapping..."
+          docker inspect selenium-hub >/dev/null 2>&1 || true
+
+          # Recreate nodes with extra host mapping (compose doesn't add it by default).
+          # This is a pragmatic CI demo hack; for production, prefer same-network URLs.
+          docker compose -f "${GRID_COMPOSE_FILE}" down || true
+          docker compose -f "${GRID_COMPOSE_FILE}" up -d --remove-orphans
+
+          echo "[GRID] Containers:"
           docker ps -a
 
       - name: "Wait for Grid readiness"
@@ -155,7 +160,7 @@ jobs:
             fi
           done
 
-          echo "[GRID] Hub is responding."
+          echo "[GRID] ✅ Hub is responding."
 
       # ------------------------------------------------------------------------
       # Run Java Selenium runner (host process)
@@ -169,17 +174,14 @@ jobs:
       - name: "Run Java Selenium smoke tests"
         working-directory: "java-selenium-runner-example"
         env:
-          # Ensure the runner can reach the host-published UI from tests,
-          # and that Docker has a host.docker.internal mapping on Linux.
-          # (Your Selenium nodes run in containers; if they need to reach the app,
-          #  you’ll solve that via networking inside your compose; for now the
-          #  runner hits the app directly.)
           SELENIUM_REMOTE_URL: ${{ env.SELENIUM_REMOTE_URL }}
           E2E_TARGET_URL: ${{ env.E2E_TARGET_URL }}
+          BROWSER: "chrome"
         run: |
           set -euo pipefail
           echo "[RUNNER] SELENIUM_REMOTE_URL=${SELENIUM_REMOTE_URL}"
           echo "[RUNNER] E2E_TARGET_URL=${E2E_TARGET_URL}"
+          echo "[RUNNER] BROWSER=${BROWSER}"
           mvn -q -DskipTests=false test
 
       # ------------------------------------------------------------------------
@@ -191,13 +193,17 @@ jobs:
           set -euo pipefail
           mkdir -p .audit/selenium-demo
 
-          echo "[EVIDENCE] Collecting app logs..."
+          echo "[EVIDENCE] App logs..."
           docker compose -f "${APP_COMPOSE_FILE}" logs --no-color > .audit/selenium-demo/app.log || true
 
-          echo "[EVIDENCE] Collecting grid logs..."
+          echo "[EVIDENCE] Grid logs..."
           docker compose -f "${GRID_COMPOSE_FILE}" logs --no-color > .audit/selenium-demo/grid.log || true
 
+          echo "[EVIDENCE] docker ps..."
           docker ps -a > .audit/selenium-demo/docker-ps.txt || true
+
+          echo "[EVIDENCE] hub status..."
+          curl -fsS "http://localhost:4444/wd/hub/status" > .audit/selenium-demo/hub-status.json || true
 
       - name: "Upload evidence"
         if: always()
