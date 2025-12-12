@@ -1,0 +1,24 @@
+name: "E2E UI (Java • Selenium Grid)"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  e2e-java:
+    uses: BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml@main
+    with:
+      # App already running in staging / preview
+      target_url: "http://app:3000"
+      health_path: "/health"
+
+      service_workdir: "java-selenium-runner-example"
+      compose_file: "brik-pipe-examples/docker-compose.selenium.yml"
+
+      runner_language: "java"
+
+      test_command: |
+        mvn -q -DskipTests=false test
+
+      artifact_name: "java-selenium-e2e"
