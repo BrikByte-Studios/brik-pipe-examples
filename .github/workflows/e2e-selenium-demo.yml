@@ -65,7 +65,7 @@ jobs:
       SELENIUM_REMOTE_URL: "http://localhost:4444/wd/hub"
 
       # UI target the runner hits (host-published port 3000)
-      E2E_TARGET_URL: "http://host.docker.internal:3000"
+      E2E_TARGET_URL: "http://app:3000"
 
       # Optional toggle (only works if your grid compose defines `edge` profile)
       ENABLE_EDGE: "false"
@@ -73,6 +73,13 @@ jobs:
     steps:
       - name: "Checkout repo"
         uses: actions/checkout@v4
+
+      - name: "Create shared Docker network (idempotent)"
+        run: |
+          set -euo pipefail
+          docker network inspect e2e-net >/dev/null 2>&1 || docker network create e2e-net
+          docker network ls | grep -E "^.*e2e-net" || true
+
 
       # ------------------------------------------------------------------------
       # Start UI app (node-ui-example)
