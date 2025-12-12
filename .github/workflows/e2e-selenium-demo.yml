@@ -72,6 +72,11 @@ jobs:
           ls -la node-ui-example || true
           ls -la java-selenium-runner-example || true
 
+      - name: "Create shared network (e2e-net)"
+        run: |
+            set -euo pipefail
+            docker network create e2e-net || true
+
       # ------------------------------------------------------------------------
       # Start UI app (node-ui-example)
       # ------------------------------------------------------------------------

@@ -40,7 +40,7 @@ services:
       test: ["CMD-SHELL", "wget -qO- http://localhost:4444/wd/hub/status | grep -q '\"ready\"'"]
       interval: 5s
       timeout: 3s
-      retries: 30
+      retri es: 30
 
   chrome:
     image: selenium/node-chrome:4.27.0

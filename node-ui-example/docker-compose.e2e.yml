@@ -1,19 +1,16 @@
-version: "3.9"
-
 services:
   app:
     build:
       context: .
       dockerfile: ./Dockerfile
-    container_name: app            # <-- important (your scripts log `docker logs app`)
+    container_name: node-ui-example-app
     environment:
       - PORT=3000
+    ports:
+      - "3000:3000"
     networks:
       - e2e-net
-    ports:
-      - "3000:3000"                # optional but useful for debugging on host
 
 networks:
   e2e-net:
     external: true
-    name: e2e-net
