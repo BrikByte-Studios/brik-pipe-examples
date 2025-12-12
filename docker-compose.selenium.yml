@@ -1,0 +1,101 @@
+# ==============================================================================
+# Selenium Grid (CI-first) — BrikByteOS v1
+# ==============================================================================
+#
+# PURPOSE
+# -------
+# Deterministic Selenium Grid 4 setup for cross-browser E2E runs in CI.
+#
+# NETWORKING (IMPORTANT)
+# ----------------------
+# In CI we typically create a shared Docker network (e.g. `e2e-net`) so:
+# - UI container can be reached via hostname: http://app:<port>
+# - Grid hub can be reached via hostname: http://selenium-hub:4444/wd/hub
+# - Helper containers (curl health probes, etc.) can resolve both hostnames
+#
+# This compose therefore joins an *external* network named `e2e-net`.
+# Your workflow should create it first:
+#   docker network create e2e-net
+#
+# ==============================================================================
+
+name: brikbyte-selenium-grid
+
+services:
+  selenium-hub:
+    image: selenium/hub:4.27.0
+    container_name: selenium-hub
+    ports:
+      # Expose for host-side debugging and for runners hitting localhost:4444.
+      - "4444:4444"
+    environment:
+      - SE_LOG_LEVEL=INFO
+      - SE_OPTS=--log-level INFO
+    networks:
+      - e2e-net
+    healthcheck:
+      # Use curl (more commonly available than wget).
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:4444/wd/hub/status | grep -q '\"ready\"'"
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  chrome:
+    image: selenium/node-chrome:4.27.0
+    shm_size: "2gb"
+    depends_on:
+      - selenium-hub
+    environment:
+      # Event bus wiring (Selenium Grid 4).
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+
+      # CI stability defaults.
+      - SE_NODE_MAX_SESSIONS=1
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_LOG_LEVEL=INFO
+    networks:
+      - e2e-net
+
+  firefox:
+    image: selenium/node-firefox:4.27.0
+    shm_size: "2gb"
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_MAX_SESSIONS=1
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_LOG_LEVEL=INFO
+    networks:
+      - e2e-net
+
+  edge:
+    # Optional node. Only started when profile "edge" is enabled.
+    image: selenium/node-edge:4.27.0
+    shm_size: "2gb"
+    profiles: ["edge"]
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_MAX_SESSIONS=1
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_LOG_LEVEL=INFO
+    networks:
+      - e2e-net
+
+networks:
+  # Shared CI network created by the workflow.
+  e2e-net:
+    external: true
+    name: e2e-net

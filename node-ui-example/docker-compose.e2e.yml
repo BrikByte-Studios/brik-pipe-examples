@@ -5,11 +5,15 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-    container_name: node-ui-example-app
-    ports:
-      - "3000:3000"         # Local access via http://localhost:3000
+    container_name: app            # <-- important (your scripts log `docker logs app`)
     environment:
       - PORT=3000
-    # For CI you usually don't need volumes; keep it deterministic.
-    # volumes:
-    #   - ./node-ui-example:/usr/src/app
+    networks:
+      - e2e-net
+    ports:
+      - "3000:3000"                # optional but useful for debugging on host
+
+networks:
+  e2e-net:
+    external: true
+    name: e2e-net
