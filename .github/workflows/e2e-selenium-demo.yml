@@ -48,15 +48,13 @@ jobs:
     timeout-minutes: 30
 
     env:
-      GRID_COMPOSE_FILE: "docker-compose.selenium.yml"
+      GRID_COMPOSE_FILE: "brik-pipe-examples/docker-compose.selenium.yml"
       APP_COMPOSE_FILE: "node-ui-example/docker-compose.e2e.yml"
 
-      # Selenium hub on host (published by compose)
+      # Java runner (host) -> Selenium hub published on host.
       SELENIUM_REMOTE_URL: "http://localhost:4444/wd/hub"
 
-      # IMPORTANT:
-      # Selenium *nodes* run in containers. To reach the host-published app port (3000),
-      # they must use host.docker.internal:3000. On Linux runners we ensure this mapping
+      # Browser (inside selenium node container) -> app service on the compose network.
       E2E_TARGET_URL: "http://app:3000"
 
       ENABLE_EDGE: "false"
@@ -65,28 +63,39 @@ jobs:
       - name: "Checkout repo"
         uses: actions/checkout@v4
 
-      - name: "Show paths (sanity)"
+      - name: "Sanity: show compose files"
         run: |
           set -euo pipefail
-          ls -la brik-pipe-examples || true
-          ls -la node-ui-example || true
-          ls -la java-selenium-runner-example || true
-
-      - name: "Create shared network (e2e-net)"
-        run: |
-            set -euo pipefail
-            docker network create e2e-net || true
+          test -f "${GRID_COMPOSE_FILE}"
+          test -f "${APP_COMPOSE_FILE}"
+          echo "[OK] Found ${GRID_COMPOSE_FILE}"
+          echo "[OK] Found ${APP_COMPOSE_FILE}"
 
       # ------------------------------------------------------------------------
-      # Start UI app (node-ui-example)
+      # Start UI + Grid in one shared compose project
       # ------------------------------------------------------------------------
-      - name: "Start UI (docker compose)"
+      - name: "Start UI + Selenium Grid (single compose project)"
         run: |
           set -euo pipefail
-          echo "[APP] Starting node-ui-example from: ${APP_COMPOSE_FILE}"
-          docker compose -f "${APP_COMPOSE_FILE}" up -d --build
+          echo "[COMPOSE] Bringing up app + grid..."
+          if [ "${ENABLE_EDGE}" = "true" ]; then
+            docker compose \
+              -f "${APP_COMPOSE_FILE}" \
+              -f "${GRID_COMPOSE_FILE}" \
+              --profile edge \
+              up -d --build
+          else
+            docker compose \
+              -f "${APP_COMPOSE_FILE}" \
+              -f "${GRID_COMPOSE_FILE}" \
+              up -d --build
+          fi
+
           docker ps -a
 
+      # ------------------------------------------------------------------------
+      # Wait for UI readiness (from host)
+      # ------------------------------------------------------------------------
       - name: "Wait for UI readiness (/health)"
         run: |
           set -euo pipefail
@@ -103,56 +112,16 @@ jobs:
 
             if [ "${elapsed}" -ge "${timeout}" ]; then
               echo "[APP] ERROR: UI did not become healthy in time."
-              docker compose -f "${APP_COMPOSE_FILE}" logs --no-color || true
+              docker compose -f "${APP_COMPOSE_FILE}" -f "${GRID_COMPOSE_FILE}" logs --no-color || true
               exit 1
             fi
           done
 
           echo "[APP] ✅ UI is healthy."
 
-
-      - name: "Debug: list compose files"
-        run: |
-            set -euo pipefail
-            ls -la
-            ls -la brik-pipe-examples || true
-            find . -maxdepth 3 -name "docker-compose.selenium.yml" -print
-
-
       # ------------------------------------------------------------------------
-      # Start Selenium Grid
+      # Wait for Grid readiness (from host)
       # ------------------------------------------------------------------------
-      - name: "Start Selenium Grid (docker compose)"
-        run: |
-          set -euo pipefail
-          echo "[GRID] Using compose file: ${GRID_COMPOSE_FILE}"
-
-          if [ ! -f "${GRID_COMPOSE_FILE}" ]; then
-            echo "[GRID] ERROR: Compose file not found: ${GRID_COMPOSE_FILE}"
-            exit 1
-          fi
-
-          if [ "${ENABLE_EDGE}" = "true" ]; then
-            echo "[GRID] Starting Grid with Edge profile..."
-            docker compose -f "${GRID_COMPOSE_FILE}" --profile edge up -d
-          else
-            echo "[GRID] Starting Grid (Chrome + Firefox)..."
-            docker compose -f "${GRID_COMPOSE_FILE}" up -d
-          fi
-
-          # Ensure Selenium containers can resolve host.docker.internal on Linux:
-          # (this allows nodes to hit the host-published app at :3000)
-          echo "[GRID] Patching Selenium containers host mapping..."
-          docker inspect selenium-hub >/dev/null 2>&1 || true
-
-          # Recreate nodes with extra host mapping (compose doesn't add it by default).
-          # This is a pragmatic CI demo hack; for production, prefer same-network URLs.
-          docker compose -f "${GRID_COMPOSE_FILE}" down || true
-          docker compose -f "${GRID_COMPOSE_FILE}" up -d --remove-orphans
-
-          echo "[GRID] Containers:"
-          docker ps -a
-
       - name: "Wait for Grid readiness"
         run: |
           set -euo pipefail
@@ -169,7 +138,7 @@ jobs:
 
             if [ "${elapsed}" -ge "${timeout}" ]; then
               echo "[GRID] ERROR: Hub not ready in time."
-              docker compose -f "${GRID_COMPOSE_FILE}" logs --no-color || true
+              docker compose -f "${APP_COMPOSE_FILE}" -f "${GRID_COMPOSE_FILE}" logs --no-color || true
               exit 1
             fi
           done
@@ -177,7 +146,24 @@ jobs:
           echo "[GRID] ✅ Hub is responding."
 
       # ------------------------------------------------------------------------
-      # Run Java Selenium runner (host process)
+      # Debug proof: selenium node can resolve app (DNS + health)
+      # ------------------------------------------------------------------------
+      - name: "Debug: can selenium node resolve app?"
+        run: |
+          set -euo pipefail
+          echo "[DEBUG] Checking DNS + HTTP from inside chrome node..."
+          CHROME_ID="$(docker ps -q --filter "name=chrome" | head -n 1)"
+          if [ -z "${CHROME_ID}" ]; then
+            echo "[DEBUG] ERROR: chrome container not found"
+            docker ps -a
+            exit 1
+          fi
+
+          docker exec -i "${CHROME_ID}" sh -lc "getent hosts app || true"
+          docker exec -i "${CHROME_ID}" sh -lc "wget -qO- http://app:3000/health || true"
+
+      # ------------------------------------------------------------------------
+      # Run Java runner (host process)
       # ------------------------------------------------------------------------
       - name: "Setup Java"
         uses: actions/setup-java@v4
@@ -207,11 +193,9 @@ jobs:
           set -euo pipefail
           mkdir -p .audit/selenium-demo
 
-          echo "[EVIDENCE] App logs..."
-          docker compose -f "${APP_COMPOSE_FILE}" logs --no-color > .audit/selenium-demo/app.log || true
-
-          echo "[EVIDENCE] Grid logs..."
-          docker compose -f "${GRID_COMPOSE_FILE}" logs --no-color > .audit/selenium-demo/grid.log || true
+          echo "[EVIDENCE] Combined compose logs..."
+          docker compose -f "${APP_COMPOSE_FILE}" -f "${GRID_COMPOSE_FILE}" logs --no-color \
+            > .audit/selenium-demo/compose.log || true
 
           echo "[EVIDENCE] docker ps..."
           docker ps -a > .audit/selenium-demo/docker-ps.txt || true
@@ -233,5 +217,4 @@ jobs:
       - name: "Teardown"
         if: always()
         run: |
-          docker compose -f "${GRID_COMPOSE_FILE}" down -v || true
-          docker compose -f "${APP_COMPOSE_FILE}" down -v || true
+          docker compose -f "${APP_COMPOSE_FILE}" -f "${GRID_COMPOSE_FILE}" down -v || true
