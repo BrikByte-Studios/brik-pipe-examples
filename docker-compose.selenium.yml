@@ -1,83 +1,72 @@
-# ==============================================================================
-# Selenium Grid (CI-first) — BrikByteOS v1
-# ==============================================================================
+# docker-compose.selenium.yml
 #
-# PURPOSE
-# -------
-# Deterministic Selenium Grid 4 setup for cross-browser E2E runs in CI.
+# Purpose:
+#   CI-first Selenium Grid 4 deployment for cross-browser testing.
 #
-# SERVICES
-# --------
-# - selenium-hub: session router + Grid UI + status endpoint
-# - chrome:       registers to hub via event-bus (4442/4443)
-# - firefox:      registers to hub via event-bus (4442/4443)
-# - edge:         optional profile, enabled via `--profile edge`
+# Services:
+#   - selenium-hub: router + event bus
+#   - chrome:       required browser node
+#   - firefox:      required browser node
+#   - edge:         optional node (enabled via compose profile "edge")
 #
-# ENDPOINTS
-# ---------
-# - Status:  http://localhost:4444/wd/hub/status
-# - Remote:  http://localhost:4444/wd/hub
+# Health:
+#   - Hub exposes /status at: http://localhost:4444/status
 #
-# NOTES
-# -----
-# - Uses official Selenium images.
-# - Publishes 4444 on the runner host for host-based runners (Java/Python).
+# Notes:
+#   - shm_size=2gb reduces browser crashes under CI constraints.
+#   - Hub publishes:
+#       4444 (WebDriver + status)
+#       4442/4443 (event bus)
 #
-# ==============================================================================
-
-name: brikbyte-selenium-grid
-
 services:
   selenium-hub:
-    image: selenium/hub:4.27.0
+    image: selenium/hub:4.24.0
     container_name: selenium-hub
     ports:
       - "4444:4444"
-    environment:
-      - SE_LOG_LEVEL=INFO
-      - SE_OPTS=--log-level INFO
+      - "4442:4442"
+      - "4443:4443"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:4444/wd/hub/status | grep -q '\"ready\"'"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4444/status >/dev/null || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 30
 
   chrome:
-    image: selenium/node-chrome:4.27.0
-    shm_size: "2gb"
+    image: selenium/node-chrome:4.24.0
+    container_name: chrome
+    shm_size: 2gb
     depends_on:
-      - selenium-hub
+      selenium-hub:
+        condition: service_healthy
     environment:
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-      - SE_NODE_MAX_SESSIONS=1
-      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
-      - SE_LOG_LEVEL=INFO
 
   firefox:
-    image: selenium/node-firefox:4.27.0
-    shm_size: "2gb"
+    image: selenium/node-firefox:4.24.0
+    container_name: firefox
+    shm_size: 2gb
     depends_on:
-      - selenium-hub
+      selenium-hub:
+        condition: service_healthy
     environment:
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-      - SE_NODE_MAX_SESSIONS=1
-      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
-      - SE_LOG_LEVEL=INFO
 
   edge:
-    image: selenium/node-edge:4.27.0
-    shm_size: "2gb"
+    # Optional: only runs when workflow passes enable_edge=true
+    # and the reusable workflow starts compose with --profile edge
     profiles: ["edge"]
+    image: selenium/node-edge:4.24.0
+    container_name: edge
+    shm_size: 2gb
     depends_on:
-      - selenium-hub
+      selenium-hub:
+        condition: service_healthy
     environment:
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-      - SE_NODE_MAX_SESSIONS=1
-      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
-      - SE_LOG_LEVEL=INFO

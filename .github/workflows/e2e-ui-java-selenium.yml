@@ -1,22 +1,65 @@
 name: "E2E UI (Java • Selenium Grid)"
 
+# -----------------------------------------------------------------------------
+# Caller workflow (brik-pipe-examples)
+#
+# Calls the org reusable workflow:
+#   BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml
+#
+# This repo provides:
+#   - docker-compose.selenium.yml  (Grid)
+#   - java-selenium-example/       (tests)
+#
+# The reusable workflow provides:
+#   - start grid
+#   - wait for app + grid readiness
+#   - run tests for Chrome + Firefox matrix
+#   - optional Edge job
+#   - collect logs + upload artifacts
+# -----------------------------------------------------------------------------
+
 on:
   push:
     branches: [main]
   pull_request:
 
 jobs:
-  e2e-java:
+  e2e-ui-java:
     uses: BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml@main
     with:
+      # -----------------------------------------------------------------------
+      # App under test
+      # -----------------------------------------------------------------------
+      # If you run the app inside CI in another job, ensure it's reachable.
+      # If you point to a staging env, set target_url accordingly.
+      #
+      # For local-container app on the same runner, target_url is typically:
+      #   http://localhost:3000
+      #
       target_url: "http://localhost:3000"
       health_url: "http://localhost:3000/health"
 
-      service_workdir: "."
+      # -----------------------------------------------------------------------
+      # Selenium Grid compose file location (this repo)
+      # -----------------------------------------------------------------------
+      service_workdir: "."                 # compose_file is at repo root
       compose_file: "docker-compose.selenium.yml"
 
+      # -----------------------------------------------------------------------
+      # Test runner configuration
+      # -----------------------------------------------------------------------
       runner_language: "java"
+
+      # Run tests from java-selenium-example.
+      # Tests must read:
+      #   SELENIUM_REMOTE_URL, E2E_TARGET_URL, BROWSER
+      # which the reusable workflow injects.
       test_command: |
+        cd java-selenium-example
         mvn -q -DskipTests=false test
 
+      # Optional: enable Edge node + Edge job
+      enable_edge: false
+
+      # Artifacts uploaded by reusable workflow (per browser)
       artifact_name: "java-selenium-e2e"
