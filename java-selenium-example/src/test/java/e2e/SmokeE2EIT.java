@@ -70,7 +70,7 @@ public class SmokeE2EIT {
 
     @Test
     void smoke_login_dashboard_logout_flow() {
-        String baseUrl = envOrThrow("E2E_TARGET_URL");
+        String baseUrl = System.getenv().getOrDefault("E2E_TARGET_URL", "http://host.docker.internal:3000");
 
         // 1) Navigate to /login
         driver.get(baseUrl + "/login");

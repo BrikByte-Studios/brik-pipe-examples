@@ -27,7 +27,7 @@ jobs:
   e2e-ui-java:
     uses: BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml@main
     with:
-      target_url: "http://localhost:3000"
+      target_url: "http://host.docker.internal:3000"
       health_url: "http://localhost:3000/health"
 
       # NEW: Start node-ui-example inside the reusable workflow job
