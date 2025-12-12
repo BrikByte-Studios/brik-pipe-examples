@@ -9,14 +9,13 @@ jobs:
   e2e-java:
     uses: BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml@main
     with:
-      # App already running in staging / preview
-      target_url: "http://app:3000"
-      health_url: "http://localhost:3000/health"
-      service_workdir: "java-selenium-runner-example"
+      target_url: "https://preview-123.yourdomain.com"
+      health_url: "https://preview-123.yourdomain.com/health"
+
+      service_workdir: "brik-pipe-examples"
       compose_file: "docker-compose.selenium.yml"
 
       runner_language: "java"
-
       test_command: |
         mvn -q -DskipTests=false test
 
