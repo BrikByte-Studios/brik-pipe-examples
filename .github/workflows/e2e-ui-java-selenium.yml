@@ -15,7 +15,7 @@ name: "E2E UI (Java • Selenium Grid)"
 #   - wait for app + grid readiness
 #   - run tests for Chrome + Firefox matrix
 #   - optional Edge job
-#   - collect logs + upload artifacts.
+#   - collect logs + upload artifacts
 # -----------------------------------------------------------------------------
 
 on:
