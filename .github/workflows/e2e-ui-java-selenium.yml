@@ -11,8 +11,7 @@ jobs:
     with:
       # App already running in staging / preview
       target_url: "http://app:3000"
-      health_path: "/health"
-
+      health_url: "http://localhost:3000/health"
       service_workdir: "java-selenium-runner-example"
       compose_file: "docker-compose.selenium.yml"
 
