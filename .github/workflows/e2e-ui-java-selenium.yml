@@ -14,7 +14,7 @@ jobs:
       health_path: "/health"
 
       service_workdir: "java-selenium-runner-example"
-      compose_file: "brik-pipe-examples/docker-compose.selenium.yml"
+      compose_file: "docker-compose.selenium.yml"
 
       runner_language: "java"
 
