@@ -7,11 +7,11 @@
 // - Screenshots and videos go under tests/e2e/cypress/{screenshots,videos}.
 // - Designed to be CI-friendly and fully offline.
 
-import { defineConfig } from "cypress";
+const { defineConfig } = require("cypress");
 
 // Small helpers to safely parse env vars into numbers.
-function parseIntEnv(value: string | undefined, fallback: number): number {
-  const parsed = value ? Number.parseInt(value, 10) : Number.NaN;
+function parseIntEnv(value, fallback) {
+  const parsed = value ? Number.parseInt(String(value), 10) : Number.NaN;
   return Number.isNaN(parsed) ? fallback : parsed;
 }
 
@@ -28,13 +28,13 @@ const baseUrl =
 const runModeRetries = parseIntEnv(process.env.CYPRESS_RUN_MODE_RETRIES, 2);
 const openModeRetries = parseIntEnv(process.env.CYPRESS_OPEN_MODE_RETRIES, 0);
 
-export default defineConfig({
+module.exports = defineConfig({
   e2e: {
     // Where Cypress looks for E2E specs:
     specPattern: "tests/e2e/cypress/e2e/**/*.cy.{js,jsx,ts,tsx}",
 
     // Support file (global setup, hooks, custom commands).
-    supportFile: "tests/e2e/cypress/support/e2e.ts",
+    supportFile: "tests/e2e/cypress/support/e2e.js",
 
     fixturesFolder: "tests/e2e/cypress/fixtures",
 
