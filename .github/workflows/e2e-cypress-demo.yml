@@ -12,12 +12,12 @@ on:
     branches: [ main, develop ]
     paths:
       - "node-ui-example/**"
-      - ".github/workflows/e2e-cypress-node-ui.yml"
+      - ".github/workflows/e2e-cypress-demo.yml"
   push:
     branches: [ main ]
     paths:
       - "node-ui-example/**"
-      - ".github/workflows/e2e-cypress-node-ui.yml"
+      - ".github/workflows/e2e-cypress-demo.yml"
 
 jobs:
   e2e-cypress:
