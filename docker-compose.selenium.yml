@@ -28,6 +28,9 @@ services:
       - "4442:4442"
       - "4443:4443"
       - "4444:4444"
+    environment:
+      # Optional but improves deterministic networking in some environments
+      - SE_ENABLE_TRACING=false
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4444/status"]
       interval: 5s
@@ -41,9 +44,15 @@ services:
       selenium-hub:
         condition: service_healthy
     environment:
+      # Tell node where hub + event bus are
+      - SE_HUB_HOST=selenium-hub
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+
+      # Helps node advertise correct host within docker network
+      - SE_NODE_HOST=chrome
+      - SE_NODE_PORT=5555
 
   firefox:
     image: selenium/node-firefox:4.21.0
@@ -52,9 +61,12 @@ services:
       selenium-hub:
         condition: service_healthy
     environment:
+      - SE_HUB_HOST=selenium-hub
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_HOST=firefox
+      - SE_NODE_PORT=5555
 
   edge:
     image: selenium/node-edge:4.21.0
@@ -64,6 +76,10 @@ services:
       selenium-hub:
         condition: service_healthy
     environment:
+      - SE_HUB_HOST=selenium-hub
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_HOST=edge
+      - SE_NODE_PORT=5555
+
