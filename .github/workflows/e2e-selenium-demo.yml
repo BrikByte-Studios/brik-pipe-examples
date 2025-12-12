@@ -48,7 +48,7 @@ jobs:
     timeout-minutes: 30
 
     env:
-      GRID_COMPOSE_FILE: "brik-pipe-examples/docker-compose.selenium.yml"
+      GRID_COMPOSE_FILE: "docker-compose.selenium.yml"
       APP_COMPOSE_FILE: "node-ui-example/docker-compose.e2e.yml"
 
       # Selenium hub on host (published by compose)
@@ -109,6 +109,15 @@ jobs:
           done
 
           echo "[APP] ✅ UI is healthy."
+
+          
+      - name: "Debug: list compose files"
+        run: |
+            set -euo pipefail
+            ls -la
+            ls -la brik-pipe-examples || true
+            find . -maxdepth 3 -name "docker-compose.selenium.yml" -print
+
 
       # ------------------------------------------------------------------------
       # Start Selenium Grid
