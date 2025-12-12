@@ -12,7 +12,7 @@ jobs:
       target_url: "https://preview-123.yourdomain.com"
       health_url: "https://preview-123.yourdomain.com/health"
 
-      service_workdir: "brik-pipe-examples"
+      service_workdir: "."
       compose_file: "docker-compose.selenium.yml"
 
       runner_language: "java"
