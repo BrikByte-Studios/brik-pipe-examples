@@ -203,6 +203,20 @@ app.post("/logout", (req, res) => {
 });
 
 /**
+ * GET /health
+ *
+ * Lightweight readiness probe for CI.
+ * Always returns HTTP 200 with a simple JSON body.
+ */
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "node-ui-example",
+    timestamp: Date.now()
+  });
+});
+
+/**
  * Start the HTTP server.
  */
 app.listen(PORT, () => {
