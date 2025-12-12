@@ -17,14 +17,10 @@
   @BrikByte-Studios/qa-automation @BrikByte-Studios/devops
 
 # Playwright config and helpers for node-ui-example
-node-ui-example/playwright.config.ts \
+**/playwright.config.ts \
   @BrikByte-Studios/qa-automation @BrikByte-Studios/devops
 
-node-ui-example/tests/e2e/playwright/** \
-  @BrikByte-Studios/qa-automation @BrikByte-Studios/devops
-node-ui-example/tests/e2e/playwright/helpers/** \
-  @BrikByte-Studios/qa-automation @BrikByte-Studios/devops
-node-ui-example/tests/e2e/playwright/fixtures/** \
+**/cypress.config.cjs \
   @BrikByte-Studios/qa-automation @BrikByte-Studios/devops
 
 # -------------------------------
@@ -33,10 +29,9 @@ node-ui-example/tests/e2e/playwright/fixtures/** \
 **/tests/integration/**         @BrikByte-Studios/qa-automation @BrikByte-Studios/platform-leads
 
 # -------------------------------
-# E2E / Playwright Tests
+# E2E / Playwright Tests / Cypress Tests
 # -------------------------------
-**/tests/e2e/**                 @BrikByte-Studios/qa-automation @BrikByte-Studios/platform-leads
-**/tests/e2e/playwright/**      @BrikByte-Studios/qa-automation @BrikByte-Studios/platform-leads
+**/tests/e2e/**                 @BrikByte-Studios/qa-automation @BrikByte-Studios/platform-leads @BrikByte-Studios/devopss
 
 # -------------------------------
 # CI / Pipeline Governance

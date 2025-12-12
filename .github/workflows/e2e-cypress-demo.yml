@@ -16,10 +16,24 @@ jobs:
   e2e-cypress:
     uses: BrikByte-Studios/.github/.github/workflows/e2e-cypress.yml@main
     with:
+      # Docker network mode
       start_with_docker: true
-      docker_image_name: node-ui-example-app
+      docker_image_name: "node-ui-example-app"
       docker_port: 3000
+
+      # In Docker mode, always target "app" hostname
       target_url: "http://app:3000"
       health_path: "/health"
+
       service_workdir: "node-ui-example"
       cypress_image: "cypress/included:13.12.0"
+      artifact_name: "cypress-artifacts-node-ui-example"
+
+      # Keep retries low
+      run_mode_retries: 2
+      open_mode_retries: 0
+
+      # Contingency controls (fed via repo variables)
+      non_blocking: ${{ vars.CYPRESS_NON_BLOCKING == '1' }}
+      allow_disable: true
+      disable_cypress_e2e: ${{ vars.DISABLE_CYPRESS_E2E == '1' }}
