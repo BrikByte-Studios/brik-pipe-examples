@@ -24,6 +24,7 @@ services:
   selenium-hub:
     image: selenium/hub:4.21.0
     container_name: selenium-hub
+    hostname: selenium-hub
     ports:
       - "4442:4442"
       - "4443:4443"
