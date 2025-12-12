@@ -1,16 +1,18 @@
+# node-ui-example/docker-compose.e2e.yml
+
 services:
   app:
     build:
       context: .
       dockerfile: ./Dockerfile
-    container_name: node-ui-example-app
+    container_name: app              # important: make DNS name stable
     environment:
       - PORT=3000
     ports:
-      - "3000:3000"
+      - "3000:3000"                  # optional (useful for curl from host)
     networks:
       - e2e-net
 
 networks:
   e2e-net:
-    external: true
+    name: e2e-net       

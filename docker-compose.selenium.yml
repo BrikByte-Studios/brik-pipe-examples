@@ -41,6 +41,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 30
+    networks: [e2e-net]
 
   chrome:
     image: selenium/node-chrome:4.27.0
@@ -54,6 +55,7 @@ services:
       - SE_NODE_MAX_SESSIONS=1
       - SE_NODE_OVERRIDE_MAX_SESSIONS=true
       - SE_LOG_LEVEL=INFO
+    networks: [e2e-net]
 
   firefox:
     image: selenium/node-firefox:4.27.0
@@ -67,6 +69,7 @@ services:
       - SE_NODE_MAX_SESSIONS=1
       - SE_NODE_OVERRIDE_MAX_SESSIONS=true
       - SE_LOG_LEVEL=INFO
+    networks: [e2e-net]
 
   edge:
     image: selenium/node-edge:4.27.0
@@ -81,3 +84,8 @@ services:
       - SE_NODE_MAX_SESSIONS=1
       - SE_NODE_OVERRIDE_MAX_SESSIONS=true
       - SE_LOG_LEVEL=INFO
+    networks: [e2e-net]
+
+networks:
+  e2e-net:
+    name: e2e-net
