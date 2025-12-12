@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-
+#
 jobs:
   e2e-java:
     uses: BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml@main
