@@ -52,7 +52,7 @@ jobs:
       allow_disable: true
       disable_cypress_e2e: ${{ vars.DISABLE_CYPRESS_E2E == '1' }}
 
-      # Artifact standard toggles
+      # Artifact standard toggles.
       e2e_video: false
       e2e_trace: false
       e2e_artifacts_always: false
