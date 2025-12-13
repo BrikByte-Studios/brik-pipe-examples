@@ -37,7 +37,7 @@ jobs:
       service_workdir: "node-ui-example"
 
       # ----------------------------------------------------------
-      # Docker-based app startup (optional)
+      # Docker-based app startup (optional).
       # ----------------------------------------------------------
       start_with_docker: true
       docker_image_name: "node-ui-example-e2e"
