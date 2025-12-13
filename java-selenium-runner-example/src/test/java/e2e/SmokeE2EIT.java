@@ -89,7 +89,7 @@ public class SmokeE2EIT {
         submit.click();
 
         // 3) Assert dashboard reached (welcome header exists)
-        WebElement welcome = byTestId("dashboard-welcome");
+        WebElement welcome = byTestId("dashboard-welcome1");
         Assertions.assertTrue(welcome.getText().toLowerCase().contains("welcome"));
 
         // 4) Optional: interact with user menu
