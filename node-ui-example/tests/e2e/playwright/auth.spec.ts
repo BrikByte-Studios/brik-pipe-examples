@@ -55,7 +55,7 @@ test.describe("Authentication flow", () => {
     // ---------------------------------------------------------------------
     // 5) Validate that a key dashboard element is visible.
     // ---------------------------------------------------------------------
-    await expect(page.getByTestId("dashboard-welcome1")).toBeVisible();
+    await expect(page.getByTestId("dashboard-welcome")).toBeVisible();
 
     // ---------------------------------------------------------------------
     // 6) Perform logout via the "user menu".
