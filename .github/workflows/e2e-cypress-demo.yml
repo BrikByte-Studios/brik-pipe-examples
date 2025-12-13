@@ -47,7 +47,12 @@ jobs:
       run_mode_retries: 2
       open_mode_retries: 0
 
-      # Contingency controls (fed via repo variables)
+      # Contingency controls (fed via repo variables).
       non_blocking: ${{ vars.CYPRESS_NON_BLOCKING == '1' }}
       allow_disable: true
       disable_cypress_e2e: ${{ vars.DISABLE_CYPRESS_E2E == '1' }}
+
+      # Artifact standard toggles
+      e2e_video: false
+      e2e_trace: false
+      e2e_artifacts_always: false
