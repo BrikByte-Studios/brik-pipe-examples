@@ -106,7 +106,7 @@ public class SmokeE2EIT {
         driver.get(baseUrl + "/login");
 
         // 2) Fill form using data-testid selectors
-        WebElement email = waitVisibleByTestId("login-email1");
+        WebElement email = waitVisibleByTestId("login-email");
         WebElement password = waitVisibleByTestId("login-password");
         WebElement submit = waitVisibleByTestId("login-submit");
 

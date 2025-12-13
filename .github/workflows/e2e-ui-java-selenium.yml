@@ -52,6 +52,6 @@ jobs:
       enforce_teardown: true
 
       # Artifact standard toggles
-      e2e_video: true
+      e2e_video: false
       e2e_trace: true
-      e2e_artifacts_always: true
+      e2e_artifacts_always: false

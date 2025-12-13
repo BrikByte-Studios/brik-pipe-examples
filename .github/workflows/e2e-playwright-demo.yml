@@ -74,9 +74,9 @@ jobs:
       # Artifact / audit controls
       # ----------------------------------------------------------
       artifact_name: "playwright-ui-e2e"
-      e2e_video: false
+      e2e_video: true
       e2e_trace: true
-      e2e_artifacts_always: false
+      e2e_artifacts_always: true
 
       # ----------------------------------------------------------
       # Safety switches
