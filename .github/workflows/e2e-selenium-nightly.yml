@@ -70,3 +70,8 @@ jobs:
       enforce_teardown: true
 
       artifact_name: "selenium-nightly"
+
+      # Artifact standard toggles
+      e2e_video: false
+      e2e_trace: false
+      e2e_artifacts_always: false

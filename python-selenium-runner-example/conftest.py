@@ -1,59 +1,118 @@
+"""
+conftest.py
+
+Purpose
+-------
+Pytest fixtures + hooks for Selenium E2E with audit-friendly artifacts.
+
+Key behaviors
+-------------
+- Creates a predictable local artifact folder for screenshots:
+    e2e-artifacts/screenshots/
+- On test failure:
+    - Captures a screenshot as:
+        <browser>_<test-name>_<timestamp>.png
+- Does NOT print secret env values.
+
+Env contract (used, not printed)
+--------------------------------
+- E2E_TARGET_URL        Base URL of the app under test (required)
+- SELENIUM_REMOTE_URL   Remote WebDriver URL (required)
+- BROWSER               chrome|firefox|edge (optional; default: chrome)
+"""
+
 import os
-import json
 import time
+import re
 from pathlib import Path
 
 import pytest
 import requests
 from selenium import webdriver
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 
-def _audit_dir() -> Path:
-    # Keep audit artifacts in repo-relative python-selenium-example/.audit/
-    # so the reusable workflow can upload: ${{ inputs.service_workdir }}/.audit/**
-    here = Path(__file__).resolve().parent
-    out = here / ".audit"
-    out.mkdir(parents=True, exist_ok=True)
-    return out
+# -----------------------------------------------------------------------------
+# Artifact directories (deterministic)
+# -----------------------------------------------------------------------------
+def _repo_root() -> Path:
+    """
+    Resolve the folder that contains this conftest.py.
+
+    We keep artifacts relative to this directory so the workflow can upload
+    `${{ inputs.service_workdir }}/e2e-artifacts/**` reliably.
+    """
+    return Path(__file__).resolve().parent
 
 
+def _artifacts_root() -> Path:
+    """
+    Deterministic artifact root for Selenium E2E.
+
+    Output:
+      <service_workdir>/e2e-artifacts/
+    """
+    root = _repo_root() / "e2e-artifacts"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def _screenshots_dir() -> Path:
+    """
+    Deterministic screenshot output directory.
+
+    Output:
+      <service_workdir>/e2e-artifacts/screenshots/
+    """
+    p = _artifacts_root() / "screenshots"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+# -----------------------------------------------------------------------------
+# Helpers (safe, non-logging)
+# -----------------------------------------------------------------------------
 def _env(name: str, default: str = "") -> str:
+    """
+    Read environment variables without printing values (avoid secrets leakage).
+    """
     val = os.getenv(name, default)
     return val.strip() if isinstance(val, str) else str(val)
 
 
+def _safe_name(value: str) -> str:
+    """
+    Convert an arbitrary string into a filesystem-friendly name.
+
+    - Replaces whitespace with underscores.
+    - Replaces non [A-Za-z0-9._-] characters with underscores.
+    - Truncates length to prevent overly long filenames.
+    """
+    v = value.strip()
+    v = re.sub(r"\s+", "_", v)
+    v = re.sub(r"[^A-Za-z0-9._-]+", "_", v)
+    return v[:180]
+
+
+def _timestamp() -> str:
+    """
+    Timestamp used in artifact naming (CI friendly and sortable).
+    Format: YYYYMMDD-HHMMSS
+    """
+    return time.strftime("%Y%m%d-%H%M%S")
+
+
 def _normalize_base_url(url: str) -> str:
-    url = url.rstrip("/")
-    return url
-
-
-def _make_remote_driver(browser: str, remote_url: str):
-    browser = browser.lower().strip()
-
-    # Selenium Grid 4 prefers W3C caps via Options, but simple caps also work.
-    # Use Options for stability.
-    if browser == "chrome":
-        options = webdriver.ChromeOptions()
-        options.add_argument("--window-size=1440,900")
-        # options.add_argument("--headless=new")  # Grid nodes usually run headed in containers; keep off unless needed
-        return webdriver.Remote(command_executor=remote_url, options=options)
-
-    if browser == "firefox":
-        options = webdriver.FirefoxOptions()
-        options.add_argument("--width=1440")
-        options.add_argument("--height=900")
-        return webdriver.Remote(command_executor=remote_url, options=options)
-
-    if browser in ("edge", "microsoftedge"):
-        options = webdriver.EdgeOptions()
-        options.add_argument("--window-size=1440,900")
-        return webdriver.Remote(command_executor=remote_url, options=options)
-
-    raise ValueError(f"Unsupported BROWSER='{browser}'. Expected chrome|firefox|edge.")
+    return url.rstrip("/")
 
 
 def _wait_for_http_ok(url: str, timeout_seconds: int = 30) -> None:
+    """
+    Best-effort readiness check from the test runner host.
+
+    Note:
+      In Docker/Grid scenarios, this doesn't guarantee the browser node can
+      reach the URL, but it catches obvious failures early.
+    """
     deadline = time.time() + timeout_seconds
     last_err = None
     while time.time() < deadline:
@@ -67,26 +126,54 @@ def _wait_for_http_ok(url: str, timeout_seconds: int = 30) -> None:
     raise RuntimeError(f"App not reachable: {url}. Last error: {last_err}")
 
 
+def _make_remote_driver(browser: str, remote_url: str) -> webdriver.Remote:
+    """
+    Create a RemoteWebDriver using Selenium Grid 4-compatible options.
+    """
+    b = browser.lower().strip()
+
+    if b == "chrome":
+        options = webdriver.ChromeOptions()
+        options.add_argument("--window-size=1440,900")
+        return webdriver.Remote(command_executor=remote_url, options=options)
+
+    if b == "firefox":
+        options = webdriver.FirefoxOptions()
+        options.add_argument("--width=1440")
+        options.add_argument("--height=900")
+        return webdriver.Remote(command_executor=remote_url, options=options)
+
+    if b in ("edge", "microsoftedge"):
+        options = webdriver.EdgeOptions()
+        options.add_argument("--window-size=1440,900")
+        return webdriver.Remote(command_executor=remote_url, options=options)
+
+    raise ValueError(f"Unsupported BROWSER='{b}'. Expected chrome|firefox|edge.")
+
+
+# -----------------------------------------------------------------------------
+# Fixtures
+# -----------------------------------------------------------------------------
 @pytest.fixture(scope="session")
 def e2e_base_url() -> str:
     """
-    Base URL of app under test.
-    Note: When running in Selenium container network, localhost != host.
-    Caller workflow should pass something reachable from nodes:
-      - http://host.docker.internal:3000 (with host-gateway mapping)
-      - OR http://app:3000 if app is on same docker network as grid nodes
+    Base URL of the app under test.
+
+    Required:
+      E2E_TARGET_URL
+
+    Important:
+      If the browser nodes run in Docker, localhost != host runner.
+      Your workflow should provide a URL reachable from the Grid nodes.
     """
     base = _normalize_base_url(_env("E2E_TARGET_URL"))
     if not base:
         raise RuntimeError("E2E_TARGET_URL is required")
 
-    # Optional: sanity check from the runner (host). This doesn't guarantee the browser node can reach it,
-    # but it catches obvious failures early.
-    # If you don’t want this, comment it out.
+    # Best-effort sanity check (do not print URL).
     try:
         _wait_for_http_ok(base, timeout_seconds=20)
     except Exception:
-        # don't fail hard here; the browser node is the real source of truth.
         pass
 
     return base
@@ -94,12 +181,20 @@ def e2e_base_url() -> str:
 
 @pytest.fixture(scope="session")
 def browser_name() -> str:
-    b = _env("BROWSER", "chrome")
-    return b
+    """
+    Browser name for Selenium Grid nodes.
+    """
+    return _env("BROWSER", "chrome")
 
 
 @pytest.fixture(scope="session")
 def selenium_remote_url() -> str:
+    """
+    Selenium Remote WebDriver URL.
+
+    Required:
+      SELENIUM_REMOTE_URL
+    """
     remote = _env("SELENIUM_REMOTE_URL")
     if not remote:
         raise RuntimeError("SELENIUM_REMOTE_URL is required (e.g., http://localhost:4444/wd/hub)")
@@ -107,25 +202,17 @@ def selenium_remote_url() -> str:
 
 
 @pytest.fixture()
-def driver(request, browser_name: str, selenium_remote_url: str):
-    out = _audit_dir()
-    meta = {
-        "browser": browser_name,
-        "selenium_remote_url": selenium_remote_url,
-        "test": request.node.nodeid,
-    }
-    (out / "run-meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+def driver(browser_name: str, selenium_remote_url: str):
+    """
+    Provide a Selenium RemoteWebDriver for each test.
 
+    Note:
+      We intentionally do not auto-screenshot on teardown here because your
+      stated contract is "on failure" only.
+    """
     d = _make_remote_driver(browser_name, selenium_remote_url)
     d.set_page_load_timeout(60)
     yield d
-
-    # Always attempt to write a final screenshot on teardown (best-effort)
-    try:
-        screenshot = out / f"teardown-{request.node.name}.png"
-        d.save_screenshot(str(screenshot))
-    except Exception:
-        pass
 
     try:
         d.quit()
@@ -133,21 +220,33 @@ def driver(request, browser_name: str, selenium_remote_url: str):
         pass
 
 
+# -----------------------------------------------------------------------------
+# Hooks
+# -----------------------------------------------------------------------------
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
-    # Capture screenshot + page source on failures
+    """
+    On test failure, capture a screenshot into:
+
+      e2e-artifacts/screenshots/<browser>_<test-name>_<timestamp>.png
+    """
     outcome = yield
     rep = outcome.get_result()
 
-    if rep.when == "call" and rep.failed:
-        out = _audit_dir()
-        drv = item.funcargs.get("driver", None)
-        if drv:
-            try:
-                drv.save_screenshot(str(out / f"FAIL-{item.name}.png"))
-            except Exception:
-                pass
-            try:
-                (out / f"FAIL-{item.name}.html").write_text(drv.page_source or "", encoding="utf-8")
-            except Exception:
-                pass
+    if rep.when != "call" or not rep.failed:
+        return
+
+    drv = item.funcargs.get("driver")
+    if not drv:
+        return
+
+    browser = _safe_name(_env("BROWSER", "unknown"))
+    test_name = _safe_name(item.name)
+    ts = _timestamp()
+
+    # Best-effort screenshot capture; never raise and mask the real test failure.
+    try:
+        path = _screenshots_dir() / f"{browser}_{test_name}_{ts}.png"
+        drv.save_screenshot(str(path))
+    except Exception:
+        pass
