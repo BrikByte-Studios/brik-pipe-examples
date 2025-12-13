@@ -1,58 +1,54 @@
-# ==============================================================================
-# Repo Wrapper — Cypress E2E (node-ui-example)
-# ==============================================================================
-#
-# Docstring:
-# - This repo-level wrapper calls the org reusable workflow.
-# - It adds per-repo controls via Variables:
-#     - DISABLE_CYPRESS_E2E=1     → disables Cypress runs without deleting YAML
-#     - CYPRESS_NON_BLOCKING=1    → failures won't block merges initially
-#
-# Where to set variables:
-# - GitHub repo → Settings → Secrets and variables → Actions → Variables
-#
-# ==============================================================================
-name: "E2E - Cypress (node-ui-example)"
+name: "UI E2E (Cypress)"
 
 on:
   pull_request:
-    branches: [ main, develop ]
-    paths:
-      - "node-ui-example/**"
-      - ".github/workflows/e2e-cypress-demo.yml"
+    branches: [main]
   push:
-    branches: [ main ]
-    paths:
-      - "node-ui-example/**"
-      - ".github/workflows/e2e-cypress-demo.yml"
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  e2e-cypress:
+  cypress-e2e:
     uses: BrikByte-Studios/.github/.github/workflows/e2e-cypress.yml@main
     with:
-      # Docker network mode
+      # ----------------------------------------------------------
+      # App under test
+      # ----------------------------------------------------------
+      target_url: "http://localhost:3000"
+      health_path: "/health"
+      service_workdir: "node-ui-example"
+
+      # ----------------------------------------------------------
+      # Docker-based app startup (optional)
+      # ----------------------------------------------------------
       start_with_docker: true
-      docker_image_name: "node-ui-example-app"
+      docker_image_name: "node-ui-example-e2e"
       docker_port: 3000
 
-      # In Docker mode, always target "app" hostname
-      target_url: "http://app:3000"
-      health_path: "/health"
-
-      service_workdir: "node-ui-example"
-      cypress_image: "cypress/included:13.12.0"
-      artifact_name: "cypress-artifacts-node-ui-example"
-
-      # Keep retries low
+      # ----------------------------------------------------------
+      # Cypress execution tuning
+      # ----------------------------------------------------------
+      spec_pattern: ""                # optional (e.g. cypress/e2e/auth.cy.ts)
       run_mode_retries: 2
       open_mode_retries: 0
+      non_blocking: false             # fail PR if Cypress fails
 
-      # Contingency controls (fed via repo variables).
-      non_blocking: ${{ vars.CYPRESS_NON_BLOCKING == '1' }}
+      # ----------------------------------------------------------
+      # Browser matrix (handled internally)
+      # ----------------------------------------------------------
+      # chrome, firefox, edge
+
+      # ----------------------------------------------------------
+      # Artifact / audit controls
+      # ----------------------------------------------------------
+      artifact_name: "cypress-ui-e2e"
+      e2e_video: false                # disable always-on video
+      e2e_trace: false                # Cypress usually false
+      e2e_artifacts_always: false     # only export on failure
+
+      # ----------------------------------------------------------
+      # Safety switches
+      # ----------------------------------------------------------
       allow_disable: true
-      disable_cypress_e2e: ${{ vars.DISABLE_CYPRESS_E2E == '1' }}
-
-      # Artifact standard toggles.
-      e2e_video: false
-      e2e_trace: false
-      e2e_artifacts_always: false
+      disable_cypress_e2e: false
+      job_timeout_minutes: 30

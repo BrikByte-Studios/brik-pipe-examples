@@ -26,22 +26,49 @@ on:
       - ".github/workflows/e2e-playwright-demo.yml"
 
 jobs:
-  e2e-ui:
-    # IMPORTANT: this is a job that *uses* a reusable workflow,
-    # so we do NOT define runs-on/steps/services here.
+  playwright-e2e:
     uses: BrikByte-Studios/.github/.github/workflows/e2e-playwright.yml@main
     with:
-      # For now, we'll just hit localhost from inside the runner.
-      # The reusable workflow will be responsible for starting the server.
+      # ----------------------------------------------------------
+      # App under test
+      # ----------------------------------------------------------
       target_url: "http://localhost:3000"
+      health_path: "/health"
+      service_workdir: "node-ui-example"
+
+      # ----------------------------------------------------------
+      # Docker-based app startup (optional)
+      # ----------------------------------------------------------
+      start_with_docker: true
+      docker_image_name: "node-ui-example-e2e"
+      docker_port: 3000
+
+      # ----------------------------------------------------------
+      # Browser coverage
+      # ----------------------------------------------------------
       enable_firefox: true
       enable_webkit: false
+
+      # ----------------------------------------------------------
+      # Playwright tuning
+      # ----------------------------------------------------------
       workers: "50%"
       retries: 1
       trace_mode: "on-first-retry"
-      service_workdir: "node-ui-example"
+      spec_pattern: "" # optional --grep
 
-      # Artifact standard toggles.
+      # ----------------------------------------------------------
+      # Artifact / audit controls
+      # ----------------------------------------------------------
+      artifact_name: "playwright-ui-e2e"
       e2e_video: false
-      e2e_trace: false
+      e2e_trace: true
       e2e_artifacts_always: false
+
+      # ----------------------------------------------------------
+      # Safety switches
+      # ----------------------------------------------------------
+      allow_disable: true
+      disable_playwright_e2e: false
+      non_blocking: false
+      job_timeout_minutes: 30
