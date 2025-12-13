@@ -59,7 +59,7 @@ jobs:
       edge_job_timeout_minutes: 40
       enforce_teardown: true
 
-      # Artifact standard toggles
+      # Artifact standard toggles.
       e2e_video: false
       e2e_trace: false
       e2e_artifacts_always: false
