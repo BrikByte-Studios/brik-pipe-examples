@@ -48,7 +48,7 @@ jobs:
       app_service_workdir: "node-ui-example"
       # IMPORTANT:
       # - This file must exist inside node-ui-example/
-      # - It must expose the app on localhost:3000 on the GitHub runner.
+      # - It must expose the app on localhost:3000 on the GitHub runner
       app_compose_file: "docker-compose.e2e.yml"
       app_wait_seconds: 120
 
