@@ -7,7 +7,7 @@
 //
 // Notes about the server:
 // - Auth is in-memory ("loggedIn" boolean), so Cypress runs must be serial/isolated.
-// - We log out at the end of tests that log in to keep state clean.
+// - We log out at the end of tests that log in to keep state clean
 
 describe("Auth - login/dashboard/logout", () => {
   it("allows a test user to log in, see the dashboard, and log out", () => {
