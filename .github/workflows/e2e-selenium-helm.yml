@@ -1,0 +1,147 @@
+name: "Future • Selenium Grid (Helm on Kubernetes)"
+
+# -----------------------------------------------------------------------------
+# Future • Selenium Grid via Helm (Kubernetes)
+#
+# Purpose:
+#   Replace docker-compose grid with a Helm-installed grid once infra maturity supports it.
+#
+# Contingency Plan:
+#   - Today:
+#       - PR gates: Playwright/Cypress
+#       - Nightly: docker-compose Selenium Grid
+#   - Future:
+#       - Helm-based grid for better scale + isolation
+#
+# Optional Future:
+#   - A Kubernetes cluster (self-hosted, managed, or ephemeral) to support Helm approach
+#
+# Enablement:
+#   - This workflow is intentionally NOT scheduled by default.
+#   - You run it manually once your cluster and secrets are ready.
+#
+# Required Secrets (example):
+#   - KUBECONFIG_B64: base64 kubeconfig for a cluster (or use OIDC + cloud auth)
+#
+# Notes:
+#   - This is a skeleton; choose your preferred Selenium Grid Helm chart approach.
+# -----------------------------------------------------------------------------
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  helm-grid-e2e:
+    name: "Helm Grid E2E (Future)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Install kubectl + helm"
+        run: |
+          set -euo pipefail
+          : <<'DOCSTRING'
+          Install kubectl + helm
+
+          Purpose:
+            Prep CI runner to interact with a Kubernetes cluster for Helm deployments.
+
+          Notes:
+            - Keep versions pinned when you standardize.
+          DOCSTRING
+
+          sudo apt-get update -y
+          sudo apt-get install -y ca-certificates curl
+
+          # kubectl
+          curl -fsSL -o kubectl https://storage.googleapis.com/kubernetes-release/release/v1.30.6/bin/linux/amd64/kubectl
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+          kubectl version --client=true
+
+          # helm
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          helm version
+
+      - name: "Configure kubeconfig (example: from secret)"
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          set -euo pipefail
+          : <<'DOCSTRING'
+          Configure kubeconfig
+
+          Purpose:
+            Authenticate CI runner to the Kubernetes cluster.
+
+          Security:
+            - Kubeconfig is treated as a secret.
+            - Do not echo it.
+          DOCSTRING
+
+          if [[ -z "${KUBECONFIG_B64}" ]]; then
+            echo "[K8S] ERROR: missing secrets.KUBECONFIG_B64"
+            exit 1
+          fi
+
+          mkdir -p "$HOME/.kube"
+          echo "${KUBECONFIG_B64}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+          kubectl cluster-info
+
+      - name: "Deploy Selenium Grid via Helm (skeleton)"
+        run: |
+          set -euo pipefail
+          : <<'DOCSTRING'
+          Deploy Selenium Grid via Helm (skeleton)
+
+          Purpose:
+            Install a Selenium Grid into Kubernetes for scalable cross-browser testing.
+
+          Implementation Notes:
+            - Pick a chart approach:
+              1) Official Selenium chart (if available/maintained in your context)
+              2) Community chart
+              3) Your own chart under infra/helm/selenium-grid
+
+          Maturity:
+            - This step is for when you have a stable cluster + RBAC policies.
+          DOCSTRING
+
+          NAMESPACE="selenium-grid"
+          kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+
+          # Example placeholder:
+          # helm upgrade --install selenium-grid ./infra/helm/selenium-grid \
+          #   -n "${NAMESPACE}" \
+          #   --set chrome.enabled=true \
+          #   --set firefox.enabled=true \
+          #   --set edge.enabled=false
+
+          echo "[HELM] Placeholder: add your chart + values here."
+
+      - name: "Run Python Selenium tests against Helm Grid (skeleton)"
+        run: |
+          set -euo pipefail
+          : <<'DOCSTRING'
+          Run tests against Helm-based Grid
+
+          Purpose:
+            Execute the same test suite, but point SELENIUM_REMOTE_URL to the
+            Kubernetes Service / Ingress that exposes the hub/router.
+
+          Typical pattern:
+            - kubectl port-forward svc/selenium-hub 4444:4444 -n selenium-grid
+            - export SELENIUM_REMOTE_URL=http://localhost:4444/wd/hub
+            - export E2E_TARGET_URL=<env url>
+            - pytest
+          DOCSTRING
+
+          echo "[TEST] Placeholder: add port-forward and run pytest here."

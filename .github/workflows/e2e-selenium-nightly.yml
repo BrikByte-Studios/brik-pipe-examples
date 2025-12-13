@@ -1,0 +1,72 @@
+name: "Nightly • E2E (Selenium Grid • Cross-Browser)"
+
+# -----------------------------------------------------------------------------
+# Nightly • Selenium Grid (Cross-Browser)
+#
+# Purpose:
+#   Run slower/flakier cross-browser checks on a schedule instead of blocking PRs.
+#
+# Contingency Plan:
+#   - If Selenium is too slow/flaky for PR gating:
+#       ✅ Keep Selenium as nightly scheduled (this workflow).
+#       ✅ Keep Playwright/Cypress as PR gates.
+#
+# Triggers:
+#   - schedule: nightly run (02:00 UTC)
+#   - workflow_dispatch: manual run for debugging or pre-release checks
+#
+# Notes:
+#   - Uses app started via docker-compose (start_app=true) for localhost CI.
+#   - Browsers: chrome + firefox (edge optional if you enable it)
+# -----------------------------------------------------------------------------
+
+on:
+  schedule:
+    # Nightly at 02:00 UTC (adjust to your team rhythm)
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      enable_edge:
+        description: "Run Edge too?"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  selenium-nightly:
+    name: "Nightly Selenium Grid"
+    uses: BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml@main
+    with:
+      # App under test
+      target_url: "http://host.docker.internal:3000"
+      health_url: "http://localhost:3000/health" # curl from host runner
+
+      start_app: true
+      app_service_workdir: "node-ui-example"
+      app_compose_file: "docker-compose.e2e.yml"
+
+      # Grid in this repo
+      service_workdir: "."
+      compose_file: "docker-compose.selenium.yml"
+
+      # Python runner
+      runner_language: "python"
+      test_command: |
+        cd python-selenium-example
+        python -m venv .venv
+        . .venv/bin/activate
+        pip install -r requirements.txt
+        pytest -q
+
+      # Optional Edge from dispatch input
+      enable_edge: ${{ inputs.enable_edge }}
+
+      # Safeguards
+      job_timeout_minutes: 35
+      edge_job_timeout_minutes: 40
+      enforce_teardown: true
+
+      artifact_name: "selenium-nightly"
