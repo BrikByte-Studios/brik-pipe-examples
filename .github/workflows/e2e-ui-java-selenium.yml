@@ -46,3 +46,7 @@ jobs:
 
       enable_edge: false
       artifact_name: "java-selenium-e2e"
+
+      job_timeout_minutes: 35
+      edge_job_timeout_minutes: 40
+      enforce_teardown: true
