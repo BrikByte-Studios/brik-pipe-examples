@@ -53,7 +53,7 @@ test.describe("Authentication flow", () => {
     await expect(page).toHaveURL(new RegExp(`${routes.dashboard}$`));
 
     // ---------------------------------------------------------------------
-    // 5) Validate that a key dashboard element is visible
+    // 5) Validate that a key dashboard element is visible.
     // ---------------------------------------------------------------------
     await expect(page.getByTestId("dashboard-welcome`")).toBeVisible();
 
