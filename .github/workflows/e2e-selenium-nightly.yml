@@ -55,7 +55,7 @@ jobs:
       # Python runner
       runner_language: "python"
       test_command: |
-        cd python-selenium-example
+        cd python-selenium-runner-example
         python -m venv .venv
         . .venv/bin/activate
         pip install -r requirements.txt
