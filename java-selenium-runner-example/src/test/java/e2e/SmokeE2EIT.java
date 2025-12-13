@@ -1,53 +1,75 @@
 package e2e;
 
+import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
+import java.time.Instant;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.extension.TestWatcher;
 import org.openqa.selenium.By;
 import org.openqa.selenium.MutableCapabilities;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.remote.RemoteWebDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
-/**
- * SmokeE2EIT
- *
- * Purpose:
- *   Minimal cross-browser smoke test to validate:
- *     - Selenium Grid wiring (RemoteWebDriver)
- *     - Your demo UI server endpoints:
- *         /login -> /dashboard -> /logout
- *
- * This test targets the deterministic "node-ui-example" Express app you provided.
- *
- * BrikPipe Env Contracts:
- *   - SELENIUM_REMOTE_URL : Remote endpoint (e.g., http://localhost:4444/wd/hub)
- *   - E2E_TARGET_URL      : App base URL (e.g., http://localhost:3000)
- *   - BROWSER             : chrome | firefox | edge
- *
- * Data-testid contracts (must match node-ui-example server HTML):
- *   - login-form
- *   - login-email
- *   - login-password
- *   - login-submit
- *   - dashboard-welcome
- *   - user-menu-toggle
- *   - user-menu-logout
- */
 public class SmokeE2EIT {
 
     private WebDriver driver;
 
-    // Keep in sync with node-ui-example TEST_USER values.
     private static final String TEST_EMAIL = "test.user@brikbyteos.local";
     private static final String TEST_PASSWORD = "password123!";
+
+    // Where Selenium screenshots should land (exporter will read this)
+    private static final Path SELENIUM_SCREENSHOTS_DIR =
+        Paths.get("target", "selenium-artifacts", "screenshots");
+
+    // Capture screenshots only when a test fails
+    @RegisterExtension
+    TestWatcher screenshotOnFailure = new TestWatcher() {
+        @Override
+        public void testFailed(ExtensionContext context, Throwable cause) {
+            try {
+                if (driver == null) return;
+                if (!(driver instanceof TakesScreenshot)) return;
+
+                Files.createDirectories(SELENIUM_SCREENSHOTS_DIR);
+
+                String browser = envOrDefault("BROWSER", "chrome");
+                String testName = context.getDisplayName().replaceAll("[^a-zA-Z0-9-_\\.]", "_");
+                String ts = String.valueOf(Instant.now().toEpochMilli());
+
+                Path out = SELENIUM_SCREENSHOTS_DIR.resolve(
+                    browser + "_" + testName + "_" + ts + ".png"
+                );
+
+                byte[] png = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
+                Files.write(out, png);
+
+                System.out.println("[SELENIUM] Screenshot captured: " + out.toString());
+            } catch (IOException e) {
+                System.out.println("[SELENIUM] Screenshot capture failed: " + e.getMessage());
+            } catch (WebDriverException e) {
+                System.out.println("[SELENIUM] Screenshot capture skipped: " + e.getMessage());
+            }
+        }
+    };
 
     @BeforeEach
     void setup() throws Exception {
@@ -55,12 +77,11 @@ public class SmokeE2EIT {
         String browser = envOrDefault("BROWSER", "chrome");
 
         MutableCapabilities options = CapabilitiesFactory.optionsFor(browser);
-
         driver = new RemoteWebDriver(new URL(remoteUrl), options);
 
-        // CI-friendly timeouts to avoid hung sessions.
         driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(30));
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(2));
+        // Prefer explicit waits for E2E flows; implicit waits can mask timing issues
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(0));
     }
 
     @AfterEach
@@ -72,10 +93,8 @@ public class SmokeE2EIT {
     void smoke_login_dashboard_logout_flow() {
         String baseUrl = System.getenv().getOrDefault("E2E_TARGET_URL", "http://host.docker.internal:3000");
 
-        // 1) Navigate to /login
         driver.get(baseUrl + "/login");
 
-        // 2) Fill form using data-testid selectors
         WebElement email = byTestId("login-email");
         WebElement password = byTestId("login-password");
         WebElement submit = byTestId("login-submit");
@@ -88,37 +107,32 @@ public class SmokeE2EIT {
 
         submit.click();
 
-        // 3) Assert dashboard reached (welcome header exists)
-        WebElement welcome = byTestId("dashboard-welcome1");
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        WebElement welcome = wait.until(ExpectedConditions.visibilityOfElementLocated(
+            By.cssSelector("[data-testid='dashboard-welcome1']")
+        ));
+
         Assertions.assertTrue(welcome.getText().toLowerCase().contains("welcome"));
 
-        // 4) Optional: interact with user menu
         WebElement toggle = byTestId("user-menu-toggle");
         Assertions.assertNotNull(toggle);
 
-        // 5) Logout (POST form submit button)
         WebElement logout = byTestId("user-menu-logout");
         logout.click();
 
-        // 6) After logout, app redirects to /login
-        // We re-check login form is present.
-        WebElement loginForm = byTestId("login-form");
+        WebElement loginForm = wait.until(ExpectedConditions.visibilityOfElementLocated(
+            By.cssSelector("[data-testid='login-form']")
+        ));
         Assertions.assertNotNull(loginForm);
     }
 
-    /**
-     * Helper to locate elements by data-testid attribute.
-     * Keeps selectors consistent and readable.
-     */
     private WebElement byTestId(String id) {
         return driver.findElement(By.cssSelector("[data-testid='" + id + "']"));
     }
 
     private static String envOrThrow(String key) {
         String v = System.getenv(key);
-        if (v == null || v.isBlank()) {
-            throw new IllegalStateException("Missing required env var: " + key);
-        }
+        if (v == null || v.isBlank()) throw new IllegalStateException("Missing required env var: " + key);
         return v;
     }
 
@@ -127,12 +141,6 @@ public class SmokeE2EIT {
         return (v == null || v.isBlank()) ? def : v;
     }
 
-    /**
-     * CapabilitiesFactory
-     *
-     * Centralizes browser option selection.
-     * Headless is enabled for CI stability.
-     */
     static class CapabilitiesFactory {
         static MutableCapabilities optionsFor(String browser) {
             switch ((browser == null ? "" : browser).toLowerCase()) {
