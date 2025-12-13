@@ -3,13 +3,14 @@
 # Responsibilities:
 # - Trigger Playwright E2E tests whenever node-ui-example changes.
 # - Delegate actual E2E execution to the reusable workflow in BrikByte-Studios/.github.
-# - Target the staging/base URL for UI flows via E2E_TARGET_URL.
+# - Start the app under test (docker compose) when running in CI.
+# - Run cross-browser Playwright E2E and export .audit evidence via the shared exporter.
 #
 # Assumptions:
 # - Reusable workflow exists at:
 #     BrikByte-Studios/.github/.github/workflows/e2e-playwright.yml
-# - That workflow defines an input `service_workdir` and uses it as the working directory
-#   when running `npm install` and `npx playwright test`.
+# - Reusable workflow inputs include:
+#     start_app, app_compose_file, app_service_workdir, target_url, health_url, service_workdir, etc.
 
 name: "E2E - Playwright (node-ui-example)"
 
@@ -34,14 +35,22 @@ jobs:
       # ----------------------------------------------------------
       target_url: "http://localhost:3000"
       health_url: "http://localhost:3000/health"
+
+      # ----------------------------------------------------------
+      # Playwright project location
+      # ----------------------------------------------------------
       service_workdir: "node-ui-example"
 
       # ----------------------------------------------------------
-      # Docker-based app startup (optional).
+      # App lifecycle (localhost CI mode) — docker compose
       # ----------------------------------------------------------
-      start_with_docker: true
-      docker_image_name: "node-ui-example-e2e"
-      docker_port: 3000
+      start_app: true
+      app_service_workdir: "node-ui-example"
+      # IMPORTANT:
+      # - This file must exist inside node-ui-example/
+      # - It must expose the app on localhost:3000 on the GitHub runner
+      app_compose_file: "docker-compose.e2e.yml"
+      app_wait_seconds: 120
 
       # ----------------------------------------------------------
       # Browser coverage
@@ -55,7 +64,11 @@ jobs:
       workers: "50%"
       retries: 1
       trace_mode: "on-first-retry"
-      spec_pattern: "" # optional --grep
+
+      # Optional grep filter (passed via env in your reusable workflow if supported)
+      # If your reusable workflow doesn’t implement grep yet, keep this empty.
+      # (It is safe to pass; it just won’t be used.)
+      # spec_pattern: ""
 
       # ----------------------------------------------------------
       # Artifact / audit controls
@@ -68,7 +81,4 @@ jobs:
       # ----------------------------------------------------------
       # Safety switches
       # ----------------------------------------------------------
-      allow_disable: true
-      disable_playwright_e2e: false
-      non_blocking: false
       job_timeout_minutes: 30
