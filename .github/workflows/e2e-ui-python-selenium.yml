@@ -1,4 +1,4 @@
-name: "E2E UI (Java • Selenium Grid)"
+name: "E2E UI (Python • Selenium Grid)"
 
 # -----------------------------------------------------------------------------
 # Caller workflow (brik-pipe-examples)
@@ -7,10 +7,12 @@ name: "E2E UI (Java • Selenium Grid)"
 #   BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml
 #
 # This repo provides:
-#   - docker-compose.selenium.yml  (Grid)
-#   - java-selenium-example/       (tests)
+#   - docker-compose.selenium.yml        (Grid)
+#   - python-selenium-example/           (tests)
+#   - node-ui-example/docker-compose.e2e.yml (app under test)
 #
 # The reusable workflow provides:
+#   - start app (optional)
 #   - start grid
 #   - wait for app + grid readiness
 #   - run tests for Chrome + Firefox matrix
@@ -24,13 +26,16 @@ on:
   pull_request:
 
 jobs:
-  e2e-ui-java:
+  e2e-ui-python:
     uses: BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml@main
     with:
+      # IMPORTANT:
+      # - Browser nodes run in containers; "localhost" from the browser ≠ runner host.
+      # - Use host.docker.internal (with host-gateway mapping in docker-compose.selenium.yml).
       target_url: "http://host.docker.internal:3000"
       health_url: "http://localhost:3000/health"
 
-      # NEW: Start node-ui-example inside the reusable workflow job
+      # Start node-ui-example inside the reusable workflow job
       start_app: true
       app_service_workdir: "node-ui-example"
       app_compose_file: "docker-compose.e2e.yml"
@@ -39,10 +44,13 @@ jobs:
       service_workdir: "."
       compose_file: "docker-compose.selenium.yml"
 
-      runner_language: "java"
+      runner_language: "python"
       test_command: |
-        cd java-selenium-runner-example
-        mvn -q -DskipTests=false test
+        set -euo pipefail
+        cd python-selenium-runner-example
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pytest
 
       enable_edge: false
-      artifact_name: "java-selenium-e2e"
+      artifact_name: "python-selenium-e2e"

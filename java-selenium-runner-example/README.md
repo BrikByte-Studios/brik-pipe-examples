@@ -1,4 +1,4 @@
-# java-selenium-example
+# java-selenium-runner-example
 
 Minimal Java + Selenium RemoteWebDriver E2E example used by BrikPipe.
 
