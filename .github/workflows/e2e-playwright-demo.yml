@@ -33,7 +33,7 @@ jobs:
       # App under test
       # ----------------------------------------------------------
       target_url: "http://localhost:3000"
-      health_path: "/health"
+       health_url: "http://localhost:3000/health"
       service_workdir: "node-ui-example"
 
       # ----------------------------------------------------------
