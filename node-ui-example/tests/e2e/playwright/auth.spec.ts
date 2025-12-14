@@ -14,7 +14,7 @@
  * - Retries for this suite can be tuned independently via describe.configure.
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/diagnostics.fixture";
 
 // Centralized helpers (no hard-coded paths or credentials)
 import { routes } from "./helpers/routes.js";
