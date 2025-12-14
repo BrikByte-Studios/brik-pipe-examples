@@ -7,7 +7,7 @@
 //
 // Notes about the server:
 // - Auth is in-memory ("loggedIn" boolean), so Cypress runs must be serial/isolated.
-// - We log out at the end of tests that log in to keep state clean
+// - We log out at the end of tests that log in to keep state clean.
 
 describe("Auth - login/dashboard/logout", () => {
   it("allows a test user to log in, see the dashboard, and log out", () => {
@@ -29,7 +29,7 @@ describe("Auth - login/dashboard/logout", () => {
         .should("be.visible")
         .and("contain", user.displayName);
 
-      cy.get('[data-testid="user-menu-logout1"]').click();
+      cy.get('[data-testid="user-menu-logout"]').click();
 
       cy.url().should("include", "/login");
       cy.get('[data-testid="login-form"]').should("be.visible");
