@@ -29,7 +29,7 @@ describe("Auth - login/dashboard/logout", () => {
         .should("be.visible")
         .and("contain", user.displayName);
 
-      cy.get('[data-testid="user-menu-logout1"]').click();
+      cy.get('[data-testid="user-menu-logout"]').click();
 
       cy.url().should("include", "/login");
       cy.get('[data-testid="login-form"]').should("be.visible");
