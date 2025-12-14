@@ -1,56 +1,35 @@
 // Global Cypress support file for node-ui-example E2E tests.
 //
 // Responsibilities:
-// - Import custom commands (if any).
-// - Basic before/after hooks that apply to all tests.
-// - Tiny helpers for debugging or future extensions.
+// - Global hooks and tiny helpers.
+// - Best-effort failure diagnostics capture (Cypress parity with Playwright).
+//
+// IMPORTANT RUNTIME NOTE
+// ----------------------
+// This file runs in the browser context.
+// Do NOT use fs/path here.
+// All disk writes must happen via cy.task(...) implemented in cypress.config.js.
 //
 // Diagnostics contract (best-effort parity with Playwright):
-// - console.json   → Cypress failure metadata + error + optional console buffer (if available)
+// - console.json   → structured failure metadata + error (not full browser console)
 // - dom.html       → DOM snapshot (document HTML) on failure
 // - network.har    → placeholder / partial (Cypress has no native HAR export)
 // - trace.zip      → placeholder (Cypress has no Playwright-style trace viewer)
 //
-// Output directory (producer):
+// Producer output directory (written by Node tasks):
 //   tests/e2e/cypress/diagnostics/
+//
 // Normalized + uploaded by:
 //   capture-e2e-diagnostics.mjs → .audit/YYYY-MM-DD/e2e/diagnostics/
 
 /// <reference types="cypress" />
 
-const fs = require("fs");
-const path = require("path");
-
-const DIAG_DIR = "tests/e2e/cypress/diagnostics";
-
-function ensureDir(dir) {
-  fs.mkdirSync(dir, { recursive: true });
-}
-
-function writeUtf8(filePath, content) {
-  ensureDir(path.dirname(filePath));
-  fs.writeFileSync(filePath, content, "utf-8");
-}
-
-/**
- * Best-effort DOM snapshot.
- * Note: Cypress runs inside the browser, so we can read DOM directly.
- */
-function captureDomSnapshot() {
-  try {
-    // jQuery is available via Cypress.$
-    const html = Cypress.$("html").prop("outerHTML");
-    return typeof html === "string" && html.length > 0
-      ? html
-      : "<!-- dom snapshot empty -->\n";
-  } catch (e) {
-    return `<!-- dom snapshot failed: ${e?.message ?? String(e)} -->\n`;
-  }
-}
-
 /**
  * Minimal, best-effort redaction to reduce accidental leakage.
  * (Still: do NOT render secrets in test environments.)
+ *
+ * @param {string} input
+ * @returns {string}
  */
 function redactText(input) {
   if (!input) return input;
@@ -78,86 +57,80 @@ function redactText(input) {
 
 // Example: log the baseUrl before the test run starts.
 before(() => {
-  // Cypress.config("baseUrl") is resolved from cypress.config.ts
   const baseUrl = Cypress.config("baseUrl");
   // eslint-disable-next-line no-console
   console.log("[CYPRESS] Using baseUrl:", baseUrl);
 });
 
-// After each test, write diagnostics if the test failed.
+/**
+ * After each test, if it failed:
+ *  - capture a DOM snapshot
+ *  - build a structured "console.json" payload (failure context + error)
+ *  - emit placeholders for network.har and trace.zip (contract stability)
+ *  - write everything to disk via cy.task("diag:write", payload)
+ */
 afterEach(function () {
   const state = this.currentTest?.state;
-
   if (state !== "failed") return;
 
-  ensureDir(DIAG_DIR);
+  const testTitle = this.currentTest?.title ?? "unknown";
+  const suite = this.currentTest?.parent?.title ?? "";
+  const spec = Cypress.spec?.relative ?? "";
+  const browser = Cypress.browser?.name ?? "unknown";
+  const baseUrl = Cypress.config("baseUrl") ?? "";
 
-  // ----------------------------------------------------------------------------
-  // 1) console.json (structured failure info)
-  // ----------------------------------------------------------------------------
-  const consolePayload = {
-    runner: "cypress",
-    browser: Cypress.browser?.name ?? "unknown",
-    status: "failed",
-    testTitle: this.currentTest?.title ?? "unknown",
-    suite: this.currentTest?.parent?.title ?? "",
-    spec: Cypress.spec?.relative ?? "",
-    baseUrl: Cypress.config("baseUrl") ?? "",
-    timestamp: new Date().toISOString(),
-    error: this.currentTest?.err
-      ? {
-          message: this.currentTest.err.message,
-          stack: this.currentTest.err.stack,
-          name: this.currentTest.err.name,
-        }
-      : null,
-    note:
-      "Cypress does not provide full browser console entries by default. This file contains structured test failure context.",
-    entries: [],
-  };
+  const err = this.currentTest?.err;
+  const errorBlock = err
+    ? { message: err.message, stack: err.stack, name: err.name }
+    : null;
 
-  writeUtf8(
-    path.join(DIAG_DIR, "console.json"),
-    JSON.stringify(consolePayload, null, 2)
-  );
+  // DOM snapshot must be captured using Cypress commands.
+  cy.document({ log: false }).then((doc) => {
+    const domHtml = redactText(doc?.documentElement?.outerHTML || "<!-- dom snapshot empty -->\n");
 
-  // ----------------------------------------------------------------------------
-  // 2) dom.html (DOM snapshot)
-  // ----------------------------------------------------------------------------
-  const dom = redactText(captureDomSnapshot());
-  writeUtf8(path.join(DIAG_DIR, "dom.html"), dom);
+    const consolePayload = {
+      runner: "cypress",
+      browser,
+      status: "failed",
+      testTitle,
+      suite,
+      spec,
+      baseUrl,
+      timestamp: new Date().toISOString(),
+      error: errorBlock,
+      note:
+        "Cypress does not expose full browser console entries by default. This file contains structured failure context.",
+      entries: [],
+    };
 
-  // ----------------------------------------------------------------------------
-  // 3) network.har (placeholder / partial)
-  // ----------------------------------------------------------------------------
-  // Cypress has no native HAR export. If later you implement cy.intercept aggregation,
-  // you can replace this placeholder with a real "HAR-like" structure.
-  writeUtf8(
-    path.join(DIAG_DIR, "network.har"),
-    JSON.stringify(
-      {
-        log: {
-          version: "1.2",
-          creator: { name: "cypress", version: Cypress.version ?? "unknown" },
-          entries: [],
-          comment:
-            "Placeholder: Cypress does not natively export HAR. Use Playwright for full HAR, or implement cy.intercept aggregation for partial network logs.",
-        },
+    // HAR placeholder (valid JSON)
+    const networkHar = {
+      log: {
+        version: "1.2",
+        creator: { name: "cypress", version: Cypress.version ?? "unknown" },
+        entries: [],
+        comment:
+          "Placeholder: Cypress does not natively export HAR. Use Playwright for full HAR, or implement cy.intercept aggregation for partial network logs.",
       },
-      null,
-      2
-    )
-  );
+    };
 
-  // ----------------------------------------------------------------------------
-  // 4) trace.zip (placeholder)
-  // ----------------------------------------------------------------------------
-  // Cypress has no Playwright trace viewer bundle.
-  writeUtf8(
-    path.join(DIAG_DIR, "trace.zip"),
-    "trace.zip not supported in Cypress. Placeholder to keep diagnostics contract stable.\n"
-  );
+    // Trace placeholder (contract stability)
+    const traceStub =
+      "trace.zip not supported in Cypress. Placeholder to keep diagnostics contract stable.\n";
 
-  // eslint-disable-next-line no-console
-  console.log("[CYPRESS] Test failed — diagnostics written to:", DIAG_DIR);
+    // Write files via Node-side task (defined in cypress.config.js)
+    cy.task(
+      "diag:write",
+      {
+        console: consolePayload,
+        domHtml,
+        networkHar,
+        traceStub,
+      },
+      { log: false }
+    );
+
+    // eslint-disable-next-line no-console
+    console.log("[CYPRESS] Test failed — diagnostics written via cy.task(diag:write).");
+  });
 });
