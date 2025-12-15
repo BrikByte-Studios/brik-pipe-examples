@@ -45,7 +45,7 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # UNIT TEST JOB
-  # Executes unit tests in parallel shards inside node-api-example/
+  # Executes unit tests in parallel shards inside node-api-example/.
   # ---------------------------------------------------------------------------
   unit:
     needs: plan
