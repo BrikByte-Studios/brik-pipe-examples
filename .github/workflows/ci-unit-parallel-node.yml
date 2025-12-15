@@ -68,5 +68,20 @@ jobs:
       - name: Run unit tests (sharded)
         working-directory: node-api-example
         run: |
-          echo "Running unit shard ${{ matrix.shard }} / ${{ strategy.job-total }}"
-          npm test -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+          SHARD="${{ matrix.shard }}"
+          TOTAL="${{ strategy.job-total }}"
+          echo "Running unit shard ${SHARD} / ${TOTAL}"
+
+          FILES="$(node scripts/shard-tests.js tests/unit "${SHARD}" "${TOTAL}")"
+
+          if [ -z "$FILES" ]; then
+            echo "No unit tests assigned to this shard; skipping."
+            exit 0
+          fi
+
+          mkdir -p out
+          NODE_OPTIONS='--experimental-vm-modules' \
+          c8 --reporter=json --reporter=json-summary --report-dir=coverage \
+          node --test --test-reporter=junit --test-reporter-destination=out/junit.xml \
+          $FILES
+
