@@ -24,7 +24,7 @@ on:
 jobs:
   # ---------------------------------------------------------------------------
   # PLAN JOB
-  # Computes the governed matrix once and exposes it to downstream jobs.
+  # Computes the governed matrix once and exposes it to downstream jobs
   # ---------------------------------------------------------------------------
   plan:
     runs-on: ubuntu-latest
