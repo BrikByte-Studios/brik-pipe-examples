@@ -2,7 +2,7 @@
  * Deterministically selects test files for a given shard.
  *
  * Usage:
- *   node scripts/shard-tests.js tests/unit 1 8
+ *   node scripts/shard-tests.cjs tests/unit 1 8
  *
  * Notes:
  * - Sorting ensures determinism across runs.
@@ -27,12 +27,11 @@ const shard = Number(shardStr);
 const total = Number(totalStr);
 
 if (!root || !Number.isInteger(shard) || !Number.isInteger(total) || shard < 1 || total < 1) {
-  console.error("Usage: node scripts/shard-tests.js <dir> <shard> <total>");
+  console.error("Usage: node scripts/shard-tests.cjs <dir> <shard> <total>");
   process.exit(2);
 }
 
-const isTestFile = (p) =>
-  /\.(test|spec)\.[cm]?[jt]sx?$/.test(p) || /\.(test|spec)\.[jt]s$/.test(p);
+const isTestFile = (p) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(p);
 
 const files = walk(root).filter(isTestFile).sort();
 const picked = files.filter((_, i) => (i % total) === (shard - 1));
