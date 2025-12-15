@@ -1,0 +1,72 @@
+# -----------------------------------------------------------------------------
+# CI Unit Tests — Node API Example
+# -----------------------------------------------------------------------------
+# Purpose:
+#   Demonstrates governed, deterministic unit test parallelization
+#   using BrikPipe matrix strategy, executed within a subproject.
+#
+# Context:
+#   Repository: brik-pipe-examples
+#   Target app: node-api-example/
+#
+# Key guarantees:
+#   - Deterministic shard calculation
+#   - Hard-capped parallelism for cost control
+#   - Single shared workflow, reusable across examples
+# -----------------------------------------------------------------------------
+
+name: "CI Unit Tests (Node API Example)"
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # PLAN JOB
+  # Computes the governed matrix once and exposes it to downstream jobs
+  # ---------------------------------------------------------------------------
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix_json }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Generate deterministic shard plan for unit tests
+      # Any value above the platform cap will be clamped safely
+      - name: Compute unit test matrix
+        id: plan
+        uses: BrikByte-Studios/.github/.github/actions/matrix-plan@main
+        with:
+          test_type: unit
+          override_shards: 8
+
+  # ---------------------------------------------------------------------------
+  # UNIT TEST JOB
+  # Executes unit tests in parallel shards inside node-api-example/
+  # ---------------------------------------------------------------------------
+  unit:
+    needs: plan
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Install dependencies inside the Node API example
+      - name: Install dependencies
+        working-directory: node-api-example
+        run: npm ci
+
+      # Run unit tests for the assigned shard
+      - name: Run unit tests (sharded)
+        working-directory: node-api-example
+        run: |
+          echo "Running unit shard ${{ matrix.shard }} / ${{ strategy.job-total }}"
+          npm test -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
