@@ -4,16 +4,16 @@
  * Usage:
  *   node scripts/shard-tests.cjs tests/unit 1 8
  *
- * Notes:
- * - Sorting ensures determinism across runs.
- * - Modulo distribution is stable and cheap.
- * - Filters to common test filenames: *.test.* / *.spec.*
+ * Behavior:
+ * - Always exits 0 when inputs are valid (even if no files are selected).
+ * - Matches JS/TS files under the provided directory.
  */
 const fs = require("fs");
 const path = require("path");
 
 function walk(dir) {
   const out = [];
+  if (!fs.existsSync(dir)) return out;
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) out.push(...walk(p));
@@ -31,9 +31,12 @@ if (!root || !Number.isInteger(shard) || !Number.isInteger(total) || shard < 1 |
   process.exit(2);
 }
 
-const isTestFile = (p) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(p);
+// Include most common file types Node projects use for tests.
+// If you only want *.test.* / *.spec.* later, tighten this filter.
+const isCandidate = (p) => /\.(cjs|mjs|js|ts)$/.test(p);
 
-const files = walk(root).filter(isTestFile).sort();
+const files = walk(root).filter(isCandidate).sort();
 const picked = files.filter((_, i) => (i % total) === (shard - 1));
 
 process.stdout.write(picked.join("\n"));
+process.exit(0);

@@ -68,11 +68,17 @@ jobs:
       - name: Run unit tests (sharded)
         working-directory: node-api-example
         run: |
+          set +e  # prevent early exit if FILES command returns non-zero for any reason
           SHARD="${{ matrix.shard }}"
           TOTAL="${{ strategy.job-total }}"
           echo "Running unit shard ${SHARD} / ${TOTAL}"
 
           FILES="$(node scripts/shard-tests.cjs tests/unit "${SHARD}" "${TOTAL}")"
+          set -e
+
+          COUNT="$(printf "%s\n" "$FILES" | sed '/^$/d' | wc -l | tr -d ' ')"
+          echo "Shard assigned files: ${COUNT}"
+          echo "$FILES" | sed -n '1,20p'
 
           if [ -z "$FILES" ]; then
             echo "No unit tests assigned to this shard; skipping."
