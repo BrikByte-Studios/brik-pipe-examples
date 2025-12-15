@@ -72,7 +72,7 @@ jobs:
           TOTAL="${{ strategy.job-total }}"
           echo "Running unit shard ${SHARD} / ${TOTAL}"
 
-          FILES="$(node scripts/shard-tests.js tests/unit "${SHARD}" "${TOTAL}")"
+          FILES="$(node scripts/shard-tests.cjs tests/unit "${SHARD}" "${TOTAL}")"
 
           if [ -z "$FILES" ]; then
             echo "No unit tests assigned to this shard; skipping."
