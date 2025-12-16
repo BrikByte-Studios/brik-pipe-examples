@@ -174,8 +174,11 @@ jobs:
           set -euo pipefail
           found="$(find . -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
           if [[ -z "${found}" ]]; then
-            echo "[AUDIT] ERROR: Could not find */out/coverage.json anywhere after download."
-            find . -maxdepth 6 -type f -print || true
+            found="$(find . -type f -name "coverage.json" -print -quit 2>/dev/null || true)"
+          fi
+          if [[ -z "${found}" ]]; then
+            echo "[AUDIT] ERROR: Could not find coverage file anywhere after download."
+            find . -maxdepth 8 -type f -print || true
             exit 1
           fi
           mkdir -p "python-api-example/out"
