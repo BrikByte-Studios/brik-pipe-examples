@@ -12,17 +12,18 @@ on:
       - "python-api-example/**"
       - ".github/workflows/ci-python-api-example.yml"
 
+permissions:
+  contents: read
+
 jobs:
-  # 1) Validate brikpipe.build.yml (optional, same pattern as Node)
+  # 1) Validate brikpipe.build.yml
   config-validate:
     uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
     with:
       project-path: "python-api-example"
       config-file: "brikpipe.build.yml"
 
-  # --------------------------------------------------------------
   # 2) Python CI (build, lint, install)
-  # --------------------------------------------------------------
   python-ci:
     name: "Python: Build & Test"
     uses: BrikByte-Studios/.github/.github/workflows/template-python-ci.yml@main
@@ -33,7 +34,7 @@ jobs:
       force-cache-refresh: "false"
     secrets: inherit
 
-  # 3) Python tests + coverage
+  # 3) Python tests + coverage (now sharded via matrix-plan inside test-python.yml)
   tests:
     name: "Python: Unit Tests + Coverage"
     needs: python-ci
@@ -41,55 +42,111 @@ jobs:
     with:
       python-version: "3.11"
       working-directory: "python-api-example"
+      # optional:
+      override_shards: "4"
+      # matrix_config_path: ".github/parallel-matrix.yml"
 
-  # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
-  coverage-gate:
-    name: "Coverage Governance Gate"
-    needs: tests
-    uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
-    with:
-      # Governance gate runs from repo root
-      working-directory: "python-api-example"
-      # coverage.json produced by test-python.yml:
-      coverage-file: "./out/coverage.json"
-
-      # point to policy above python-api-example/
-      policy-file: "../.governance/tests.yml"
-
-      # baseline also lives above python-api-example/
-      baseline-file: "../.audit/coverage-baseline.json"
-
-      # artifact name produced in test-python.yml
-      coverage-artifact-name: "coverage-python"
-
-  # --------------------------------------------------------------
-  # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
-  # --------------------------------------------------------------
-  unit-test-audit:
-    name: "Unit Test Audit Export"
+  # 3.5) Merge shard coverage artifacts into one canonical artifact
+  #
+  # Why: coverage-gate + audit-export should read ONE coverage.json.
+  merge-coverage:
+    name: "Merge coverage shards"
     needs: tests
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: "Checkout repository"
         uses: actions/checkout@v4
 
-      # Download coverage + JUnit (or equivalent) artifacts into repo root
-      - name: Download coverage + JUnit artifacts
+      # Download ALL artifacts that start with `coverage-python-`
+      - name: "Download all coverage shard artifacts"
         uses: actions/download-artifact@v4
         with:
-          name: coverage-python
-          path: python-api-example
+          pattern: "coverage-python-*"
+          path: "python-api-example/.artifacts/coverage"
+          merge-multiple: true
 
-      - name: Export unit test audit bundle
+      # Pick one canonical out/coverage.json as the merged output.
+      # (v1: last writer wins; still deterministic if you always pick shard1.)
+      # Better: update your coverage-merge action to truly aggregate per-shard.
+      - name: "Select canonical coverage.json"
+        working-directory: "python-api-example"
+        run: |
+          set -euo pipefail
+          mkdir -p out
+
+          # Prefer shard1 if present, else first match.
+          if compgen -G ".artifacts/coverage/**/out/coverage.json" > /dev/null; then
+            # try shard1
+            shard1="$(find .artifacts/coverage -path "*shard1*" -name coverage.json -o -path "*shard1*" -name "coverage.json" | head -n 1 || true)"
+            if [[ -n "${shard1}" ]]; then
+              echo "[MERGE] Using shard1 coverage: ${shard1}"
+              cp "${shard1}" out/coverage.json
+            else
+              first="$(find .artifacts/coverage -name coverage.json | head -n 1)"
+              echo "[MERGE] Using first shard coverage: ${first}"
+              cp "${first}" out/coverage.json
+            fi
+          else
+            echo "[MERGE] ERROR: No shard coverage.json found"
+            find .artifacts/coverage -maxdepth 4 -type f || true
+            exit 1
+          fi
+
+          echo "[MERGE] Final out/coverage.json:"
+          cat out/coverage.json
+
+      - name: "Upload merged coverage artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "coverage-python-merged"
+          path: |
+            python-api-example/out/coverage.json
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14
+
+  # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
+  coverage-gate:
+    name: "Coverage Governance Gate"
+    needs: merge-coverage
+    uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
+    with:
+      working-directory: "python-api-example"
+      coverage-file: "./out/coverage.json"
+
+      policy-file: "../.governance/tests.yml"
+      baseline-file: "../.audit/coverage-baseline.json"
+
+      # Updated to merged artifact name
+      coverage-artifact-name: "coverage-python-merged"
+
+  # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
+  unit-test-audit:
+    name: "Unit Test Audit Export"
+    needs: merge-coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+
+      # Download merged coverage artifact into project folder
+      - name: "Download merged coverage artifact"
+        uses: actions/download-artifact@v4
+        with:
+          name: "coverage-python-merged"
+          path: "python-api-example/out"
+
+      - name: "Export unit test audit bundle"
         if: always()
         uses: BrikByte-Studios/.github/.github/actions/audit-export@main
         with:
-          working-directory: python-api-example
-          junit: out/junit.xml
-          coverage: out/coverage.json
-          audit-root: .audit
-          runtime: python@3.11
+          working-directory: "python-api-example"
+          junit: "out/junit.xml"              # ensure your Makefile/pytest writes this
+          coverage: "out/coverage.json"
+          audit-root: ".audit"
+          runtime: "python@3.11"
           duration-seconds: ""
           upload-artifact: "true"
           artifact-name: "unit-tests-audit-python"
