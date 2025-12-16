@@ -67,14 +67,13 @@ test-unit: deps
 	@if ls $(TEST_DIR)/test_*.py >/dev/null 2>&1; then \
 	  mkdir -p out; \
 	  \
-	  # Build deterministic file list (sorted)
 	  files="$$(ls -1 $(TEST_DIR)/test_*.py 2>/dev/null | sort)"; \
+	  export FILES="$$files"; \
 	  \
-	  # If sharding enabled, select subset by modulo on index (1-based)
-	  if [ "$(UNIT_SHARD_TOTAL)" -gt "1" ]; then \
+	  if [ "$${UNIT_SHARD_TOTAL:-1}" -gt "1" ]; then \
 	    selected="$$(python - << 'PY' \
-import os, sys \
-files = os.environ["FILES"].splitlines() \
+import os \
+files = os.environ.get("FILES","").splitlines() \
 shard = int(os.environ.get("UNIT_SHARD","1")) \
 total = int(os.environ.get("UNIT_SHARD_TOTAL","1")) \
 out=[] \
@@ -89,28 +88,29 @@ PY \
 	  fi; \
 	  \
 	  if [ -z "$$selected" ]; then \
-	    echo "ℹ️ No tests selected for shard $(UNIT_SHARD)/$(UNIT_SHARD_TOTAL) (nothing to run)."; \
+	    echo "ℹ️ No tests selected for shard $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1} (nothing to run)."; \
 	    exit 0; \
 	  fi; \
 	  \
 	  echo "📄 Selected test files:"; \
 	  echo "$$selected" | sed 's/^/  - /'; \
 	  \
-	  PYTHONPATH="$$(pwd):$$PYTHONPATH" FILES="$$files" UNIT_SHARD="$(UNIT_SHARD)" UNIT_SHARD_TOTAL="$(UNIT_SHARD_TOTAL)" pytest \
+	  PYTHONPATH="$$(pwd):$$PYTHONPATH" pytest \
 	    -q \
 	    $$selected \
 	    -m "not integration" \
 	    --ignore=$(TEST_DIR)/integration \
 	    --maxfail=1 \
 	    --disable-warnings \
-	    --junitxml=out/junit-unit-shard$(UNIT_SHARD).xml \
+	    --junitxml=out/junit-unit-shard$${UNIT_SHARD:-1}.xml \
 	    --cov=main \
 	    --cov-report=term-missing \
-	    --cov-report=xml:coverage-shard$(UNIT_SHARD).xml \
-	    --cov-report=json:out/coverage-shard$(UNIT_SHARD).json; \
+	    --cov-report=xml:coverage-shard$${UNIT_SHARD:-1}.xml \
+	    --cov-report=json:out/coverage-shard$${UNIT_SHARD:-1}.json; \
 	else \
 	  echo "ℹ️ No unit tests found; skipping pytest."; \
 	fi
+
 
 # Backwards-compatible alias
 test: test-unit
