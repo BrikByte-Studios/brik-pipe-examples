@@ -21,7 +21,12 @@ on:
   schedule:
     # Nightly at 02:00 UTC
     - cron: "0 2 * * *"
-  
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
   selenium-nightly:
     name: "Nightly Selenium Grid"
@@ -57,7 +62,7 @@ jobs:
       #
       # Edge is conditionally added below.
       # -----------------------------------------------------------------------
-      enable_edge: true
+      enable_edge: false
 
       # Selenium sharding intentionally OFF for nightly stability.
       # Increase only if your test runner implements deterministic splitting.
