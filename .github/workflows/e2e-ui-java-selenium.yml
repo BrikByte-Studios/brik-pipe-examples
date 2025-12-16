@@ -61,7 +61,7 @@ jobs:
       # browsers: "chrome,firefox"
 
       # Selenium sharding OFF by default. Keep "1" unless your Maven test runner
-      # implements deterministic splitting using E2E_SHARD/E2E_SHARD_TOTAL.
+      # implements deterministic splitting using E2E_SHARD/E2E_SHARD_TOTAL
       override_shards: "1"
 
       # -----------------------------------------------------------------------
