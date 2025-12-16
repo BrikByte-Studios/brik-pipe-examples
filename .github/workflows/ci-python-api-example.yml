@@ -61,33 +61,34 @@ jobs:
           path: "python-api-example/.artifacts/coverage"
           merge-multiple: true
 
-      - name: "Select canonical coverage.json"
+      - name: "Select canonical coverage (supports out/coverage.json OR coverage.json)"
         working-directory: "python-api-example"
         run: |
           set -euo pipefail
           mkdir -p out
 
           echo "[MERGE] Listing downloaded coverage artifacts:"
-          find .artifacts/coverage -maxdepth 10 -type f -print || true
+          find .artifacts/coverage -maxdepth 12 -type f -print || true
 
-          # Prefer shard1 if present, else first match.
-          shard1="$(find .artifacts/coverage -type f -path "*/shard1*/out/coverage.json" -print -quit 2>/dev/null || true)"
-          first="$(find .artifacts/coverage -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
+          # Prefer: */out/coverage.json (new format)
+          out_cov="$(find .artifacts/coverage -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
+          # Fallback: */coverage.json (old/root format)
+          root_cov="$(find .artifacts/coverage -type f -name "coverage.json" -print -quit 2>/dev/null || true)"
 
-          if [[ -n "${shard1}" ]]; then
-            echo "[MERGE] Using shard1 coverage: ${shard1}"
-            cp "${shard1}" out/coverage.json
-          elif [[ -n "${first}" ]]; then
-            echo "[MERGE] Using first nested coverage: ${first}"
-            cp "${first}" out/coverage.json
+          if [[ -n "${out_cov}" ]]; then
+            echo "[MERGE] Using out/coverage.json: ${out_cov}"
+            cp "${out_cov}" out/coverage.json
+          elif [[ -n "${root_cov}" ]]; then
+            echo "[MERGE] Using coverage.json: ${root_cov}"
+            cp "${root_cov}" out/coverage.json
           else
-            echo "[MERGE] ERROR: No out/coverage.json found under .artifacts/coverage"
+            echo "[MERGE] ERROR: No coverage file found under .artifacts/coverage"
             exit 1
           fi
 
-          echo "[MERGE] Final out/coverage.json:"
+          echo "[MERGE] Final python-api-example/out/coverage.json:"
           ls -la out || true
-          cat out/coverage.json
+          head -n 40 out/coverage.json || true
 
       - name: "Upload merged coverage artifact"
         uses: actions/upload-artifact@v4
@@ -116,17 +117,23 @@ jobs:
           name: "coverage-python-merged"
           path: "."
 
-      - name: "Materialize coverage.json to canonical path"
+      - name: "Materialize coverage.json to canonical path (handles coverage.json OR out/coverage.json)"
         run: |
           set -euo pipefail
 
-          echo "[COVERAGE] Searching for coverage.json after artifact download..."
+          echo "[COVERAGE] Searching for coverage after artifact download..."
+          # Prefer: */out/coverage.json
           found="$(find . -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
 
+          # Fallback: */coverage.json
           if [[ -z "${found}" ]]; then
-            echo "[COVERAGE] ERROR: Could not find */out/coverage.json anywhere after download."
+            found="$(find . -type f -name "coverage.json" -print -quit 2>/dev/null || true)"
+          fi
+
+          if [[ -z "${found}" ]]; then
+            echo "[COVERAGE] ERROR: Could not find coverage file anywhere after download."
             echo "[COVERAGE] Files in workspace:"
-            find . -maxdepth 6 -type f -print || true
+            find . -maxdepth 8 -type f -print || true
             exit 1
           fi
 
