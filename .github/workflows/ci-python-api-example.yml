@@ -43,7 +43,6 @@ jobs:
       python-version: "3.11"
       working-directory: "python-api-example"
       override_shards: "4"
-      # matrix_config_path: ""   # (optional) let matrix-plan use its default internal config
 
   # 3.5) Merge shard coverage artifacts into one canonical output (v1: pick one)
   merge-coverage:
@@ -69,37 +68,32 @@ jobs:
           mkdir -p out
 
           echo "[MERGE] Listing downloaded coverage artifacts:"
-          find .artifacts/coverage -maxdepth 8 -type f -print || true
+          find .artifacts/coverage -maxdepth 10 -type f -print || true
 
-          # If download merged files "flat", shard paths may disappear and you may get:
-          #   .artifacts/coverage/out/coverage.json
-          if [[ -f ".artifacts/coverage/out/coverage.json" ]]; then
-            echo "[MERGE] Using merged-flat coverage: .artifacts/coverage/out/coverage.json"
-            cp ".artifacts/coverage/out/coverage.json" "out/coverage.json"
+          # Prefer shard1 if present, else first match.
+          shard1="$(find .artifacts/coverage -type f -path "*/shard1*/out/coverage.json" -print -quit 2>/dev/null || true)"
+          first="$(find .artifacts/coverage -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
+
+          if [[ -n "${shard1}" ]]; then
+            echo "[MERGE] Using shard1 coverage: ${shard1}"
+            cp "${shard1}" out/coverage.json
+          elif [[ -n "${first}" ]]; then
+            echo "[MERGE] Using first nested coverage: ${first}"
+            cp "${first}" out/coverage.json
           else
-            # Otherwise search nested
-            shard1="$(find .artifacts/coverage -type f -path "*/shard1*/out/coverage.json" -print -quit 2>/dev/null || true)"
-            first="$(find .artifacts/coverage -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
-
-            if [[ -n "${shard1}" ]]; then
-              echo "[MERGE] Using shard1 coverage: ${shard1}"
-              cp "${shard1}" out/coverage.json
-            elif [[ -n "${first}" ]]; then
-              echo "[MERGE] Using first nested coverage: ${first}"
-              cp "${first}" out/coverage.json
-            else
-              echo "[MERGE] ERROR: No out/coverage.json found under .artifacts/coverage"
-              exit 1
-            fi
+            echo "[MERGE] ERROR: No out/coverage.json found under .artifacts/coverage"
+            exit 1
           fi
 
           echo "[MERGE] Final out/coverage.json:"
+          ls -la out || true
           cat out/coverage.json
 
       - name: "Upload merged coverage artifact"
         uses: actions/upload-artifact@v4
         with:
           name: "coverage-python-merged"
+          # NOTE: keep it simple: store it as out/coverage.json (no extra nesting)
           path: |
             python-api-example/out/coverage.json
           if-no-files-found: error
@@ -107,7 +101,6 @@ jobs:
           retention-days: 14
 
   # 4) Coverage Governance Gate
-  # NOTE: This MUST download the merged coverage artifact in THIS job.
   coverage-gate:
     name: "Coverage Governance Gate"
     needs: merge-coverage
@@ -123,13 +116,27 @@ jobs:
           name: "coverage-python-merged"
           path: "."
 
-      - name: "Debug: show merged coverage at expected path"
+      - name: "Materialize coverage.json to canonical path"
         run: |
           set -euo pipefail
-          echo "[DEBUG] Expecting: python-api-example/out/coverage.json"
-          ls -la python-api-example/out || true
-          test -f python-api-example/out/coverage.json
-          echo "[DEBUG] Found ✅"
+
+          echo "[COVERAGE] Searching for coverage.json after artifact download..."
+          found="$(find . -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
+
+          if [[ -z "${found}" ]]; then
+            echo "[COVERAGE] ERROR: Could not find */out/coverage.json anywhere after download."
+            echo "[COVERAGE] Files in workspace:"
+            find . -maxdepth 6 -type f -print || true
+            exit 1
+          fi
+
+          echo "[COVERAGE] Found: ${found}"
+          mkdir -p "python-api-example/out"
+          cp "${found}" "python-api-example/out/coverage.json"
+
+          echo "[COVERAGE] Canonical path ready: python-api-example/out/coverage.json"
+          ls -la python-api-example/out
+          head -n 40 python-api-example/out/coverage.json || true
 
       - name: "Run coverage governance gate"
         uses: BrikByte-Studios/.github/.github/actions/coverage-gate@main
@@ -149,20 +156,23 @@ jobs:
       - name: "Checkout repository"
         uses: actions/checkout@v4
 
-      # Download merged coverage artifact into project root (avoid nested out/out path)
       - name: "Download merged coverage artifact"
         uses: actions/download-artifact@v4
         with:
           name: "coverage-python-merged"
-          path: "python-api-example"
+          path: "."
 
-      # OPTIONAL: if you also need junit.xml from shards, download them too (patterned)
-      # - name: "Download all junit shard artifacts"
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     pattern: "coverage-python-*"
-      #     path: "python-api-example/.artifacts/junit"
-      #     merge-multiple: true
+      - name: "Materialize coverage.json to canonical path"
+        run: |
+          set -euo pipefail
+          found="$(find . -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
+          if [[ -z "${found}" ]]; then
+            echo "[AUDIT] ERROR: Could not find */out/coverage.json anywhere after download."
+            find . -maxdepth 6 -type f -print || true
+            exit 1
+          fi
+          mkdir -p "python-api-example/out"
+          cp "${found}" "python-api-example/out/coverage.json"
 
       - name: "Export unit test audit bundle"
         if: always()
@@ -176,5 +186,5 @@ jobs:
           duration-seconds: ""
           upload-artifact: "true"
           artifact-name: "unit-tests-audit-python"
-          upload-to-blob: "true"             # set true once blob sync exists
+          upload-to-blob: "true"
           blob-target: "s3://brikbyte-audit/unit-tests/python-api-example"
