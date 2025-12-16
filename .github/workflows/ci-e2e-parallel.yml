@@ -44,7 +44,7 @@ jobs:
       - name: Install Playwright browsers
         run: npx --yes playwright install --with-deps
 
-            - name: Build UI (if needed)
+      - name: Build UI (if needed)
         run: npm run build --if-present
 
       - name: Start UI app
