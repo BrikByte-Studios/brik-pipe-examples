@@ -121,7 +121,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: "coverage-python-merged"
-          path: "python-api-example"
+          path: "."
 
       - name: "Run coverage governance gate"
         uses: BrikByte-Studios/.github/.github/actions/coverage-gate@main
