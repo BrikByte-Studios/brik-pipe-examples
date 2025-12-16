@@ -12,8 +12,13 @@ on:
       - "java-api-example/**"
       - ".github/workflows/ci-java-api-example.yml"
 
+permissions:
+  contents: read
+
 jobs:
+  # --------------------------------------------------------------
   # 1) Validate brikpipe.build.yml
+  # --------------------------------------------------------------
   config-validate:
     uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
     with:
@@ -21,7 +26,9 @@ jobs:
       config-file: "brikpipe.build.yml"
       # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
 
+  # --------------------------------------------------------------
   # 2) Java CI (build / compile / lint etc.)
+  # --------------------------------------------------------------
   java-ci:
     name: "Java: Build & CI"
     needs: config-validate
@@ -34,7 +41,10 @@ jobs:
       force-cache-refresh: "false"
     secrets: inherit
 
-  # 3) Java Tests + Coverage (produces out/coverage.json + coverage-java artifact)
+  # --------------------------------------------------------------
+  # 3) Java Tests + Coverage (sharded inside test-java.yml)
+  #    - uploads per-shard artifacts: coverage-java-shard<N>
+  # --------------------------------------------------------------
   tests:
     name: "Java: Unit Tests + Coverage"
     needs: java-ci
@@ -43,46 +53,103 @@ jobs:
       java-version: "17"
       distribution: "temurin"
       working-directory: "java-api-example"
+      # optional governed parallelism (clamped to caps):
+      override_shards: "4"
+      # matrix_config_path: ""   # leave empty to use default inside .github repo
+
+  # --------------------------------------------------------------
+  # 3.5) Merge shard coverage artifacts -> canonical java-api-example/out/coverage.json
+  # --------------------------------------------------------------
+  merge-coverage:
+    name: "Merge coverage shards"
+    needs: tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "Download all Java coverage shard artifacts"
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "coverage-java-shard*"
+          path: "java-api-example/.artifacts/coverage"
+          merge-multiple: true
+
+      - name: "Select canonical coverage.json"
+        working-directory: "java-api-example"
+        run: |
+          set -euo pipefail
+          mkdir -p out
+
+          echo "[MERGE] Listing downloaded coverage artifacts:"
+          find .artifacts/coverage -maxdepth 10 -type f -print || true
+
+          # Prefer the normalized coverage file path first (new format)
+          out_cov="$(find .artifacts/coverage -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
+          # Fallback: any coverage.json (older/root format)
+          root_cov="$(find .artifacts/coverage -type f -name "coverage.json" -print -quit 2>/dev/null || true)"
+
+          if [[ -n "${out_cov}" ]]; then
+            echo "[MERGE] Using out/coverage.json: ${out_cov}"
+            cp "${out_cov}" out/coverage.json
+          elif [[ -n "${root_cov}" ]]; then
+            echo "[MERGE] Using coverage.json: ${root_cov}"
+            cp "${root_cov}" out/coverage.json
+          else
+            echo "[MERGE] ERROR: No coverage file found under .artifacts/coverage"
+            exit 1
+          fi
+
+          echo "[MERGE] Final java-api-example/out/coverage.json:"
+          ls -la out || true
+          head -n 60 out/coverage.json || true
+
+      - name: "Upload merged coverage artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "coverage-java-merged"
+          path: |
+            java-api-example/out/coverage.json
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14
 
   # --------------------------------------------------------------
   # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
   # --------------------------------------------------------------
   coverage-gate:
     name: "Coverage Governance Gate"
-    needs: tests
+    needs: merge-coverage
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
-      # Gate evaluates coverage from inside the Java example folder
       working-directory: "java-api-example"
-
-      # coverage.json produced by test-java.yml:
       coverage-file: "./out/coverage.json"
 
       # Policy + baseline live at repo root, so we go one level up.
       policy-file: "../.governance/tests.yml"
       baseline-file: "../.audit/coverage-baseline.json"
 
-      # Artifact name produced by test-java.yml
-      coverage-artifact-name: "coverage-java"
+      # Use merged artifact
+      coverage-artifact-name: "coverage-java-merged"
 
   # --------------------------------------------------------------
   # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
   # --------------------------------------------------------------
   unit-test-audit:
     name: "Unit Test Audit Export"
-    needs: tests
+    needs: merge-coverage
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Download coverage + JUnit artifacts (from test-java.yml)
-      - name: Download coverage + JUnit artifacts
+      - name: "Download merged coverage artifact"
         uses: actions/download-artifact@v4
         with:
-          name: coverage-java
-          path: java-api-example
+          name: "coverage-java-merged"
+          path: "java-api-example/out"
 
       - name: Export unit test audit bundle
         if: always()
