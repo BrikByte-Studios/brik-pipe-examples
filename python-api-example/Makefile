@@ -91,11 +91,11 @@ test-unit: deps
 	    --ignore=$(TEST_DIR)/integration \
 	    --maxfail=1 \
 	    --disable-warnings \
-	    --junitxml=out/junit-unit-shard$${UNIT_SHARD:-1}.xml \
+	    --junitxml=out/junit.xml \
 	    --cov=main \
 	    --cov-report=term-missing \
-	    --cov-report=xml:coverage-shard$${UNIT_SHARD:-1}.xml \
-	    --cov-report=json:out/coverage-shard$${UNIT_SHARD:-1}.json; \
+	    --cov-report=xml:coverage.xml  \
+	    --cov-report=json:out/coverage.json; \
 	else \
 	  echo "ℹ️ No unit tests found; skipping pytest."; \
 	fi
