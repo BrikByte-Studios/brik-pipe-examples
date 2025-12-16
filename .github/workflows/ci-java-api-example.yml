@@ -149,7 +149,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: "coverage-java-merged"
-          path: "java-api-example/out"
+          path: "."
 
       - name: Export unit test audit bundle
         if: always()
