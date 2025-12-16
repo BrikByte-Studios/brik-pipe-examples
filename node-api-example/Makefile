@@ -1,3 +1,4 @@
+SHELL := /usr/bin/bash
 # -----------------------------------------------------------------------------
 # Makefile — Node API Example
 #
@@ -41,8 +42,20 @@ build:
 	$(NPM) run build
 
 test: install
-	@echo "🧪 Running Node.js test suite..."
-	$(NPM) test
+	@set -euo pipefail; \
+	echo "🧪 Running Node.js unit tests..."; \
+	echo "🧩 Shard: $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1}"; \
+	SHARD="$${UNIT_SHARD:-1}"; \
+	TOTAL="$${UNIT_SHARD_TOTAL:-1}"; \
+	LIST="$$(node scripts/shard-tests.cjs tests/unit "$$SHARD" "$$TOTAL")"; \
+	if [ -z "$$LIST" ]; then \
+	  echo "ℹ️ No tests selected for shard $$SHARD/$$TOTAL (nothing to run)."; \
+	  exit 0; \
+	fi; \
+	echo "📄 Selected test files:"; \
+	echo "$$LIST" | sed 's/^/  - /'; \
+	TEST_FILES="$$LIST" npm run test:shard
+
 
 ci: clean install build test
 	@echo "✅ CI pipeline (Node) completed successfully."
