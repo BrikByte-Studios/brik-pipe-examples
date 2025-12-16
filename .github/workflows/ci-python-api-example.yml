@@ -75,28 +75,28 @@ jobs:
           set -euo pipefail
           mkdir -p out
 
-          # We expect coverage artifacts to contain out/coverage.json (optionally per shard)
-          if compgen -G ".artifacts/coverage/**/out/coverage.json" > /dev/null; then
-            # Prefer shard1 if present, else first match.
-            shard1="$(find .artifacts/coverage -path "*/shard1*/out/coverage.json" -print -quit 2>/dev/null || true)"
+          # Find any out/coverage.json under .artifacts/coverage (no globstar needed)
+          first="$(find .artifacts/coverage -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
 
-            if [[ -n "${shard1}" ]]; then
-              echo "[MERGE] Using shard1 coverage: ${shard1}"
-              cp "${shard1}" out/coverage.json
-            else
-              first="$(find .artifacts/coverage -path "*/out/coverage.json" -print -quit)"
-              echo "[MERGE] Using first coverage: ${first}"
-              cp "${first}" out/coverage.json
-            fi
-          else
+          if [[ -z "${first}" ]]; then
             echo "[MERGE] ERROR: No out/coverage.json found under .artifacts/coverage"
             find .artifacts/coverage -maxdepth 6 -type f || true
             exit 1
           fi
 
+          # Prefer shard1 if present
+          shard1="$(find .artifacts/coverage -type f -path "*/shard1*/out/coverage.json" -print -quit 2>/dev/null || true)"
+
+          if [[ -n "${shard1}" ]]; then
+            echo "[MERGE] Using shard1 coverage: ${shard1}"
+            cp "${shard1}" out/coverage.json
+          else
+            echo "[MERGE] Using first coverage: ${first}"
+            cp "${first}" out/coverage.json
+          fi
+
           echo "[MERGE] Final out/coverage.json:"
           cat out/coverage.json
-
 
       - name: "Upload merged coverage artifact"
         uses: actions/upload-artifact@v4
