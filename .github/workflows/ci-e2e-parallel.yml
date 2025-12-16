@@ -44,6 +44,25 @@ jobs:
       - name: Install Playwright browsers
         run: npx --yes playwright install --with-deps
 
+            - name: Build UI (if needed)
+        run: npm run build --if-present
+
+      - name: Start UI app
+        run: |
+          mkdir -p out
+          nohup npm run start --if-present > out/app.log 2>&1 &
+          echo "Started UI app (background)."
+
+      - name: Wait for UI health
+        run: |
+          for i in {1..60}; do
+            curl -fsS "http://localhost:3000/health" && exit 0
+            sleep 2
+          done
+          echo "UI app not ready. Last logs:"
+          tail -n 200 out/app.log || true
+          exit 1
+
       - name: Run Playwright (browser × shard)
         run: |
           echo "E2E: ${{ matrix.browser }} shard ${{ matrix.shard }}/${{ strategy.job-total }}"
