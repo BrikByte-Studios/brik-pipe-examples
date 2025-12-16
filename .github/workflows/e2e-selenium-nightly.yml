@@ -23,6 +23,12 @@ on:
     - cron: "0 2 * * *"
 
   workflow_dispatch:
+    inputs:
+      enable_edge:
+        description: "Include Edge in nightly Selenium run?"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -62,7 +68,7 @@ jobs:
       #
       # Edge is conditionally added below.
       # -----------------------------------------------------------------------
-      enable_edge: true
+      enable_edge: ${{ inputs.enable_edge }}
 
       # Selenium sharding intentionally OFF for nightly stability.
       # Increase only if your test runner implements deterministic splitting.
