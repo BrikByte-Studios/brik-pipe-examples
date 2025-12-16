@@ -66,23 +66,12 @@ test-unit: deps
 	@echo "🧩 Shard: $(UNIT_SHARD)/$(UNIT_SHARD_TOTAL)"
 	@if ls $(TEST_DIR)/test_*.py >/dev/null 2>&1; then \
 	  mkdir -p out; \
-	  \
 	  files="$$(ls -1 $(TEST_DIR)/test_*.py 2>/dev/null | sort)"; \
-	  export FILES="$$files"; \
 	  \
 	  if [ "$${UNIT_SHARD_TOTAL:-1}" -gt "1" ]; then \
-	    selected="$$(python - << 'PY' \
-import os \
-files = os.environ.get("FILES","").splitlines() \
-shard = int(os.environ.get("UNIT_SHARD","1")) \
-total = int(os.environ.get("UNIT_SHARD_TOTAL","1")) \
-out=[] \
-for i,f in enumerate(files, start=1): \
-    if ((i-1) % total) == (shard-1): \
-        out.append(f) \
-print("\\n".join(out)) \
-PY \
-)"; \
+	    selected="$$(FILES="$$files" UNIT_SHARD="$${UNIT_SHARD:-1}" UNIT_SHARD_TOTAL="$${UNIT_SHARD_TOTAL:-1}" \
+	      python -c 'import os; files=os.environ.get("FILES","").splitlines(); shard=int(os.environ.get("UNIT_SHARD","1")); total=int(os.environ.get("UNIT_SHARD_TOTAL","1")); out=[f for i,f in enumerate(files,1) if ((i-1)%total)==(shard-1)]; print("\n".join(out))' \
+	    )"; \
 	  else \
 	    selected="$$files"; \
 	  fi; \
@@ -110,7 +99,6 @@ PY \
 	else \
 	  echo "ℹ️ No unit tests found; skipping pytest."; \
 	fi
-
 
 # Backwards-compatible alias
 test: test-unit
