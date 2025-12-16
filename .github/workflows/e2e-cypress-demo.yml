@@ -56,3 +56,6 @@ jobs:
       e2e_video: false
       e2e_trace: false
       e2e_artifacts_always: false
+
+      override_shards: 1
+      browsers: chrome,firefox,edge
