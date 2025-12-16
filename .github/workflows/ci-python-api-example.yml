@@ -123,6 +123,14 @@ jobs:
           name: "coverage-python-merged"
           path: "."
 
+      - name: "Debug: show merged coverage at expected path"
+        run: |
+          set -euo pipefail
+          echo "[DEBUG] Expecting: python-api-example/out/coverage.json"
+          ls -la python-api-example/out || true
+          test -f python-api-example/out/coverage.json
+          echo "[DEBUG] Found ✅"
+
       - name: "Run coverage governance gate"
         uses: BrikByte-Studios/.github/.github/actions/coverage-gate@main
         with:
