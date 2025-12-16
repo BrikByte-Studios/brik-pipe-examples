@@ -7,15 +7,17 @@ name: "E2E UI (Java • Selenium Grid)"
 #   BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml
 #
 # This repo provides:
-#   - docker-compose.selenium.yml  (Grid)
-#   - java-selenium-example/       (tests)
+#   - docker-compose.selenium.yml             (Grid)
+#   - java-selenium-runner-example/           (tests)
+#   - node-ui-example/docker-compose.e2e.yml  (app under test)
 #
 # The reusable workflow provides:
+#   - governed matrix-plan (browser × shard)
+#   - start app (optional)
 #   - start grid
 #   - wait for app + grid readiness
-#   - run tests for Chrome + Firefox matrix
-#   - optional Edge job
-#   - collect logs + upload artifacts
+#   - run tests per matrix item
+#   - collect logs + export/upload artifacts
 # -----------------------------------------------------------------------------
 
 on:
@@ -27,31 +29,60 @@ jobs:
   e2e-ui-java:
     uses: BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml@main
     with:
+      # -----------------------------------------------------------------------
+      # App under test
+      # IMPORTANT:
+      # - Browser nodes run in containers; "localhost" from the browser ≠ runner host.
+      # - Use host.docker.internal (with host-gateway mapping in docker-compose.selenium.yml).
+      # -----------------------------------------------------------------------
       target_url: "http://host.docker.internal:3000"
       health_url: "http://localhost:3000/health"
 
-      # NEW: Start node-ui-example inside the reusable workflow job
       start_app: true
       app_service_workdir: "node-ui-example"
       app_compose_file: "docker-compose.e2e.yml"
+      app_wait_seconds: 120
 
-      # Grid config in this repo
+      # -----------------------------------------------------------------------
+      # Grid config (caller repo)
+      # -----------------------------------------------------------------------
       service_workdir: "."
       compose_file: "docker-compose.selenium.yml"
+      grid_wait_seconds: 120
 
+      # -----------------------------------------------------------------------
+      # Governed matrix wiring (NEW)
+      # - Default browsers in reusable workflow are chrome,firefox (+edge if enabled).
+      # - You can hard-pin browsers deterministically if you want.
+      # -----------------------------------------------------------------------
+      enable_edge: false
+
+      # Optional explicit deterministic override (uncomment if you want)
+      # browsers: "chrome,firefox"
+
+      # Selenium sharding OFF by default. Keep "1" unless your Maven test runner
+      # implements deterministic splitting using E2E_SHARD/E2E_SHARD_TOTAL.
+      override_shards: "1"
+
+      # -----------------------------------------------------------------------
+      # Runner
+      # -----------------------------------------------------------------------
       runner_language: "java"
       test_command: |
+        set -euo pipefail
         cd java-selenium-runner-example
         mvn -q -DskipTests=false test
 
-      enable_edge: false
+      # -----------------------------------------------------------------------
+      # Artifacts / audit
+      # -----------------------------------------------------------------------
       artifact_name: "java-selenium-e2e"
-
-      job_timeout_minutes: 35
-      edge_job_timeout_minutes: 40
-      enforce_teardown: true
-
-      # Artifact standard toggles
       e2e_video: false
       e2e_trace: true
       e2e_artifacts_always: false
+
+      # -----------------------------------------------------------------------
+      # Safety
+      # -----------------------------------------------------------------------
+      job_timeout_minutes: 35
+      enforce_teardown: true
