@@ -34,7 +34,7 @@ jobs:
       force-cache-refresh: "false"
     secrets: inherit
 
-  # 3) Python tests + coverage (now sharded via matrix-plan inside test-python.yml)
+  # 3) Python tests + coverage (sharded inside test-python.yml)
   tests:
     name: "Python: Unit Tests + Coverage"
     needs: python-ci
@@ -42,13 +42,10 @@ jobs:
     with:
       python-version: "3.11"
       working-directory: "python-api-example"
-      # optional:
       override_shards: "4"
-      # matrix_config_path: ".github/parallel-matrix.yml"
+      # matrix_config_path: ""   # (optional) let matrix-plan use its default internal config
 
-  # 3.5) Merge shard coverage artifacts into one canonical artifact
-  #
-  # Why: coverage-gate + audit-export should read ONE coverage.json.
+  # 3.5) Merge shard coverage artifacts into one canonical output (v1: pick one)
   merge-coverage:
     name: "Merge coverage shards"
     needs: tests
@@ -58,7 +55,6 @@ jobs:
       - name: "Checkout repository"
         uses: actions/checkout@v4
 
-      # Download ALL artifacts that start with `coverage-python-`
       - name: "Download all coverage shard artifacts"
         uses: actions/download-artifact@v4
         with:
@@ -66,9 +62,6 @@ jobs:
           path: "python-api-example/.artifacts/coverage"
           merge-multiple: true
 
-      # Pick one canonical out/coverage.json as the merged output.
-      # (v1: last writer wins; still deterministic if you always pick shard1.)
-      # Better: update your coverage-merge action to truly aggregate per-shard.
       - name: "Select canonical coverage.json"
         working-directory: "python-api-example"
         run: |
@@ -76,26 +69,32 @@ jobs:
           mkdir -p out
 
           echo "[MERGE] Listing downloaded coverage artifacts:"
-          find .artifacts/coverage -maxdepth 6 -type f -print || true
+          find .artifacts/coverage -maxdepth 8 -type f -print || true
 
-          # If artifacts were merged-flat, out/coverage.json may be directly here:
+          # If download merged files "flat", shard paths may disappear and you may get:
+          #   .artifacts/coverage/out/coverage.json
           if [[ -f ".artifacts/coverage/out/coverage.json" ]]; then
             echo "[MERGE] Using merged-flat coverage: .artifacts/coverage/out/coverage.json"
             cp ".artifacts/coverage/out/coverage.json" "out/coverage.json"
           else
-            # Otherwise, search for any nested path (if you later change download behavior)
+            # Otherwise search nested
+            shard1="$(find .artifacts/coverage -type f -path "*/shard1*/out/coverage.json" -print -quit 2>/dev/null || true)"
             first="$(find .artifacts/coverage -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
-            if [[ -z "${first}" ]]; then
+
+            if [[ -n "${shard1}" ]]; then
+              echo "[MERGE] Using shard1 coverage: ${shard1}"
+              cp "${shard1}" out/coverage.json
+            elif [[ -n "${first}" ]]; then
+              echo "[MERGE] Using first nested coverage: ${first}"
+              cp "${first}" out/coverage.json
+            else
               echo "[MERGE] ERROR: No out/coverage.json found under .artifacts/coverage"
               exit 1
             fi
-            echo "[MERGE] Using first nested coverage: ${first}"
-            cp "${first}" out/coverage.json
           fi
 
           echo "[MERGE] Final out/coverage.json:"
           cat out/coverage.json
-
 
       - name: "Upload merged coverage artifact"
         uses: actions/upload-artifact@v4
@@ -107,20 +106,30 @@ jobs:
           include-hidden-files: true
           retention-days: 14
 
-  # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
+  # 4) Coverage Governance Gate
+  # NOTE: This MUST download the merged coverage artifact in THIS job.
   coverage-gate:
     name: "Coverage Governance Gate"
     needs: merge-coverage
-    uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
-    with:
-      working-directory: "python-api-example"
-      coverage-file: "./out/coverage.json"
+    runs-on: ubuntu-latest
 
-      policy-file: "../.governance/tests.yml"
-      baseline-file: "../.audit/coverage-baseline.json"
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
 
-      # Updated to merged artifact name
-      coverage-artifact-name: "coverage-python-merged"
+      - name: "Download merged coverage artifact"
+        uses: actions/download-artifact@v4
+        with:
+          name: "coverage-python-merged"
+          path: "python-api-example"
+
+      - name: "Run coverage governance gate"
+        uses: BrikByte-Studios/.github/.github/actions/coverage-gate@main
+        with:
+          working-directory: "python-api-example"
+          coverage-file: "./out/coverage.json"
+          policy-file: "../.governance/tests.yml"
+          baseline-file: "../.audit/coverage-baseline.json"
 
   # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
   unit-test-audit:
@@ -132,12 +141,20 @@ jobs:
       - name: "Checkout repository"
         uses: actions/checkout@v4
 
-      # Download merged coverage artifact into project folder
+      # Download merged coverage artifact into project root (avoid nested out/out path)
       - name: "Download merged coverage artifact"
         uses: actions/download-artifact@v4
         with:
           name: "coverage-python-merged"
-          path: "python-api-example/out"
+          path: "python-api-example"
+
+      # OPTIONAL: if you also need junit.xml from shards, download them too (patterned)
+      # - name: "Download all junit shard artifacts"
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     pattern: "coverage-python-*"
+      #     path: "python-api-example/.artifacts/junit"
+      #     merge-multiple: true
 
       - name: "Export unit test audit bundle"
         if: always()
@@ -151,5 +168,5 @@ jobs:
           duration-seconds: ""
           upload-artifact: "true"
           artifact-name: "unit-tests-audit-python"
-          upload-to-blob: "true"             # set "true" once blob sync exists
+          upload-to-blob: "true"             # set true once blob sync exists
           blob-target: "s3://brikbyte-audit/unit-tests/python-api-example"
