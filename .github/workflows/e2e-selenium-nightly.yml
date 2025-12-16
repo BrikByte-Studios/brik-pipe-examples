@@ -4,30 +4,28 @@ name: "Nightly • E2E (Selenium Grid • Cross-Browser)"
 # Nightly • Selenium Grid (Cross-Browser)
 #
 # Purpose:
-#   Run slower/flakier cross-browser checks on a schedule instead of blocking PRs.
+#   Run slower / flakier cross-browser Selenium checks on a schedule,
+#   keeping PR gates fast (Playwright / Cypress).
 #
-# Contingency Plan:
-#   - If Selenium is too slow/flaky for PR gating:
-#       ✅ Keep Selenium as nightly scheduled (this workflow).
-#       ✅ Keep Playwright/Cypress as PR gates.
+# Strategy:
+#   - Chrome + Firefox by default (governed matrix in reusable workflow)
+#   - Optional Edge via workflow_dispatch input
+#   - App + Grid started inside reusable workflow
 #
 # Triggers:
 #   - schedule: nightly run (02:00 UTC)
-#   - workflow_dispatch: manual run for debugging or pre-release checks
-#
-# Notes:
-#   - Uses app started via docker-compose (start_app=true) for localhost CI.
-#   - Browsers: chrome + firefox (edge optional if you enable it)
+#   - workflow_dispatch: manual run (debug / pre-release)
 # -----------------------------------------------------------------------------
 
 on:
   schedule:
-    # Nightly at 02:00 UTC (adjust to your team rhythm)
+    # Nightly at 02:00 UTC
     - cron: "0 2 * * *"
+
   workflow_dispatch:
     inputs:
       enable_edge:
-        description: "Run Edge too?"
+        description: "Include Edge in nightly Selenium run?"
         required: false
         type: boolean
         default: false
@@ -40,38 +38,66 @@ jobs:
     name: "Nightly Selenium Grid"
     uses: BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml@main
     with:
+      # -----------------------------------------------------------------------
       # App under test
+      #
+      # NOTE:
+      # - Browser nodes run in containers
+      # - Use host.docker.internal for app access from Selenium nodes
+      # -----------------------------------------------------------------------
       target_url: "http://host.docker.internal:3000"
-      health_url: "http://localhost:3000/health" # curl from host runner
+      health_url: "http://localhost:3000/health"
 
       start_app: true
       app_service_workdir: "node-ui-example"
       app_compose_file: "docker-compose.e2e.yml"
+      app_wait_seconds: 120
 
-      # Grid in this repo
+      # -----------------------------------------------------------------------
+      # Selenium Grid (caller repo)
+      # -----------------------------------------------------------------------
       service_workdir: "."
       compose_file: "docker-compose.selenium.yml"
+      grid_wait_seconds: 120
 
-      # Python runner
+      # -----------------------------------------------------------------------
+      # Governed matrix wiring (NEW)
+      #
+      # Default (in reusable workflow):
+      #   browsers = chrome,firefox
+      #
+      # Edge is conditionally added below.
+      # -----------------------------------------------------------------------
+      enable_edge: ${{ inputs.enable_edge }}
+
+      # Selenium sharding intentionally OFF for nightly stability.
+      # Increase only if your test runner implements deterministic splitting.
+      override_shards: "1"
+
+      # -----------------------------------------------------------------------
+      # Test runner (Python)
+      # -----------------------------------------------------------------------
       runner_language: "python"
       test_command: |
+        set -euo pipefail
         cd python-selenium-runner-example
         python -m venv .venv
         . .venv/bin/activate
+        python -m pip install --upgrade pip
         pip install -r requirements.txt
         pytest -q
 
-      # Optional Edge from dispatch input
-      enable_edge: ${{ inputs.enable_edge }}
-
-      # Safeguards
-      job_timeout_minutes: 35
-      edge_job_timeout_minutes: 40
-      enforce_teardown: true
-
+      # -----------------------------------------------------------------------
+      # Artifacts / audit
+      # -----------------------------------------------------------------------
       artifact_name: "selenium-nightly"
-
-      # Artifact standard toggles
       e2e_video: false
       e2e_trace: false
       e2e_artifacts_always: false
+
+      # -----------------------------------------------------------------------
+      # Safeguards
+      # -----------------------------------------------------------------------
+      job_timeout_minutes: 35
+      edge_job_timeout_minutes: 40
+      enforce_teardown: true
