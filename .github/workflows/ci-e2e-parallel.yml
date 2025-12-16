@@ -3,7 +3,7 @@
 # Heavy, flake-prone → strictly governed
 # -----------------------------------------------------------------------------
 
-name: "CI E2E Tests"
+name: "CI E2E Tests (node-ui-example)"
 
 on: [push, pull_request]
 
@@ -26,15 +26,27 @@ jobs:
   e2e:
     needs: plan
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: node-ui-example
+
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+
     steps:
       - uses: actions/checkout@v4
-      - working-directory: node-ui-example
-      - run: npm ci
-      - run: |
-          echo "E2E: ${{ matrix.browser }} shard ${{ matrix.shard }}"
-          npx playwright test \
-            --project=${{ matrix.browser }} \
-            --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx --yes playwright install --with-deps
+
+      - name: Run Playwright (browser × shard)
+        run: |
+          echo "E2E: ${{ matrix.browser }} shard ${{ matrix.shard }}/${{ strategy.job-total }}"
+          npx --yes playwright test \
+            --project="${{ matrix.browser }}" \
+            --shard="${{ matrix.shard }}/${{ strategy.job-total }}"
