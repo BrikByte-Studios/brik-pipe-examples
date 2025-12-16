@@ -15,7 +15,7 @@
 #   - Single shared workflow, reusable across examples
 # -----------------------------------------------------------------------------
 
-name: "CI Unit Tests (Node API Example)"
+name: "CI Unit Tests (Node API Example) Parallel"
 
 on:
   push:

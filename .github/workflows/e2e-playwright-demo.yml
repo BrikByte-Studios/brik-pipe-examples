@@ -82,3 +82,6 @@ jobs:
       # Safety switches
       # ----------------------------------------------------------
       job_timeout_minutes: 30
+
+      override_shards: 6
+      browsers: chromium,firefox

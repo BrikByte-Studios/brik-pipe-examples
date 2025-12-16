@@ -3,7 +3,7 @@
 # Heavy, flake-prone → strictly governed
 # -----------------------------------------------------------------------------
 
-name: "CI E2E Tests (node-ui-example)"
+name: "CI E2E Tests (node-ui-example) Parallel"
 
 on: [push, pull_request]
 
