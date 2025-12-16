@@ -105,53 +105,14 @@ jobs:
   coverage-gate:
     name: "Coverage Governance Gate"
     needs: merge-coverage
-    runs-on: ubuntu-latest
+    uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
+    with:
+      working-directory: "python-api-example"
+      coverage-file: "./out/coverage.json"
+      policy-file: "../.governance/tests.yml"
+      baseline-file: "../.audit/coverage-baseline.json"
+      coverage-artifact-name: "coverage-python-merged"
 
-    steps:
-      - name: "Checkout repository"
-        uses: actions/checkout@v4
-
-      - name: "Download merged coverage artifact"
-        uses: actions/download-artifact@v4
-        with:
-          name: "coverage-python-merged"
-          path: "."
-
-      - name: "Materialize coverage.json to canonical path (handles coverage.json OR out/coverage.json)"
-        run: |
-          set -euo pipefail
-
-          echo "[COVERAGE] Searching for coverage after artifact download..."
-          # Prefer: */out/coverage.json
-          found="$(find . -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
-
-          # Fallback: */coverage.json
-          if [[ -z "${found}" ]]; then
-            found="$(find . -type f -name "coverage.json" -print -quit 2>/dev/null || true)"
-          fi
-
-          if [[ -z "${found}" ]]; then
-            echo "[COVERAGE] ERROR: Could not find coverage file anywhere after download."
-            echo "[COVERAGE] Files in workspace:"
-            find . -maxdepth 8 -type f -print || true
-            exit 1
-          fi
-
-          echo "[COVERAGE] Found: ${found}"
-          mkdir -p "python-api-example/out"
-          cp "${found}" "python-api-example/out/coverage.json"
-
-          echo "[COVERAGE] Canonical path ready: python-api-example/out/coverage.json"
-          ls -la python-api-example/out
-          head -n 40 python-api-example/out/coverage.json || true
-
-      - name: "Run coverage governance gate"
-        uses: BrikByte-Studios/.github/.github/actions/coverage-gate@main
-        with:
-          working-directory: "python-api-example"
-          coverage-file: "./out/coverage.json"
-          policy-file: "../.governance/tests.yml"
-          baseline-file: "../.audit/coverage-baseline.json"
 
   # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
   unit-test-audit:
