@@ -68,7 +68,7 @@ jobs:
       #
       # Edge is conditionally added below.
       # -----------------------------------------------------------------------
-      enable_edge: ${{ inputs.enable_edge }}
+      enable_edge: false
 
       # Selenium sharding intentionally OFF for nightly stability.
       # Increase only if your test runner implements deterministic splitting.
@@ -99,5 +99,4 @@ jobs:
       # Safeguards
       # -----------------------------------------------------------------------
       job_timeout_minutes: 35
-      edge_job_timeout_minutes: 40
       enforce_teardown: true
