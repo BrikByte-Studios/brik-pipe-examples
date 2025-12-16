@@ -16,6 +16,9 @@ on:
       - "node-api-example/**"
       - ".github/workflows/ci-node-api-example.yml"
 
+permissions:
+  contents: read
+
 jobs:
   # --------------------------------------------------------------
   # 1) Validate brikpipe.build.yml
@@ -39,9 +42,9 @@ jobs:
       project-path: "node-api-example"
       force-cache-refresh: "false"
     secrets: inherit
-  
+
   # --------------------------------------------------------------
-  # 3) Tests — generates coverage.json + uploads artifact.
+  # 3) Tests (sharded) — uploads per-shard coverage artifacts
   # --------------------------------------------------------------
   tests:
     name: "Node: Unit Tests + Coverage"
@@ -50,13 +53,82 @@ jobs:
     with:
       node-version: "20"
       working-directory: "node-api-example"
+      # optional governed parallelism (clamped to caps):
+      override_shards: "4"
+      # matrix_config_path: ""   # leave empty to use default config inside .github repo
+
+  # --------------------------------------------------------------
+  # 3.5) Merge shard coverage artifacts -> canonical node-api-example/out/coverage.json
+  # --------------------------------------------------------------
+  merge-coverage:
+    name: "Merge coverage shards"
+    needs: tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "Download all Node coverage shard artifacts"
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "coverage-node-shard*"
+          path: "node-api-example/.artifacts/coverage"
+          merge-multiple: true
+
+      - name: "Select canonical coverage.json"
+        working-directory: "node-api-example"
+        run: |
+          set -euo pipefail
+          mkdir -p out
+
+          echo "[MERGE] Listing downloaded coverage artifacts:"
+          find .artifacts/coverage -maxdepth 8 -type f -print || true
+
+          # If artifacts were merged-flat, this path may exist directly:
+          if [[ -f ".artifacts/coverage/out/coverage.json" ]]; then
+            echo "[MERGE] Using merged-flat coverage: .artifacts/coverage/out/coverage.json"
+            cp ".artifacts/coverage/out/coverage.json" "out/coverage.json"
+          else
+            # Otherwise search nested paths:
+            first="$(find .artifacts/coverage -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
+
+            if [[ -z "${first}" ]]; then
+              echo "[MERGE] ERROR: No out/coverage.json found under .artifacts/coverage"
+              exit 1
+            fi
+
+            # Prefer shard1 if present
+            shard1="$(find .artifacts/coverage -type f -path "*/shard1*/out/coverage.json" -print -quit 2>/dev/null || true)"
+
+            if [[ -n "${shard1}" ]]; then
+              echo "[MERGE] Using shard1 coverage: ${shard1}"
+              cp "${shard1}" out/coverage.json
+            else
+              echo "[MERGE] Using first coverage: ${first}"
+              cp "${first}" out/coverage.json
+            fi
+          fi
+
+          echo "[MERGE] Final out/coverage.json:"
+          head -n 60 out/coverage.json || true
+
+      - name: "Upload merged coverage artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: "coverage-node-merged"
+          path: |
+            node-api-example/out/coverage.json
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14
 
   # --------------------------------------------------------------
   # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
   # --------------------------------------------------------------
   coverage-gate:
     name: "Coverage Governance Gate"
-    needs: tests
+    needs: merge-coverage
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
       working-directory: "node-api-example"
@@ -64,27 +136,25 @@ jobs:
       # policy & baseline live at repo root, so go one level up
       policy-file: "../.governance/tests.yml"
       baseline-file: "../.audit/coverage-baseline.json"
-      coverage-artifact-name: "coverage-node"
+      coverage-artifact-name: "coverage-node-merged"
 
-  
   # --------------------------------------------------------------
   # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
   # --------------------------------------------------------------
   unit-test-audit:
     name: "Unit Test Audit Export"
-    needs: tests
+    needs: merge-coverage
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Download coverage + JUnit artifacts into repo root
-      - name: Download coverage + JUnit artifacts
+      - name: "Download merged coverage artifact"
         uses: actions/download-artifact@v4
         with:
-          name: coverage-node
-          path: node-api-example
+          name: "coverage-node-merged"
+          path: "node-api-example/out"
 
       - name: Export unit test audit bundle
         if: always()
@@ -100,5 +170,3 @@ jobs:
           artifact-name: "unit-tests-audit-node"
           upload-to-blob: "true"             # set "true" once blob sync exists
           blob-target: "s3://brikbyte-audit/unit-tests/node-api-example"
-
-
