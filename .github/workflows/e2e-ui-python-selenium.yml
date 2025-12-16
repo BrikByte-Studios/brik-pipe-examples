@@ -23,17 +23,7 @@ name: "E2E UI (Python • Selenium Grid)"
 on:
   push:
     branches: [main]
-    paths:
-      - "python-selenium-runner-example/**"
-      - "node-ui-example/**"
-      - "docker-compose.selenium.yml"
-      - ".github/workflows/e2e-selenium-python.yml"
   pull_request:
-    paths:
-      - "python-selenium-runner-example/**"
-      - "node-ui-example/**"
-      - "docker-compose.selenium.yml"
-      - ".github/workflows/e2e-selenium-python.yml"
 
 jobs:
   e2e-ui-python:
