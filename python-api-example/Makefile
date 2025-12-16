@@ -59,7 +59,7 @@ build:
 	fi
 
 # -----------------------------
-# Unit tests (default "test").
+# Unit tests (default "test")
 # -----------------------------
 test-unit: deps
 	@echo "🧪 Running Python UNIT tests (excluding 'integration' mark, ignoring tests/integration)..."
