@@ -2,16 +2,12 @@ name: "CI — Node API Example"
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [ main, master ]
     paths:
       - "node-api-example/**"
       - ".github/workflows/ci-node-api-example.yml"
   pull_request:
-    branches:
-      - main
-      - master
+    branches: [ main, master ]
     paths:
       - "node-api-example/**"
       - ".github/workflows/ci-node-api-example.yml"
@@ -28,7 +24,6 @@ jobs:
     with:
       project-path: "node-api-example"
       config-file: "brikpipe.build.yml"
-      # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
 
   # --------------------------------------------------------------
   # 2) Node CI (build, lint, install)
@@ -53,12 +48,16 @@ jobs:
     with:
       node-version: "20"
       working-directory: "node-api-example"
-      # optional governed parallelism (clamped to caps):
+      # governed parallelism (clamped to caps in .github/actions/matrix-plan/parallel-matrix.yml):
       override_shards: "4"
       # matrix_config_path: ""   # leave empty to use default config inside .github repo
 
   # --------------------------------------------------------------
   # 3.5) Merge shard coverage artifacts -> canonical node-api-example/out/coverage.json
+  #
+  # NOTE (v1):
+  #   This picks ONE shard’s coverage.json deterministically (prefers shard1).
+  #   True aggregation needs a real merge step (e.g., merge raw coverage inputs).
   # --------------------------------------------------------------
   merge-coverage:
     name: "Merge coverage shards"
@@ -72,6 +71,7 @@ jobs:
       - name: "Download all Node coverage shard artifacts"
         uses: actions/download-artifact@v4
         with:
+          # test-node.yml uploads: coverage-node-shard${N}
           pattern: "coverage-node-shard*"
           path: "node-api-example/.artifacts/coverage"
           merge-multiple: true
@@ -82,36 +82,42 @@ jobs:
           set -euo pipefail
           mkdir -p out
 
-          echo "[MERGE] Listing downloaded coverage artifacts:"
-          find .artifacts/coverage -maxdepth 8 -type f -print || true
+          echo "[MERGE] Listing downloaded files:"
+          find .artifacts/coverage -maxdepth 10 -type f -print || true
 
-          # If artifacts were merged-flat, this path may exist directly:
+          # Because merge-multiple: true may flatten directories, prefer these checks:
           if [[ -f ".artifacts/coverage/out/coverage.json" ]]; then
-            echo "[MERGE] Using merged-flat coverage: .artifacts/coverage/out/coverage.json"
+            echo "[MERGE] Using flattened: .artifacts/coverage/out/coverage.json"
             cp ".artifacts/coverage/out/coverage.json" "out/coverage.json"
+          elif [[ -f ".artifacts/coverage/coverage.json" ]]; then
+            echo "[MERGE] Using flattened: .artifacts/coverage/coverage.json"
+            cp ".artifacts/coverage/coverage.json" "out/coverage.json"
           else
-            # Otherwise search nested paths:
-            first="$(find .artifacts/coverage -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
-
-            if [[ -z "${first}" ]]; then
-              echo "[MERGE] ERROR: No out/coverage.json found under .artifacts/coverage"
-              exit 1
-            fi
-
-            # Prefer shard1 if present
-            shard1="$(find .artifacts/coverage -type f -path "*/shard1*/out/coverage.json" -print -quit 2>/dev/null || true)"
-
+            # Otherwise, search any nested location:
+            shard1="$(find .artifacts/coverage -type f -path "*shard1*/out/coverage.json" -print -quit 2>/dev/null || true)"
             if [[ -n "${shard1}" ]]; then
-              echo "[MERGE] Using shard1 coverage: ${shard1}"
-              cp "${shard1}" out/coverage.json
+              echo "[MERGE] Using shard1: ${shard1}"
+              cp "${shard1}" "out/coverage.json"
             else
-              echo "[MERGE] Using first coverage: ${first}"
-              cp "${first}" out/coverage.json
+              any_out="$(find .artifacts/coverage -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
+              any_root="$(find .artifacts/coverage -type f -name "coverage.json" -print -quit 2>/dev/null || true)"
+
+              if [[ -n "${any_out}" ]]; then
+                echo "[MERGE] Using first out/coverage.json: ${any_out}"
+                cp "${any_out}" "out/coverage.json"
+              elif [[ -n "${any_root}" ]]; then
+                echo "[MERGE] Using first coverage.json: ${any_root}"
+                cp "${any_root}" "out/coverage.json"
+              else
+                echo "[MERGE] ERROR: No coverage file found under .artifacts/coverage"
+                exit 1
+              fi
             fi
           fi
 
-          echo "[MERGE] Final out/coverage.json:"
-          head -n 60 out/coverage.json || true
+          echo "[MERGE] Final node-api-example/out/coverage.json:"
+          ls -la out || true
+          head -n 80 out/coverage.json || true
 
       - name: "Upload merged coverage artifact"
         uses: actions/upload-artifact@v4
@@ -133,7 +139,6 @@ jobs:
     with:
       working-directory: "node-api-example"
       coverage-file: "./out/coverage.json"
-      # policy & baseline live at repo root, so go one level up
       policy-file: "../.governance/tests.yml"
       baseline-file: "../.audit/coverage-baseline.json"
       coverage-artifact-name: "coverage-node-merged"
@@ -150,11 +155,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # IMPORTANT:
+      # Download into node-api-example (not node-api-example/out),
+      # because the artifact likely contains out/coverage.json inside it.
       - name: "Download merged coverage artifact"
         uses: actions/download-artifact@v4
         with:
           name: "coverage-node-merged"
-          path: "node-api-example/out"
+          path: "."
 
       - name: Export unit test audit bundle
         if: always()
@@ -168,5 +176,5 @@ jobs:
           duration-seconds: ""
           upload-artifact: "true"
           artifact-name: "unit-tests-audit-node"
-          upload-to-blob: "true"             # set "true" once blob sync exists
+          upload-to-blob: "true"
           blob-target: "s3://brikbyte-audit/unit-tests/node-api-example"
