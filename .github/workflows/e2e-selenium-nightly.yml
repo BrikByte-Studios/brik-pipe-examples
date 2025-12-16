@@ -62,7 +62,7 @@ jobs:
       #
       # Edge is conditionally added below.
       # -----------------------------------------------------------------------
-      enable_edge: false
+      enable_edge: true
 
       # Selenium sharding intentionally OFF for nightly stability.
       # Increase only if your test runner implements deterministic splitting.
