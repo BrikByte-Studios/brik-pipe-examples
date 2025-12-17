@@ -54,7 +54,7 @@ jobs:
       #   ghcr.io/<org>/<image-name>:sha-<GITHUB_SHA>
       #
       # This should match the image tag produced by your Kaniko
-      # or build pipeline for the java-api-example service.
+      # or build pipeline for the java-api-example service
       image: ghcr.io/brikbyte-studios/example-java-api:sha-${{ github.sha }}
 
       # Path to the Java service Dockerfile (relative to repo root)
