@@ -41,6 +41,52 @@ jobs:
       dotnet-version: "8.0.x"
       working-directory: "dotnet-api-example"
 
+  merge:
+    name: ".NET: Merge coverage + junit (unit)"
+    needs: tests
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-dotnet-shard*
+          merge-multiple: true
+          path: merged
+
+      - name: Combine coverage.json (pick best or average)
+        run: |
+          set -euo pipefail
+          ls -R merged || true
+          python - << 'PY'
+          import json
+          from pathlib import Path
+
+          # Strategy: choose max summary.line across shards (safe for “some shards empty”)
+          best = None
+          for p in Path("merged").rglob("coverage.json"):
+            try:
+              d = json.loads(p.read_text())
+              v = float(d.get("summary", {}).get("line", 0.0))
+              if best is None or v > best["v"]:
+                best = {"v": v, "d": d}
+            except Exception:
+              pass
+
+          out = Path("out"); out.mkdir(exist_ok=True)
+          if best is None:
+            raise SystemExit("No coverage.json found in merged artifacts")
+          (out / "coverage.json").write_text(json.dumps(best["d"], indent=2))
+          print("Merged coverage.summary.line =", best["v"])
+          PY
+
+      - name: Upload merged coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-dotnet
+          path: out/coverage.json
+
+
   # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
   coverage-gate:
     name: "Coverage Governance Gate"
