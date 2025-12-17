@@ -54,14 +54,36 @@ build:
 	$(GO) build -o $(BUILD_OUT) ./...
 
 test-unit: ensure-go-junit-report
-	@echo "🧪 Running Go UNIT tests..."
-	mkdir -p out
-	$(GO) test ./... \
+	@set -euo pipefail; \
+	echo "🧪 Running Go UNIT tests..."; \
+	echo "🧩 Shard: $(UNIT_SHARD)/$(UNIT_SHARD_TOTAL)"; \
+	mkdir -p out; \
+	\
+	# Deterministic package list
+	pkgs="$$( $(GO) list ./... | sort )"; \
+	\
+	# Select shard packages by modulo (1-based shard index)
+	if [ "$(UNIT_SHARD_TOTAL)" -gt "1" ]; then \
+	  selected="$$(printf "%s\n" "$$pkgs" | awk 'NR % '$(UNIT_SHARD_TOTAL)' == ('$(UNIT_SHARD)'-1)')"; \
+	else \
+	  selected="$$pkgs"; \
+	fi; \
+	\
+	if [ -z "$$selected" ]; then \
+	  echo "ℹ️ No packages selected for shard $(UNIT_SHARD)/$(UNIT_SHARD_TOTAL) (nothing to run)."; \
+	  exit 0; \
+	fi; \
+	\
+	echo "📦 Selected packages:"; \
+	printf "%s\n" "$$selected" | sed 's/^/  - /'; \
+	\
+	# Run tests for selected packages
+	$(GO) test $$selected \
 		-coverprofile=coverage.out \
-		-json > out/test-unit-report.json
-	@echo "📄 Converting UNIT test JSON → JUnit XML..."
-	go-junit-report < out/test-unit-report.json > out/junit-unit.xml
-	@echo "✅ UNIT JUnit report written to out/junit-unit.xml"
+		-json > out/test-unit-report.json; \
+	\
+	go-junit-report < out/test-unit-report.json > out/junit-unit.xml; \
+	echo "✅ Wrote out/junit-unit.xml"
 
 # Optional: integration tests (only when explicitly run, and typically
 # driven by the BrikPipe integration-test runner with -tags=integration).
