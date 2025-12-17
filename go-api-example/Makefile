@@ -25,6 +25,10 @@ GO          ?= go
 BIN_DIR     := bin
 BUILD_OUT   := $(BIN_DIR)/app
 
+# Shard contract (optional)
+UNIT_SHARD ?= 1
+UNIT_SHARD_TOTAL ?= 1
+
 .PHONY: help build test-unit test-integration test ci clean
 
 help:
