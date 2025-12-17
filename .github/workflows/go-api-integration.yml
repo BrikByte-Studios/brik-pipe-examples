@@ -61,4 +61,11 @@ jobs:
       test_language: "go"
       # Optional: override default Go behaviour (see run-integration-tests.sh: run_go_tests)
       # e.g. "go test ./integration/..." or "go test ./... -run Integration"
-      test_command: ""
+      test_command: "go test ./integration/..."
+
+      # matrix inputs (service × scenario)
+      services_csv: "payments,users"
+      scenarios_csv: "happy_path,declined_card,timeout"
+
+      # governed parallelism (clamped to integration.cap=4)
+      override_shards: "4"
