@@ -36,6 +36,7 @@ deps:
 
 test: deps
 	@echo "🧪 Running Maven tests..."
+	@echo "🧩 Shard: $(UNIT_SHARD)/$(UNIT_SHARD_TOTAL)"
 	$(MVN) -B test
 	@$(MAKE) post-test
 
