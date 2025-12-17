@@ -60,7 +60,7 @@ jobs:
       # Test execution
       test_language: "python"
       # Optional: override to a custom command if you don't use pytest -m integration:
-      # test_command: "pytest tests/integration -m 'integration'".
+      test_command: "pytest tests/integration -m 'integration'"
 
       # Health checks
       healthcheck_path: "/health"
@@ -69,3 +69,10 @@ jobs:
       # Network ports
       app_port: "8080"   # Adjust to your Python service port (8000 for FastAPI by default)
       db_port: "5432"
+
+      # matrix inputs (service × scenario)
+      services_csv: "payments,users"
+      scenarios_csv: "happy_path,declined_card,timeout"
+
+      # governed parallelism (clamped to integration.cap=4)
+      override_shards: "4"
