@@ -10,7 +10,7 @@
 # Targets:
 #   - make build : mvn -B clean package
 #   - make test  : mvn -B test
-#   - make ci    : mvn -B clean verify (build + tests)
+#   - make ci    : mvn -B clean verify (build + tests).
 # -----------------------------------------------------------------------------
 
 MVN          ?= mvn
