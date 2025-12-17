@@ -32,7 +32,7 @@ jobs:
       test_language: "node"
       # Either rely on default (npm test / npm run test:integration)
       # or be explicit:
-      # test_command: "npm run test:integration"
+      test_command: "npm run test:integration"
       healthcheck_path: "/health"
       healthcheck_timeout: "60"
       app_port: "3000"
