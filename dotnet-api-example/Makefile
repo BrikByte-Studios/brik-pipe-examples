@@ -86,7 +86,7 @@ test: build
 	  for proj in $$selected; do \
 	    name=$$(basename "$$proj" .csproj); \
 	    trx="$(TEST_RESULTS_DIR)/TestResult.$$name.shard$$shard.trx"; \
-	    covbase="$(TEST_RESULTS_DIR)/coverage.$$name.net.shard$$shard."; \
+	    covbase="$(TEST_RESULTS_DIR)/coverage.net.$$name.shard$$shard."; \
 	    echo "➡️ dotnet test $$proj (trx=$$trx)"; \
 	    $(DOTNET) test "$$proj" \
 	      --configuration $(CONFIG) \
