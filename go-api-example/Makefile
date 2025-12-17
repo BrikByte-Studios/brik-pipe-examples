@@ -20,6 +20,8 @@
 #   - make ci             : build + test
 #   - make clean          : remove bin/
 # -----------------------------------------------------------------------------
+SHELL := /usr/bin/env bash
+.SHELLFLAGS := -euo pipefail -c
 
 GO          ?= go
 BIN_DIR     := bin
