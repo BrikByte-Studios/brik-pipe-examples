@@ -65,7 +65,7 @@ test: build
 	    --results-directory $(TEST_RESULTS_DIR) \
 	    /p:CollectCoverage=true \
 	    /p:CoverletOutput=$(TEST_RESULTS_DIR)/coverage.net. \
-	    /p:CoverletOutputFormat="json,opencover"; \
+	    /p:CoverletOutputFormat=`json,opencover`; \
 	else \
 	  shard=$$(printf "%s" "$(UNIT_SHARD)" | tr -d '\r'); \
 	  total=$$(printf "%s" "$(UNIT_SHARD_TOTAL)" | tr -d '\r'); \
