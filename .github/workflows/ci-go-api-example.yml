@@ -42,47 +42,118 @@ jobs:
       working-directory: "go-api-example"
 
   # --------------------------------------------------------------
+  # 3.5) Merge shard coverage artifacts -> canonical out/coverage.json
+  # --------------------------------------------------------------
+  merge-coverage:
+    name: "Merge coverage shards"
+    needs: tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all Go shard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "coverage-go-shard*"
+          path: "go-api-example/.artifacts/coverage"
+          merge-multiple: true
+
+      - name: Merge Go coverage.out files (gocovmerge)
+        working-directory: "go-api-example"
+        run: |
+          set -euo pipefail
+          mkdir -p out
+
+          echo "[MERGE] Listing downloaded shard artifacts:"
+          find .artifacts/coverage -type f -maxdepth 6 -print || true
+
+          # Collect coverprofiles
+          mapfile -t profiles < <(find .artifacts/coverage -type f -name "coverage.out" | sort)
+          if [ "${#profiles[@]}" -eq 0 ]; then
+            echo "ERROR: No coverage.out files found in shard artifacts"
+            exit 1
+          fi
+
+          echo "[MERGE] Found ${#profiles[@]} coverage.out files"
+
+          # Install gocovmerge
+          go install github.com/wadey/gocovmerge@latest
+          export PATH="$(go env GOPATH)/bin:$PATH"
+
+          # Merge into one coverage.out
+          gocovmerge "${profiles[@]}" > coverage.out
+
+          # Compute total % and write canonical out/coverage.json
+          go tool cover -func=coverage.out > coverage-func.txt
+          tail -n 5 coverage-func.txt || true
+
+          python - << 'PY'
+          import json
+          from pathlib import Path
+
+          lines = Path("coverage-func.txt").read_text(encoding="utf-8").splitlines()
+          last = lines[-1].strip()
+          pct = float(last.split()[-1].rstrip("%"))
+
+          out = Path("out")
+          out.mkdir(parents=True, exist_ok=True)
+          cov_path = out / "coverage.json"
+
+          cov = {}
+          cov["summary"] = {"line": pct}
+          cov["files"] = []
+
+          cov_path.write_text(json.dumps(cov, indent=2), encoding="utf-8")
+          print("Wrote out/coverage.json summary.line =", pct)
+          PY
+
+          echo "[MERGE] Final out/coverage.json:"
+          cat out/coverage.json
+
+      - name: Upload merged coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "coverage-go-merged"
+          path: |
+            go-api-example/out/coverage.json
+          if-no-files-found: error
+          retention-days: 14
+
+
+  # --------------------------------------------------------------
   # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
   # --------------------------------------------------------------
   coverage-gate:
     name: "Coverage Governance Gate"
-    needs: tests
+    needs: merge-coverage
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
-      # Coverage gate MUST run inside the Go project folder
       working-directory: "go-api-example"
-
-      # Path is relative to working-directory
       coverage-file: "./out/coverage.json"
-
-      # Policy and baseline are at repo root → go one level up
       policy-file: "../.governance/tests.yml"
       baseline-file: "../.audit/coverage-baseline.json"
+      coverage-artifact-name: "coverage-go-merged"
 
-      # Artifact uploaded by test-go.yml
-      coverage-artifact-name: "coverage-go"
   
   # --------------------------------------------------------------
   # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
   # --------------------------------------------------------------
   unit-test-audit:
     name: "Unit Test Audit Export"
-    needs: tests
+    needs: merge-coverage
     runs-on: ubuntu-latest
-
     steps:
-      # Standard checkout
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Download Go coverage + JUnit artifacts (produced in test-go.yml)
-      - name: Download coverage + JUnit artifacts
+      - name: Download merged coverage artifact
         uses: actions/download-artifact@v4
         with:
-          name: coverage-go
-          path: go-api-example
+          name: coverage-go-merged
+          path: go-api-example/out
 
-      # Run audit-export
       - name: Export unit test audit bundle
         if: always()
         uses: BrikByte-Studios/.github/.github/actions/audit-export@main
@@ -95,5 +166,6 @@ jobs:
           duration-seconds: ""
           upload-artifact: "true"
           artifact-name: "unit-tests-audit-go"
-          upload-to-blob: "true"             # set "true" once blob sync exists
+          upload-to-blob: "true"
           blob-target: "s3://brikbyte-audit/unit-tests/go-api-example"
+
