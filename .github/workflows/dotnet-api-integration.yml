@@ -50,10 +50,17 @@ jobs:
       # Test runner language hint (drives default test command selection)
       test_language: "dotnet"
       # Optional explicit command (leave empty to use defaults in run-integration-tests.sh)
-      test_command: ""
+      test_command: "dotnet test *IntegrationTests*.csproj"
 
       # Health + readiness config
       healthcheck_path: "/health"
       healthcheck_timeout: "60"
       app_port: "8080"
       db_port: "5432"
+
+      # matrix inputs (service × scenario)
+      services_csv: "payments,users"
+      scenarios_csv: "happy_path,declined_card,timeout"
+
+      # governed parallelism (clamped to integration.cap=4)
+      override_shards: "4"
