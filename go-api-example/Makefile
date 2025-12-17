@@ -61,23 +61,45 @@ build:
 
 test-unit: ensure-go-junit-report
 	@echo "🧪 Running Go UNIT tests..."
-	@echo "🧩 Shard: $(UNIT_SHARD)/$(UNIT_SHARD_TOTAL)"
 	@mkdir -p out
-	@pkgs="$$(go list ./... | sort)"; \
-	if [ "$(UNIT_SHARD_TOTAL)" -gt "1" ]; then \
-	  selected="$$(printf "%s\n" "$$pkgs" | awk 'NR % '$(UNIT_SHARD_TOTAL)' == ('$(UNIT_SHARD)'-1)')"; \
+	@echo "🧩 Shard: $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1}"
+
+	@# Build deterministic package list
+	@pkgs="$$( $(GO) list ./... | sort )"; \
+	if [[ -z "$$pkgs" ]]; then \
+	  echo "⚠️ No packages found"; \
+	  echo "mode: set" > coverage.out; \
+	  exit 0; \
+	fi; \
+	\
+	shard="$${UNIT_SHARD:-1}"; \
+	total="$${UNIT_SHARD_TOTAL:-1}"; \
+	\
+	if [[ "$$total" -gt 1 ]]; then \
+	  selected="$$(printf "%s\n" "$$pkgs" | awk -v t="$$total" -v s="$$shard" '((NR-1) % t) == (s-1)')"; \
 	else \
 	  selected="$$pkgs"; \
 	fi; \
-	if [ -z "$$selected" ]; then \
-	  echo "ℹ️ No packages selected for shard $(UNIT_SHARD)/$(UNIT_SHARD_TOTAL) (nothing to run)."; \
+	\
+	if [[ -z "$$selected" ]]; then \
+	  echo "ℹ️ No packages selected for shard $$shard/$$total (nothing to run)."; \
+	  echo "mode: set" > coverage.out; \
 	  exit 0; \
 	fi; \
+	\
 	echo "📦 Selected packages:"; \
 	printf "%s\n" "$$selected" | sed 's/^/  - /'; \
-	$(GO) test $$selected -coverprofile=coverage.out -json > out/test-unit-report.json; \
-	go-junit-report < out/test-unit-report.json > out/junit-unit.xml; \
-	echo "✅ UNIT JUnit report written to out/junit-unit.xml"
+	\
+	# Run tests for selected packages AND always write coverage.out in module root
+	$(GO) test $$selected \
+	  -covermode=atomic \
+	  -coverpkg=./... \
+	  -coverprofile=coverage.out \
+	  -json > out/test-unit-report.json; \
+	\
+	echo "📄 Converting UNIT test JSON → JUnit XML..."; \
+	go-junit-report < out/test-unit-report.json > out/junit.xml; \
+	echo "✅ Wrote out/junit.xml and coverage.out"
 
 # Optional: integration tests (only when explicitly run, and typically
 # driven by the BrikPipe integration-test runner with -tags=integration).
