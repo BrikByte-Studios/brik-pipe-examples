@@ -50,7 +50,11 @@ jobs:
       # Test runner language hint (drives default test command selection)
       test_language: "dotnet"
       # Optional explicit command (leave empty to use defaults in run-integration-tests.sh)
-      test_command: "dotnet test *IntegrationTests*.csproj"
+      test_command: >
+        dotnet test
+        ./tests/<Service>.IntegrationTests/<Service>.IntegrationTests.csproj
+        --filter "IntegItem=$(INTEG_ITEM)"
+
 
       # Health + readiness config
       healthcheck_path: "/health"
