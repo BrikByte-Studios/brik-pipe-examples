@@ -85,7 +85,7 @@ test-unit: ensure-go-junit-report
 	echo "✅ Wrote out/junit.xml and coverage.out"
 
 # Optional: integration tests (only when explicitly run, and typically
-# driven by the BrikPipe integration-test runner with -tags=integration).
+# driven by the BrikPipe integration-test runner with -tags=integration)
 test-integration: ensure-go-junit-report
 	@echo "🧪 Running Go INTEGRATION tests..."
 	mkdir -p out
