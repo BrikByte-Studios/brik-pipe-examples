@@ -89,7 +89,7 @@ jobs:
   # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
   coverage-gate:
     name: "Coverage Governance Gate"
-    needs: tests
+    needs: merge
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
       # Gate runs from the .NET project folder
@@ -106,11 +106,11 @@ jobs:
       coverage-artifact-name: "coverage-dotnet"
 
   # --------------------------------------------------------------
-  # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
+  # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*).
   # --------------------------------------------------------------
   unit-test-audit:
     name: "Unit Test Audit Export"
-    needs: tests
+    needs: merge
     runs-on: ubuntu-latest
 
     steps:
