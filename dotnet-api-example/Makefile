@@ -92,7 +92,7 @@ test: build
 	      --results-directory "$(TEST_RESULTS_DIR)" \
 	      /p:CollectCoverage=true \
 	      /p:CoverletOutput="$$covbase" \
-	      /p:CoverletOutputFormat="json,opencover"; \
+	      /p:CoverletOutputFormat=`json,opencover`; \
 	  done; \
 	fi
 
@@ -121,8 +121,6 @@ test: build
 	fi; \
 	mv "$$junit" "$(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"; \
 	echo "✅ JUnit report written to $(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"
-
-
 
 ci: test
 	@echo "✅ CI pipeline (.NET) completed successfully."
