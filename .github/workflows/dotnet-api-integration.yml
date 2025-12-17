@@ -51,9 +51,10 @@ jobs:
       test_language: "dotnet"
       # Optional explicit command (leave empty to use defaults in run-integration-tests.sh)
       test_command: >
-        dotnet test
-        ./tests/BrikByte.DotNetApiExample.IntegrationTests/
-        BrikByte.DotNetApiExample.IntegrationTests.csproj
+        dotnet test 
+        ./tests/BrikByte.DotNetApiExample.IntegrationTests/BrikByte.DotNetApiExample.IntegrationTests.csproj \
+        --filter "Category=Integration&IntegItem=$(INTEG_ITEM)"
+
 
 
       # Health + readiness config

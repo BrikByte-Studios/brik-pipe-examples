@@ -23,6 +23,7 @@ namespace BrikByte.DotNetApiExample.Tests.Integration
     /// the tests container, talking to the running app container.
     /// </summary>
     [Trait("Category", "Integration")]
+    [Trait("IntegItem", "payments::approved")] 
     public class ExternalPaymentIntegrationTests : IDisposable
     {
         private readonly HttpClient _httpClient;
