@@ -40,6 +40,7 @@ jobs:
     with:
       dotnet-version: "8.0.x"
       working-directory: "dotnet-api-example"
+      parallel_mode: "static"
 
   merge:
     name: ".NET: Merge coverage + junit (unit)"
