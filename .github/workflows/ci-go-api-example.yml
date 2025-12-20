@@ -42,7 +42,7 @@ jobs:
       working-directory: "go-api-example"
 
   # --------------------------------------------------------------
-  # 3.5) Merge shard coverage artifacts -> canonical out/coverage.json
+  # 3.5) Merge shard coverage artifacts -> canonical out/coverage.json.
   # --------------------------------------------------------------
   merge-coverage:
     name: "Merge coverage shards"
