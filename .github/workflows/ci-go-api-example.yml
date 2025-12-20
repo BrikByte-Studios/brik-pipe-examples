@@ -32,7 +32,7 @@ jobs:
       force-cache-refresh: "false"
     secrets: inherit
 
-  # 3) Go Tests + Coverage
+  # 3) Go Tests + Coverage.
   tests:
     name: "Go: Unit Tests + Coverage"
     needs: go-ci
