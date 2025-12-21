@@ -58,7 +58,7 @@ jobs:
       # matrix_config_path: ""   # leave empty to use default inside .github repo
 
   # --------------------------------------------------------------
-  # 3.5) Merge shard coverage artifacts -> canonical java-api-example/out/coverage.json
+  # 3.5) Merge shard coverage artifacts -> canonical java-api-example/out/coverage.json.
   # --------------------------------------------------------------
   merge-coverage:
     name: "Merge coverage shards"
