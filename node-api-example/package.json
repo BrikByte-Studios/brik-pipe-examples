@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node server.js",
     "build": "mkdir -p dist && cp -r src dist/",
-    "test:shard": "mkdir -p out coverage && NODE_OPTIONS=--experimental-vm-modules sh -lc 'set -euo pipefail; echo \"[SHARD] TEST_FILES=\"; printf \"%s\\n\" \"${TEST_FILES:-}\"; if [ -z \"${TEST_FILES:-}\" ]; then echo \"[SHARD] No TEST_FILES provided\"; exit 0; fi; c8 --all --reporter=json --reporter=json-summary --report-dir=coverage node --test --test-reporter=junit --test-reporter-destination=out/junit.xml ${TEST_FILES}'",
+    "test:shard": "mkdir -p out coverage && NODE_OPTIONS='--experimental-vm-modules' c8 --reporter=json --reporter=json-summary --report-dir=coverage node --test --test-reporter=junit --test-reporter-destination=out/junit.xml $TEST_FILES",
     "test:integration": "NODE_OPTIONS='--experimental-vm-modules' node --test tests/integration",
     "test:integration:smoke": "NODE_OPTIONS='--experimental-vm-modules' node --test tests/integration/smoke"
   },
