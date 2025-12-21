@@ -44,6 +44,13 @@ build:
 test: install
 	@set -euo pipefail; \
 	echo "🧪 Running Node.js unit tests..."; \
+	echo "📁 CWD: $$(pwd)"; \
+	if [ ! -d tests/unit ]; then \
+	  echo "❌ tests/unit not found. Listing repo tree:"; \
+	  ls -la; \
+	  find . -maxdepth 3 -type d -name "tests" -o -name "__tests__" || true; \
+	  exit 1; \
+	fi; \
 	echo "🧩 Shard: $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1}"; \
 	SHARD="$${UNIT_SHARD:-1}"; \
 	TOTAL="$${UNIT_SHARD_TOTAL:-1}"; \
