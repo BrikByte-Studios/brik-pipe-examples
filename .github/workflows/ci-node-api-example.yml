@@ -39,7 +39,7 @@ jobs:
     secrets: inherit
 
   # --------------------------------------------------------------
-  # 3) Tests (sharded) — uploads per-shard coverage artifacts
+  # 3) Tests (sharded) — uploads per-shard coverage artifacts.
   # --------------------------------------------------------------
   tests:
     name: "Node: Unit Tests + Coverage"
