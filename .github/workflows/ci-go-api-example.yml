@@ -112,6 +112,8 @@ jobs:
           print("Wrote out/coverage.json summary.line =", pct)
           PY
 
+          echo "[MERGE] coverage-func.txt (tail):"
+          tail -n 20 coverage-func.txt || true
 
           echo "[MERGE] Final out/coverage.json:"
           cat out/coverage.json
