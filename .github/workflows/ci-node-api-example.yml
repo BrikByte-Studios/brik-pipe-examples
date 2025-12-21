@@ -26,7 +26,7 @@ jobs:
       config-file: "brikpipe.build.yml"
 
   # --------------------------------------------------------------
-  # 2) Node CI (build, lint, install)
+  # 2) Node CI (build, lint, install).
   # --------------------------------------------------------------
   node-ci:
     name: "Node: Build & Test"
