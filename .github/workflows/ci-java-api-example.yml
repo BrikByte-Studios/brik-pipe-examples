@@ -43,7 +43,7 @@ jobs:
 
   # --------------------------------------------------------------
   # 3) Java Tests + Coverage (sharded inside test-java.yml)
-  #    - uploads per-shard artifacts: coverage-java-shard<N>
+  #    - uploads per-shard artifacts: coverage-java-shard<N>.
   # --------------------------------------------------------------
   tests:
     name: "Java: Unit Tests + Coverage"
