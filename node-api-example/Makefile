@@ -51,14 +51,14 @@ test: install
 	  find . -maxdepth 3 -type d \( -name "tests" -o -name "__tests__" \) || true; \
 	  exit 1; \
 	fi; \
-	echo "🧩 Shard: $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1}"; \
+	\
 	SHARD="$${UNIT_SHARD:-1}"; \
 	TOTAL="$${UNIT_SHARD_TOTAL:-1}"; \
+	echo "🧩 Shard: $$SHARD/$$TOTAL"; \
 	\
-	# If the parallel-runner provided a deterministic selection file, use it. \
 	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
 	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
-	  LIST="$$(cat "$${TEST_ITEMS_FILE}")"; \
+	  LIST="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}")"; \
 	else \
 	  echo "📌 Using repo sharder: scripts/shard-tests.cjs"; \
 	  LIST="$$(node scripts/shard-tests.cjs tests/unit "$$SHARD" "$$TOTAL")"; \
@@ -69,8 +69,9 @@ test: install
 	  exit 0; \
 	fi; \
 	\
-	echo "📄 Selected test files:"; \
+	echo "📄 Selected test files ($$(echo "$$LIST" | wc -l | tr -d ' ')):"; \
 	echo "$$LIST" | sed 's/^/  - /'; \
+	\
 	TEST_FILES="$$LIST" npm run test:shard
 
 
