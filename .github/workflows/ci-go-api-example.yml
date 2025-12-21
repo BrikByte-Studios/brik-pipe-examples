@@ -90,24 +90,28 @@ jobs:
           tail -n 5 coverage-func.txt || true
 
           python - << 'PY'
-          import json
+          import json, re
           from pathlib import Path
 
-          lines = Path("coverage-func.txt").read_text(encoding="utf-8").splitlines()
-          last = lines[-1].strip()
-          pct = float(last.split()[-1].rstrip("%"))
+          txt = Path("coverage-func.txt").read_text(encoding="utf-8", errors="replace").splitlines()
 
-          out = Path("out")
-          out.mkdir(parents=True, exist_ok=True)
+          m = None
+          for line in reversed(txt):
+            if line.lower().startswith("total:"):
+              m = re.search(r'(\d+(\.\d+)?)%$', line.strip())
+              if m:
+                pct = float(m.group(1))
+                break
+          else:
+            raise SystemExit("ERROR: could not find a 'total:' coverage line in coverage-func.txt")
+
+          out = Path("out"); out.mkdir(parents=True, exist_ok=True)
           cov_path = out / "coverage.json"
-
-          cov = {}
-          cov["summary"] = {"line": pct}
-          cov["files"] = []
-
+          cov = {"summary": {"line": pct}, "files": []}
           cov_path.write_text(json.dumps(cov, indent=2), encoding="utf-8")
           print("Wrote out/coverage.json summary.line =", pct)
           PY
+
 
           echo "[MERGE] Final out/coverage.json:"
           cat out/coverage.json
