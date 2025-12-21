@@ -48,17 +48,27 @@ test: install
 	if [ ! -d tests/unit ]; then \
 	  echo "❌ tests/unit not found. Listing repo tree:"; \
 	  ls -la; \
-	  find . -maxdepth 3 -type d -name "tests" -o -name "__tests__" || true; \
+	  find . -maxdepth 3 -type d \( -name "tests" -o -name "__tests__" \) || true; \
 	  exit 1; \
 	fi; \
 	echo "🧩 Shard: $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1}"; \
 	SHARD="$${UNIT_SHARD:-1}"; \
 	TOTAL="$${UNIT_SHARD_TOTAL:-1}"; \
-	LIST="$$(node scripts/shard-tests.cjs tests/unit "$$SHARD" "$$TOTAL")"; \
+	\
+	# If the parallel-runner provided a deterministic selection file, use it. \
+	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
+	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
+	  LIST="$$(cat "$${TEST_ITEMS_FILE}")"; \
+	else \
+	  echo "📌 Using repo sharder: scripts/shard-tests.cjs"; \
+	  LIST="$$(node scripts/shard-tests.cjs tests/unit "$$SHARD" "$$TOTAL")"; \
+	fi; \
+	\
 	if [ -z "$$LIST" ]; then \
 	  echo "ℹ️ No tests selected for shard $$SHARD/$$TOTAL (nothing to run)."; \
 	  exit 0; \
 	fi; \
+	\
 	echo "📄 Selected test files:"; \
 	echo "$$LIST" | sed 's/^/  - /'; \
 	TEST_FILES="$$LIST" npm run test:shard
