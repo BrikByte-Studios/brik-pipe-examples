@@ -44,7 +44,7 @@ jobs:
       working-directory: "python-api-example"
       override_shards: "4"
 
-  # 3.5) Merge shard coverage artifacts into one canonical output (v1: pick one).
+  # 3.5) Merge shard coverage artifacts into one canonical output (v1: pick one)
   merge-coverage:
     name: "Merge coverage shards"
     needs: tests
