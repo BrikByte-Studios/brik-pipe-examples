@@ -157,7 +157,7 @@ jobs:
 
       # IMPORTANT:
       # Download into node-api-example (not node-api-example/out),
-      # because the artifact likely contains out/coverage.json inside it.
+      # because the artifact likely contains out/coverage.json inside it
       - name: "Download merged coverage artifact"
         uses: actions/download-artifact@v4
         with:
