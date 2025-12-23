@@ -57,7 +57,7 @@ jobs:
   #
   # NOTE (v1):
   #   This picks ONE shard’s coverage.json deterministically (prefers shard1).
-  #   True aggregation needs a real merge step (e.g., merge raw coverage inputs)
+  #   True aggregation needs a real merge step (e.g., merge raw coverage inputs).
   # --------------------------------------------------------------
   merge-coverage:
     name: "Merge coverage shards"
