@@ -17,7 +17,6 @@ MVN          ?= mvn
 POM_FILE     := pom.xml
 TARGET_DIR   := target
 SHELL := /usr/bin/env bash
-.SHELLFLAGS := -euo pipefail -c
 
 .PHONY: help build test ci clean deps post-test
 
