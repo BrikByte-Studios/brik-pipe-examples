@@ -116,7 +116,7 @@ test-unit: deps
 	  --maxfail=1 \
 	  --disable-warnings \
 	  --junitxml=out/junit.xml \
-	  --cov=. \
+	  --cov=main \
 	  --cov-report=term-missing \
 	  --cov-report=xml:coverage.xml \
 	  --cov-report=json:out/coverage.json
