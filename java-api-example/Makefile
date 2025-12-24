@@ -40,14 +40,12 @@ test: deps
 	echo "🧪 Running Maven tests..."; \
 	echo "🧩 Shard: $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1}"; \
 	mkdir -p out; \
-	\
-	# 1) Get test file list (runner-provided OR repo-discovered fallback) \
 	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
 	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
 	  files="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}")"; \
 	else \
 	  echo "📌 Discovering tests under src/test/java (recursive)"; \
-	  files="$$(find src/test/java -type f \\( -name '*Test.java' -o -name '*Tests.java' \\) 2>/dev/null | sort || true)"; \
+	  files="$$(find src/test/java -type f \( -name '*Test.java' -o -name '*Tests.java' \) 2>/dev/null | sort || true)"; \
 	  shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
 	  if [ "$$total" -gt "1" ]; then \
 	    files="$$(FILES="$$files" UNIT_SHARD="$$shard" UNIT_SHARD_TOTAL="$$total" \
@@ -55,19 +53,14 @@ test: deps
 	    )"; \
 	  fi; \
 	fi; \
-	\
 	if [ -z "$$files" ]; then \
 	  echo "ℹ️ No tests selected for this shard (nothing to run)."; \
 	  exit 0; \
 	fi; \
-	\
 	echo "📄 Selected test files ($$(echo "$$files" | wc -l | tr -d ' ')):"; \
 	echo "$$files" | sed 's/^/  - /'; \
-	\
-	# 2) Convert file paths -> fully-qualified class names (Surefire -Dtest=) \
-	classes="$$(echo "$$files" | sed -E 's|^src/test/java/||; s|/|.|g; s|\\.java$$||')"; \
+	classes="$$(echo "$$files" | sed -E 's|^src/test/java/||; s|/|.|g; s|\.java$$||')"; \
 	tests_csv="$$(echo "$$classes" | paste -sd, -)"; \
-	\
 	echo "🧪 Surefire -Dtest=$$tests_csv"; \
 	$(MVN) -B -Dtest="$$tests_csv" test; \
 	$(MAKE) post-test
