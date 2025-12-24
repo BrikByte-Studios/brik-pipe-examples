@@ -60,29 +60,46 @@ build:
 	$(GO) build -o $(BUILD_OUT) ./...
 
 test-unit: ensure-go-junit-report
-	@set -euo pipefail
 	@echo "🧪 Running Go UNIT tests..."
 	@mkdir -p out
 	@shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
-	pkgs="$$( $(GO) list ./... | sort )"; \
-	if [[ "$$total" -gt 1 ]]; then \
-	  selected="$$(printf "%s\n" "$$pkgs" | awk -v t="$$total" -v s="$$shard" '((NR-1) % t) == (s-1)')"; \
+	\
+
+	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
+	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
+	  pkgs="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}" | sort -u)"; \
 	else \
-	  selected="$$pkgs"; \
+	  echo "📌 Discovering packages via 'go list ./...'"; \
+	  pkgs="$$( $(GO) list ./... | sort )"; \
 	fi; \
-	if [[ -z "$$selected" ]]; then \
+	\
+
+	if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then \
+	  if [ "$$total" -gt 1 ]; then \
+	    pkgs="$$(printf "%s\n" "$$pkgs" | awk -v t="$$total" -v s="$$shard" '((NR-1) % t) == (s-1)')"; \
+	  fi; \
+	fi; \
+	\
+	if [ -z "$$pkgs" ]; then \
 	  echo "ℹ️ No packages selected for shard $$shard/$$total (nothing to run)."; \
-	  echo "mode: set" > coverage.out; \
+	  printf "mode: atomic\n" > coverage.out; \
+	  : > out/test-unit-report.json; \
+	  : > out/junit.xml; \
 	  exit 0; \
 	fi; \
-	echo "📦 Selected packages:"; printf "%s\n" "$$selected" | sed 's/^/  - /'; \
-	$(GO) test $$(printf "%s\n" "$$selected") \
+	\
+	echo "🧩 Shard: $$shard/$$total"; \
+	echo "📦 Selected packages ($$(printf "%s\n" "$$pkgs" | wc -l | tr -d ' ')):"; \
+	printf "%s\n" "$$pkgs" | sed 's/^/  - /'; \
+	\
+	$(GO) test $$(printf "%s\n" "$$pkgs") \
 	  -covermode=atomic \
 	  -coverpkg=./... \
 	  -coverprofile=coverage.out \
 	  -json > out/test-unit-report.json; \
 	go-junit-report < out/test-unit-report.json > out/junit.xml; \
 	echo "✅ Wrote out/junit.xml and coverage.out"
+
 
 # Optional: integration tests (only when explicitly run, and typically
 # driven by the BrikPipe integration-test runner with -tags=integration).
