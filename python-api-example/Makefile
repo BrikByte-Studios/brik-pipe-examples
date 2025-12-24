@@ -106,7 +106,7 @@ test-unit: deps
 	echo "📄 Selected test files ($$(echo "$$selected" | wc -l | tr -d ' ')):"; \
 	echo "$$selected" | sed 's/^/  - /'; \
 	\
-	PYTHONPATH="$$(pwd):$$PYTHONPATH" pytest -q \
+	PYTHONPATH="$$(pwd):$${PYTHONPATH:-}" pytest -q \
 	  $$selected \
 	  -m "not integration" \
 	  --ignore="$(TEST_DIR)/integration" \
