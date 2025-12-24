@@ -23,6 +23,8 @@ PIP        ?= pip
 SRC_DIR    := .
 TEST_DIR   := tests
 BUILD_DIR  := dist
+SHELL := /usr/bin/env bash
+.SHELLFLAGS := -euo pipefail -c
 
 # Optional sharding (default: single shard)
 UNIT_SHARD ?= 1
