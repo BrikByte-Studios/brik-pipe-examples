@@ -38,7 +38,7 @@ deps:
 test: deps
 	@set -euo pipefail; \
 	echo "🧪 Running Maven tests..."; \
-	echo "🧩 Shard: $${UNIT_SHARD:-0}/$${UNIT_SHARD_TOTAL:-1}"; \
+	echo "🧩 Shard: $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1}"; \
 	mkdir -p out; \
 	\
 	# 1) Get test file list (runner-provided OR repo-discovered fallback) \
@@ -47,11 +47,11 @@ test: deps
 	  files="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}")"; \
 	else \
 	  echo "📌 Discovering tests under src/test/java (recursive)"; \
-	  files="$$(find src/test/java -type f \\( -name "*Test.java" -o -name "*Tests.java" \\) 2>/dev/null | sort || true)"; \
-	  shard="$${UNIT_SHARD:-0}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
+	  files="$$(find src/test/java -type f \\( -name '*Test.java' -o -name '*Tests.java' \\) 2>/dev/null | sort || true)"; \
+	  shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
 	  if [ "$$total" -gt "1" ]; then \
-	    files="$$(FILES="$$files" SHARD_INDEX="$$shard" SHARD_TOTAL="$$total" \
-	      python -c 'import os; fs=[f for f in os.environ.get("FILES","").splitlines() if f.strip()]; i=int(os.environ.get("SHARD_INDEX","0")); t=int(os.environ.get("SHARD_TOTAL","1")); out=[f for n,f in enumerate(fs) if (n%t)==i]; print("\n".join(out))' \
+	    files="$$(FILES="$$files" UNIT_SHARD="$$shard" UNIT_SHARD_TOTAL="$$total" \
+	      python -c 'import os; fs=[f for f in os.environ.get("FILES","").splitlines() if f.strip()]; s=int(os.environ.get("UNIT_SHARD","1")); t=int(os.environ.get("UNIT_SHARD_TOTAL","1")); out=[f for n,f in enumerate(fs) if (n%t)==(s-1)]; print("\n".join(out))' \
 	    )"; \
 	  fi; \
 	fi; \
@@ -71,6 +71,7 @@ test: deps
 	echo "🧪 Surefire -Dtest=$$tests_csv"; \
 	$(MVN) -B -Dtest="$$tests_csv" test; \
 	$(MAKE) post-test
+
 
 post-test:
 	@echo "🔧 Merging Surefire JUnit XML into out/junit.xml..."
