@@ -62,43 +62,60 @@ build:
 # Unit tests (default "test")
 # -----------------------------
 test-unit: deps
-	@echo "🧪 Running Python UNIT tests (excluding 'integration' mark, ignoring tests/integration)..."
-	@echo "🧩 Shard: $(UNIT_SHARD)/$(UNIT_SHARD_TOTAL)"
-	@if ls $(TEST_DIR)/test_*.py >/dev/null 2>&1; then \
-	  mkdir -p out; \
-	  files="$$(ls -1 $(TEST_DIR)/test_*.py 2>/dev/null | sort)"; \
-	  \
-	  if [ "$${UNIT_SHARD_TOTAL:-1}" -gt "1" ]; then \
-	    selected="$$(FILES="$$files" UNIT_SHARD="$${UNIT_SHARD:-1}" UNIT_SHARD_TOTAL="$${UNIT_SHARD_TOTAL:-1}" \
-	      python -c 'import os; files=os.environ.get("FILES","").splitlines(); shard=int(os.environ.get("UNIT_SHARD","1")); total=int(os.environ.get("UNIT_SHARD_TOTAL","1")); out=[f for i,f in enumerate(files,1) if ((i-1)%total)==(shard-1)]; print("\n".join(out))' \
+	@set -euo pipefail; \
+	echo "🧪 Running Python UNIT tests (excluding 'integration' mark)..."; \
+	echo "📁 CWD: $$(pwd)"; \
+	echo "🧩 Shard: $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1}"; \
+	mkdir -p out; \
+	\
+	# 1) If runner provided a deterministic list, use it. \
+	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
+	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
+	  files="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}")"; \
+	else \
+	  echo "📌 Discovering tests under $(TEST_DIR)/ (recursive)"; \
+	  files="$$(find "$(TEST_DIR)" -type f \( -name "test_*.py" -o -name "*_test.py" \) | sort)"; \
+	fi; \
+	\
+	if [ -z "$$files" ]; then \
+	  echo "ℹ️ No unit tests found; skipping pytest."; \
+	  exit 0; \
+	fi; \
+	\
+	# 2) If we discovered a list (not runner-provided), apply sharding here. \
+	if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then \
+	  shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
+	  if [ "$$total" -gt "1" ]; then \
+	    selected="$$(FILES="$$files" UNIT_SHARD="$$shard" UNIT_SHARD_TOTAL="$$total" \
+	      python -c 'import os; files=os.environ["FILES"].splitlines(); s=int(os.environ["UNIT_SHARD"]); t=int(os.environ["UNIT_SHARD_TOTAL"]); out=[f for i,f in enumerate(files) if (i%t)==(s-1)]; print("\n".join(out))' \
 	    )"; \
 	  else \
 	    selected="$$files"; \
 	  fi; \
-	  \
-	  if [ -z "$$selected" ]; then \
-	    echo "ℹ️ No tests selected for shard $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1} (nothing to run)."; \
-	    exit 0; \
-	  fi; \
-	  \
-	  echo "📄 Selected test files:"; \
-	  echo "$$selected" | sed 's/^/  - /'; \
-	  \
-	  PYTHONPATH="$$(pwd):$$PYTHONPATH" pytest \
-	    -q \
-	    $$selected \
-	    -m "not integration" \
-	    --ignore=$(TEST_DIR)/integration \
-	    --maxfail=1 \
-	    --disable-warnings \
-	    --junitxml=out/junit.xml \
-	    --cov=main \
-	    --cov-report=term-missing \
-	    --cov-report=xml:coverage.xml  \
-	    --cov-report=json:out/coverage.json; \
 	else \
-	  echo "ℹ️ No unit tests found; skipping pytest."; \
-	fi
+	  selected="$$files"; \
+	fi; \
+	\
+	if [ -z "$$selected" ]; then \
+	  echo "ℹ️ No tests selected for shard $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1} (nothing to run)."; \
+	  exit 0; \
+	fi; \
+	\
+	echo "📄 Selected test files ($$(echo "$$selected" | wc -l | tr -d ' ')):"; \
+	echo "$$selected" | sed 's/^/  - /'; \
+	\
+	PYTHONPATH="$$(pwd):$$PYTHONPATH" pytest -q \
+	  $$selected \
+	  -m "not integration" \
+	  --ignore="$(TEST_DIR)/integration" \
+	  --maxfail=1 \
+	  --disable-warnings \
+	  --junitxml=out/junit.xml \
+	  --cov=. \
+	  --cov-report=term-missing \
+	  --cov-report=xml:coverage.xml \
+	  --cov-report=json:out/coverage.json
+
 
 # Backwards-compatible alias
 test: test-unit
