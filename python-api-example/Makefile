@@ -70,17 +70,18 @@ test-unit: deps
 	echo "🧩 Shard: $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1}"; \
 	mkdir -p out; \
 	\
-	# 1) If runner provided a deterministic list, use it. \
+	# 1) If runner provided a deterministic list, use it (but filter integration out). \
 	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
 	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
-	  files="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}")"; \
+	  files="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}" | grep -vE '(^|/)(tests/integration|test/integration|integration/)' || true)"; \
 	else \
-	  echo "📌 Discovering tests under $(TEST_DIR)/ (recursive)"; \
-	  files="$$(find "$(TEST_DIR)" -type f \( -name "test_*.py" -o -name "*_test.py" \) | sort)"; \
+	  echo "📌 Discovering UNIT tests under $(TEST_DIR)/ (recursive), excluding $(TEST_DIR)/integration"; \
+	  files="$$(find "$(TEST_DIR)" -type f \( -name "test_*.py" -o -name "*_test.py" \) \
+	    ! -path "$(TEST_DIR)/integration/*" | sort)"; \
 	fi; \
 	\
 	if [ -z "$$files" ]; then \
-	  echo "ℹ️ No unit tests found; skipping pytest."; \
+	  echo "ℹ️ No unit tests found after filtering integration; skipping pytest."; \
 	  exit 0; \
 	fi; \
 	\
@@ -98,8 +99,11 @@ test-unit: deps
 	  selected="$$files"; \
 	fi; \
 	\
+	# Final safety filter (in case anything slipped in) \
+	selected="$$(printf "%s\n" "$$selected" | grep -vE '(^|/)(tests/integration|test/integration|integration/)' || true)"; \
+	\
 	if [ -z "$$selected" ]; then \
-	  echo "ℹ️ No tests selected for shard $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1} (nothing to run)."; \
+	  echo "ℹ️ No unit tests selected for shard $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1} (nothing to run)."; \
 	  exit 0; \
 	fi; \
 	\
@@ -109,7 +113,6 @@ test-unit: deps
 	PYTHONPATH="$$(pwd):$${PYTHONPATH:-}" pytest -q \
 	  $$selected \
 	  -m "not integration" \
-	  --ignore="$(TEST_DIR)/integration" \
 	  --maxfail=1 \
 	  --disable-warnings \
 	  --junitxml=out/junit.xml \
@@ -117,6 +120,7 @@ test-unit: deps
 	  --cov-report=term-missing \
 	  --cov-report=xml:coverage.xml \
 	  --cov-report=json:out/coverage.json
+
 
 
 # Backwards-compatible alias
