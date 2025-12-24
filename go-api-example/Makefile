@@ -68,7 +68,6 @@ test-unit: ensure-go-junit-report
 	shard="${UNIT_SHARD:-1}"
 	total="${UNIT_SHARD_TOTAL:-1}"
 
-	# 1) Prefer runner-provided package list (one pkg per line)
 	if [ -n "${TEST_ITEMS_FILE:-}" ] && [ -f "${TEST_ITEMS_FILE}" ]; then
 	  echo "📌 Using runner-provided selection file: ${TEST_ITEMS_FILE}"
 	  pkgs="$(sed '/^[[:space:]]*$$/d' "${TEST_ITEMS_FILE}" | sort -u)"
@@ -77,7 +76,6 @@ test-unit: ensure-go-junit-report
 	  pkgs="$(go list ./... | sort)"
 	fi
 
-	# 2) If no runner list, shard locally by package index (deterministic)
 	if [ -z "${TEST_ITEMS_FILE:-}" ] || [ ! -f "${TEST_ITEMS_FILE}" ]; then
 	  if [ "${total}" -gt 1 ]; then
 	    pkgs="$(printf "%s\n" "${pkgs}" | awk -v t="${total}" -v s="${shard}" '((NR-1) % t) == (s-1)')"
