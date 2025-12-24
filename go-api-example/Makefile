@@ -63,8 +63,6 @@ test-unit: ensure-go-junit-report
 	@echo "🧪 Running Go UNIT tests..."
 	@mkdir -p out
 	@shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
-	\
-
 	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
 	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
 	  pkgs="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}" | sort -u)"; \
@@ -72,8 +70,6 @@ test-unit: ensure-go-junit-report
 	  echo "📌 Discovering packages via 'go list ./...'"; \
 	  pkgs="$$( $(GO) list ./... | sort )"; \
 	fi; \
-	\
-
 	if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then \
 	  if [ "$$total" -gt 1 ]; then \
 	    pkgs="$$(printf "%s\n" "$$pkgs" | awk -v t="$$total" -v s="$$shard" '((NR-1) % t) == (s-1)')"; \
