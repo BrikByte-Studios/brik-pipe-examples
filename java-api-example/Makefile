@@ -35,10 +35,41 @@ deps:
 	$(MVN) -B dependency:resolve
 
 test: deps
-	@echo "🧪 Running Maven tests..."
-	@echo "🧩 Shard: $(UNIT_SHARD)/$(UNIT_SHARD_TOTAL)"
-	$(MVN) -B test
-	@$(MAKE) post-test
+	@set -euo pipefail; \
+	echo "🧪 Running Maven tests..."; \
+	echo "🧩 Shard: $${UNIT_SHARD:-0}/$${UNIT_SHARD_TOTAL:-1}"; \
+	mkdir -p out; \
+	\
+	# 1) Get test file list (runner-provided OR repo-discovered fallback) \
+	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
+	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
+	  files="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}")"; \
+	else \
+	  echo "📌 Discovering tests under src/test/java (recursive)"; \
+	  files="$$(find src/test/java -type f \\( -name "*Test.java" -o -name "*Tests.java" \\) 2>/dev/null | sort || true)"; \
+	  shard="$${UNIT_SHARD:-0}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
+	  if [ "$$total" -gt "1" ]; then \
+	    files="$$(FILES="$$files" SHARD_INDEX="$$shard" SHARD_TOTAL="$$total" \
+	      python -c 'import os; fs=[f for f in os.environ.get("FILES","").splitlines() if f.strip()]; i=int(os.environ.get("SHARD_INDEX","0")); t=int(os.environ.get("SHARD_TOTAL","1")); out=[f for n,f in enumerate(fs) if (n%t)==i]; print("\n".join(out))' \
+	    )"; \
+	  fi; \
+	fi; \
+	\
+	if [ -z "$$files" ]; then \
+	  echo "ℹ️ No tests selected for this shard (nothing to run)."; \
+	  exit 0; \
+	fi; \
+	\
+	echo "📄 Selected test files ($$(echo "$$files" | wc -l | tr -d ' ')):"; \
+	echo "$$files" | sed 's/^/  - /'; \
+	\
+	# 2) Convert file paths -> fully-qualified class names (Surefire -Dtest=) \
+	classes="$$(echo "$$files" | sed -E 's|^src/test/java/||; s|/|.|g; s|\\.java$$||')"; \
+	tests_csv="$$(echo "$$classes" | paste -sd, -)"; \
+	\
+	echo "🧪 Surefire -Dtest=$$tests_csv"; \
+	$(MVN) -B -Dtest="$$tests_csv" test; \
+	$(MAKE) post-test
 
 post-test:
 	@echo "🔧 Merging Surefire JUnit XML into out/junit.xml..."
