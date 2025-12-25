@@ -87,7 +87,7 @@ jobs:
           name: coverage-dotnet
           path: out/coverage.json
 
-  # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004).
+  # 4) Coverage Governance Gate (GOV-TEST-COVERAGE-POLICY-004)
   coverage-gate:
     name: "Coverage Governance Gate"
     needs: merge
