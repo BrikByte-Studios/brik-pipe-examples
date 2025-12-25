@@ -21,7 +21,7 @@
 #   - Health endpoint:      /actuator/health   (Spring Boot-style)
 #   - Integration tests can be driven via:
 #       ./mvnw -B verify -Pintegration-tests
-#     or equivalent, as implemented in run-integration-tests.sh
+#     or equivalent, as implemented in run-integration-tests.sh.
 
 name: "Java API — Containerized Integration Tests"
 

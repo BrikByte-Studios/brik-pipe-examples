@@ -1,6 +1,6 @@
 # Node API Example — Integration Tests
 # This workflow delegates to the reusable integration-test workflow
-# in BrikByte-Studios/.github and is scoped to node-api-example/ changes.
+# in BrikByte-Studios/.github and is scoped to node-api-example/ changes
 
 name: "Node API — Integration Tests"
 

@@ -10,7 +10,7 @@
 #   - Project lives under: dotnet-api-example/
 #   - Dockerfile:          dotnet-api-example/Dockerfile
 #   - App port:            8080
-#   - Health endpoint:     GET /health → 200 OK
+#   - Health endpoint:     GET /health → 200 OK.
 #
 # Image naming convention:
 #   ghcr.io/brikbyte-studios/example-dotnet-api:sha-${{ github.sha }}

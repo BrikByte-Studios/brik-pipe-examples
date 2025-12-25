@@ -16,7 +16,7 @@
 #
 # Triggers:
 #   - Pushes & PRs that touch go-api-example/** or this workflow.
-#   - Manual runs via workflow_dispatch
+#   - Manual runs via workflow_dispatch.
 
 name: "Go API — Integration Tests"
 
