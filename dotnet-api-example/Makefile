@@ -58,11 +58,6 @@ test: build
 
 	@mkdir -p "$(TEST_RESULTS_DIR)" "$(OUT_DIR)"
 
-	@# -------------------------------------------------------------------
-	@# 1) Determine test project list:
-	@#    - If runner provided TEST_ITEMS_FILE, use it (already sharded)
-	@#    - Else discover ./tests/*.csproj and shard here (legacy fallback)
-	@# -------------------------------------------------------------------
 	@projects=""; \
 	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
 	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
@@ -71,7 +66,7 @@ test: build
 	  echo "📌 Discovering test projects under ./tests (deterministic)"; \
 	  projects="$$(find . -type f -name '*.csproj' -path './tests/*' | sort)"; \
 	fi; \
-	\
+
 	if [ -z "$$projects" ]; then \
 	  echo "⚠️ No test projects found/selected."; \
 	  echo "ℹ️ Writing empty JUnit for shard $(UNIT_SHARD) and exiting 0."; \
@@ -79,10 +74,7 @@ test: build
 	  : > "$(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"; \
 	  exit 0; \
 	fi; \
-	\
-	@# -------------------------------------------------------------------
-	@# 2) If TEST_ITEMS_FILE was NOT provided, apply sharding here (1-based)
-	@# -------------------------------------------------------------------
+
 	selected="$$projects"; \
 	if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then \
 	  shard=$$(printf "%s" "$(UNIT_SHARD)" | tr -d '\r'); \
@@ -98,13 +90,10 @@ test: build
 	    exit 0; \
 	  fi; \
 	fi; \
-	\
+
 	echo "📦 Selected test projects:"; \
 	printf "%s\n" "$$selected" | sed 's/^/  - /'; \
-	\
-	@# -------------------------------------------------------------------
-	@# 3) Execute selected projects (coverage per project, shard-tagged)
-	@# -------------------------------------------------------------------
+
 	for proj in $$selected; do \
 	  name=$$(basename "$$proj" .csproj); \
 	  trx="$(TEST_RESULTS_DIR)/TestResult.$$name.shard$(UNIT_SHARD).trx"; \
