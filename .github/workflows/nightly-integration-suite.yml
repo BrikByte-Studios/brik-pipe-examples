@@ -49,7 +49,19 @@ jobs:
             context: java-api-example
             app_port: "8080"
             test_language: "java"
-            test_command: "./mvn -B verify -Pintegration-tests"  # full suite: maven/gradle defaults
+            test_command: >-
+              bash -lc '
+                set -euo pipefail
+                if [ -x "./mvnw" ]; then
+                  ./mvnw -B verify -Pintegration-tests
+                elif command -v mvn >/dev/null 2>&1; then
+                  mvn -B verify -Pintegration-tests
+                else
+                  echo "❌ No mvnw or mvn found"
+                  ls -la
+                  exit 127
+                fi
+              ' # full suite: maven/gradle defaults
           - service_name: "go-api-example"
             image: ghcr.io/brikbyte-studios/example-go-api:sha-${{ github.sha }}
             dockerfile: go-api-example/Dockerfile
