@@ -93,6 +93,7 @@ jobs:
     secrets: inherit
 
     with:
+      service_name: ${{ matrix.service_name }}
       image: ${{ matrix.image }}
       dockerfile: ${{ matrix.dockerfile }}
       context: ${{ matrix.context }}
