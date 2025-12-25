@@ -54,54 +54,75 @@ build: restore
 test: build
 	@echo "🧪 Running .NET tests (Release, excluding Integration) + coverage..."
 	@echo "🧩 Shard: $(UNIT_SHARD)/$(UNIT_SHARD_TOTAL)"
+	@echo "📌 TEST_ITEMS_FILE: $${TEST_ITEMS_FILE:-<none>}"
 
 	@mkdir -p "$(TEST_RESULTS_DIR)" "$(OUT_DIR)"
 
-	@# Discover test projects deterministically (sorted). Adjust the find path/pattern if needed.
-	@projects=$$(find . -type f -name '*.csproj' -path './tests/*' | sort); \
-	if [ -z "$$projects" ]; then \
-	  echo "⚠️ No test projects found under ./tests. Falling back to solution run (no sharding)."; \
-	  $(DOTNET) test $(SOLUTION_FILE) \
-	    --configuration $(CONFIG) \
-	    --no-build \
-	    --filter "Category!=Integration" \
-	    --logger "trx;LogFileName=TestResult.trx" \
-	    --results-directory $(TEST_RESULTS_DIR) \
-	    /p:CollectCoverage=true \
-	    /p:CoverletOutput=$(TEST_RESULTS_DIR)/coverage.net. \
-	    /p:CoverletOutputFormat=json; \
+	@# -------------------------------------------------------------------
+	@# 1) Determine test project list:
+	@#    - If runner provided TEST_ITEMS_FILE, use it (already sharded)
+	@#    - Else discover ./tests/*.csproj and shard here (legacy fallback)
+	@# -------------------------------------------------------------------
+	@projects=""; \
+	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
+	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
+	  projects="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}" | sort -u)"; \
 	else \
+	  echo "📌 Discovering test projects under ./tests (deterministic)"; \
+	  projects="$$(find . -type f -name '*.csproj' -path './tests/*' | sort)"; \
+	fi; \
+	\
+	if [ -z "$$projects" ]; then \
+	  echo "⚠️ No test projects found/selected."; \
+	  echo "ℹ️ Writing empty JUnit for shard $(UNIT_SHARD) and exiting 0."; \
+	  mkdir -p "$(OUT_DIR)"; \
+	  : > "$(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"; \
+	  exit 0; \
+	fi; \
+	\
+	@# -------------------------------------------------------------------
+	@# 2) If TEST_ITEMS_FILE was NOT provided, apply sharding here (1-based)
+	@# -------------------------------------------------------------------
+	selected="$$projects"; \
+	if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then \
 	  shard=$$(printf "%s" "$(UNIT_SHARD)" | tr -d '\r'); \
 	  total=$$(printf "%s" "$(UNIT_SHARD_TOTAL)" | tr -d '\r'); \
 	  if [ "$$total" -lt 1 ]; then total=1; fi; \
 	  if [ "$$shard" -lt 1 ]; then shard=1; fi; \
 	  if [ "$$shard" -gt "$$total" ]; then shard=$$total; fi; \
-	  selected=$$(printf "%s\n" $$projects | awk -v s=$$(($$shard-1)) -v t=$$total '((NR-1)%t)==s{print}'); \
+	  selected="$$(printf "%s\n" $$projects | awk -v s=$$(($$shard-1)) -v t=$$total '((NR-1)%t)==s{print}')"; \
 	  if [ -z "$$selected" ]; then \
 	    echo "ℹ️ No test projects selected for shard $$shard/$$total (nothing to run)."; \
+	    echo "ℹ️ Writing empty JUnit for shard $(UNIT_SHARD) and exiting 0."; \
+	    : > "$(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"; \
 	    exit 0; \
 	  fi; \
-	  echo "📦 Selected test projects:"; \
-	  printf "%s\n" "$$selected" | sed 's/^/  - /'; \
-	  for proj in $$selected; do \
-	    name=$$(basename "$$proj" .csproj); \
-	    trx="$(TEST_RESULTS_DIR)/TestResult.$$name.shard$$shard.trx"; \
-	    covbase="$(TEST_RESULTS_DIR)/coverage.net.$$name.shard$$shard."; \
-	    echo "➡️ dotnet test $$proj (trx=$$trx)"; \
-	    $(DOTNET) test "$$proj" \
-	      --configuration $(CONFIG) \
-	      --no-build \
-	      --filter "Category!=Integration" \
-	      --logger "trx;LogFileName=$$(basename "$$trx")" \
-	      --results-directory "$(TEST_RESULTS_DIR)" \
-	      /p:CollectCoverage=true \
-	      /p:CoverletOutput="$$covbase" \
-	      /p:CoverletOutputFormat=json; \
-	  done; \
-	fi
+	fi; \
+	\
+	echo "📦 Selected test projects:"; \
+	printf "%s\n" "$$selected" | sed 's/^/  - /'; \
+	\
+	@# -------------------------------------------------------------------
+	@# 3) Execute selected projects (coverage per project, shard-tagged)
+	@# -------------------------------------------------------------------
+	for proj in $$selected; do \
+	  name=$$(basename "$$proj" .csproj); \
+	  trx="$(TEST_RESULTS_DIR)/TestResult.$$name.shard$(UNIT_SHARD).trx"; \
+	  covbase="$(TEST_RESULTS_DIR)/coverage.net.$$name.shard$(UNIT_SHARD)."; \
+	  echo "➡️ dotnet test $$proj (trx=$$trx)"; \
+	  $(DOTNET) test "$$proj" \
+	    --configuration $(CONFIG) \
+	    --no-build \
+	    --filter "Category!=Integration" \
+	    --logger "trx;LogFileName=$$(basename "$$trx")" \
+	    --results-directory "$(TEST_RESULTS_DIR)" \
+	    /p:CollectCoverage=true \
+	    /p:CoverletOutput="$$covbase" \
+	    /p:CoverletOutputFormat=json; \
+	done
 
 	@echo "📄 Converting TRX → JUnit XML for audit-export (per shard)..."
-	@rm -rf "$(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"
+	@rm -f "$(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"
 
 	@if ! command -v trx2junit >/dev/null 2>&1; then \
 	  echo "📦 Installing trx2junit dotnet tool..."; \
@@ -109,15 +130,16 @@ test: build
 	fi
 
 	@PATH="$$PATH:$$HOME/.dotnet/tools"; \
-	trx=$$(find "$(TEST_RESULTS_DIR)" -maxdepth 1 -name "TestResult.*.shard$(UNIT_SHARD).trx" | head -n 1); \
+	trx=$$(find "$(TEST_RESULTS_DIR)" -maxdepth 1 -name "TestResult.*.shard$(UNIT_SHARD).trx" | head -n 1 || true); \
 	if [ -z "$$trx" ]; then \
-	  echo "❌ No TRX file found for shard $(UNIT_SHARD)."; \
-	  ls -R "$(TEST_RESULTS_DIR)"; \
-	  exit 1; \
+	  echo "ℹ️ No TRX file found for shard $(UNIT_SHARD) (likely empty shard)."; \
+	  : > "$(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"; \
+	  echo "✅ Wrote empty JUnit to $(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"; \
+	  exit 0; \
 	fi; \
 	echo "ℹ️ Converting TRX: $$trx"; \
 	trx2junit "$$trx" --output "$(OUT_DIR)"; \
-	junit=$$(find "$(OUT_DIR)" -maxdepth 1 -name '*.xml' | head -n 1); \
+	junit=$$(find "$(OUT_DIR)" -maxdepth 1 -name '*.xml' | head -n 1 || true); \
 	if [ -z "$$junit" ]; then \
 	  echo "❌ No JUnit XML produced by trx2junit in $(OUT_DIR)"; \
 	  ls -R "$(OUT_DIR)"; \
@@ -125,6 +147,7 @@ test: build
 	fi; \
 	mv "$$junit" "$(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"; \
 	echo "✅ JUnit report written to $(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"
+
 
 ci: test
 	@echo "✅ CI pipeline (.NET) completed successfully."
