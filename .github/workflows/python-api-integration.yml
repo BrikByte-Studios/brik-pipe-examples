@@ -14,7 +14,7 @@
 #   - Health endpoint:   GET /health returning 2xx when ready.
 #
 # If your image name or port differs, adjust `image`, `app_port`,
-# and `healthcheck_path` values in the `with:` block
+# and `healthcheck_path` values in the `with:` block.
 
 name: "Python API — Integration Tests"
 
