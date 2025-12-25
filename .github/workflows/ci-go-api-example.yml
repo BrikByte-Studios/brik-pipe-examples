@@ -66,26 +66,25 @@ jobs:
           set -euo pipefail
           mkdir -p out
 
-          echo "[MERGE] Listing downloaded shard artifacts:"
-          find .artifacts/coverage -type f -maxdepth 6 -print || true
+          ART_DIR="../.artifacts/coverage"
 
-          # Collect coverprofiles
-          mapfile -t profiles < <(find .artifacts/coverage -type f -name "coverage.out" | sort)
+          echo "[MERGE] Listing downloaded shard artifacts:"
+          find "${ART_DIR}" -maxdepth 4 -type f -print || true
+
+          mapfile -t profiles < <(find "${ART_DIR}" -type f -name "coverage.out" | sort)
           if [ "${#profiles[@]}" -eq 0 ]; then
-            echo "ERROR: No coverage.out files found in shard artifacts"
+            echo "ERROR: No coverage.out files found in shard artifacts under ${ART_DIR}"
             exit 1
           fi
 
           echo "[MERGE] Found ${#profiles[@]} coverage.out files"
+          printf "  - %s\n" "${profiles[@]}"
 
-          # Install gocovmerge
           go install github.com/wadey/gocovmerge@latest
           export PATH="$(go env GOPATH)/bin:$PATH"
 
-          # Merge into one coverage.out
           gocovmerge "${profiles[@]}" > coverage.out
 
-          # Compute total % and write canonical out/coverage.json
           go tool cover -func=coverage.out > coverage-func.txt
           tail -n 5 coverage-func.txt || true
 
@@ -94,38 +93,22 @@ jobs:
           from pathlib import Path
 
           txt = Path("coverage-func.txt").read_text(encoding="utf-8", errors="replace").splitlines()
-
-          m = None
+          pct = None
           for line in reversed(txt):
             if line.lower().startswith("total:"):
               m = re.search(r'(\d+(\.\d+)?)%$', line.strip())
               if m:
                 pct = float(m.group(1))
                 break
-          else:
-            raise SystemExit("ERROR: could not find a 'total:' coverage line in coverage-func.txt")
+          if pct is None:
+            raise SystemExit("ERROR: could not find total % in coverage-func.txt")
 
           out = Path("out"); out.mkdir(parents=True, exist_ok=True)
-          cov_path = out / "coverage.json"
-          cov = {"summary": {"line": pct}, "files": []}
-          cov_path.write_text(json.dumps(cov, indent=2), encoding="utf-8")
+          Path("out/coverage.json").write_text(json.dumps({"summary":{"line":pct},"files":[]}, indent=2), encoding="utf-8")
           print("Wrote out/coverage.json summary.line =", pct)
           PY
 
-          echo "[MERGE] coverage-func.txt (tail):"
-          tail -n 20 coverage-func.txt || true
-
-          echo "[MERGE] Final out/coverage.json:"
           cat out/coverage.json
-
-          echo "[MERGE] coverage.out header + sample lines:"
-          head -n 25 "${profiles[0]}" || true
-
-          echo "[MERGE] coverage.out line count:"
-          wc -l "${profiles[0]}" || true
-
-          echo "[MERGE] coverage.out unique packages sample:"
-          awk 'NR>1 {print $1}' "${profiles[0]}" | head -n 20 || true
 
 
       - name: Upload merged coverage artifact
