@@ -9,7 +9,7 @@
 #     - CYPRESS_NON_BLOCKING=1    → failures won't block merges initially
 #
 # Where to set variables:
-# - GitHub repo → Settings → Secrets and variables → Actions → Variables
+# - GitHub repo → Settings → Secrets and variables → Actions → Variables.
 #
 # ==============================================================================
 name: "E2E - Cypress (node-ui-example)"
