@@ -28,16 +28,8 @@ name: "Java API — Containerized Integration Tests"
 on:
   push:
     branches: [ main ]
-    paths:
-      # Trigger when Java example or this workflow changes
-      - "java-api-example/**"
-      - ".github/workflows/java-api-integration.yml"
-
   pull_request:
     branches: [ main ]
-    paths:
-      - "java-api-example/**"
-      - ".github/workflows/java-api-integration.yml"
 
 jobs:
   integration:

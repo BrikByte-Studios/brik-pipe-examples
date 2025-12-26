@@ -21,14 +21,8 @@ name: "Python API — Integration Tests"
 on:
   pull_request:
     branches: [ main ]
-    paths:
-      - "python-api-example/**"
-      - ".github/workflows/python-api-integration.yml"
   push:
     branches: [ main ]
-    paths:
-      - "python-api-example/**"
-      - ".github/workflows/python-api-integration.yml"
 
 jobs:
   integration:

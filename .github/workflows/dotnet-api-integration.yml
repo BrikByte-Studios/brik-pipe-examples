@@ -20,14 +20,9 @@ name: "BrikPipe — .NET API Integration"
 on:
   push:
     branches: [ main ]
-    paths:
-      - "dotnet-api-example/**"
-      - ".github/workflows/dotnet-api-integration.yml"
+
   pull_request:
     branches: [ main ]
-    paths:
-      - "dotnet-api-example/**"
-      - ".github/workflows/dotnet-api-integration.yml"
 
 jobs:
   integration:

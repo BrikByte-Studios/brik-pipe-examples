@@ -23,14 +23,9 @@ name: "Go API — Integration Tests"
 on:
   push:
     branches: [ main ]
-    paths:
-      - "go-api-example/**"
-      - ".github/workflows/go-api-integration.yml"
   pull_request:
     branches: [ main ]
-    paths:
-      - "go-api-example/**"
-      - ".github/workflows/go-api-integration.yml"
+
   workflow_dispatch: {}
 
 jobs:

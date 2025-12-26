@@ -7,14 +7,8 @@ name: "Node API — Integration Tests"
 on:
   pull_request:
     branches: [ main ]
-    paths:
-      - "node-api-example/**"
-      - ".github/workflows/node-api-integration.yml"
   push:
     branches: [ main ]
-    paths:
-      - "node-api-example/**"
-      - ".github/workflows/node-api-integration.yml"
 
 jobs:
   integration:
