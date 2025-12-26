@@ -66,11 +66,6 @@ build:
 # -----------------------------
 test-unit: deps
 	@set -euo pipefail; \
-	: <<'DOCSTRING'; \
-	Run UNIT tests (exclude integration). \
-	- If TEST_ITEMS_FILE exists: use it (filter integration paths out). \
-	- Else: discover unit tests and apply shard selection. \
-	DOCSTRING \
 	echo "🧪 Running Python UNIT tests (excluding 'integration' mark)..."; \
 	echo "📁 CWD: $$(pwd)"; \
 	echo "🧩 Shard: $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1}"; \
