@@ -66,26 +66,31 @@ build:
 # -----------------------------
 test-unit: deps
 	@set -euo pipefail; \
+	: <<'DOCSTRING'; \
+	Run UNIT tests (exclude integration). \
+	- If TEST_ITEMS_FILE exists: use it (filter integration paths out). \
+	- Else: discover unit tests and apply shard selection. \
+	DOCSTRING \
 	echo "🧪 Running Python UNIT tests (excluding 'integration' mark)..."; \
 	echo "📁 CWD: $$(pwd)"; \
 	echo "🧩 Shard: $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1}"; \
-	echo "🗂️ OUT_DIR: $(OUT_DIR)"; \
-	mkdir -p "$(OUT_DIR)"; \
-
+	mkdir -p out; \
+	\
+	files=""; selected=""; \
+	\
 	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
 	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
 	  files="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}" | grep -vE '(^|/)(tests/integration|test/integration|integration/)' || true)"; \
 	else \
 	  echo "📌 Discovering UNIT tests under $(TEST_DIR)/ (recursive), excluding $(TEST_DIR)/integration"; \
-	  files="$$(find "$(TEST_DIR)" -type f \( -name "test_*.py" -o -name "*_test.py" \) \
-	    ! -path "$(TEST_DIR)/integration/*" | sort)"; \
+	  files="$$(find "$(TEST_DIR)" -type f \( -name "test_*.py" -o -name "*_test.py" \) ! -path "$(TEST_DIR)/integration/*" | sort || true)"; \
 	fi; \
 	\
-	if [ -z "$$files" ]; then \
+	if [ -z "$${files:-}" ]; then \
 	  echo "ℹ️ No unit tests found after filtering integration; skipping pytest."; \
 	  exit 0; \
 	fi; \
-
+	\
 	if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then \
 	  shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
 	  if [ "$$total" -gt "1" ]; then \
@@ -99,10 +104,8 @@ test-unit: deps
 	  selected="$$files"; \
 	fi; \
 	\
-	# Final safety filter (in case anything slipped in) \
-	selected="$$(printf "%s\n" "$$selected" | grep -vE '(^|/)(tests/integration|test/integration|integration/)' || true)"; \
-	\
-	if [ -z "$$selected" ]; then \
+	selected="$$(printf "%s\n" "$${selected:-}" | grep -vE '(^|/)(tests/integration|test/integration|integration/)' || true)"; \
+	if [ -z "$${selected:-}" ]; then \
 	  echo "ℹ️ No unit tests selected for shard $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1} (nothing to run)."; \
 	  exit 0; \
 	fi; \
@@ -115,11 +118,11 @@ test-unit: deps
 	  -m "not integration" \
 	  --maxfail=1 \
 	  --disable-warnings \
-	  --junitxml="$(OUT_DIR)/junit.xml" \
+	  --junitxml=out/junit.xml \
 	  --cov=main \
 	  --cov-report=term-missing \
-	  --cov-report=xml:$(OUT_DIR)/coverage.xml \
-	  --cov-report=json:$(OUT_DIR)/coverage.json
+	  --cov-report=xml:coverage.xml \
+	  --cov-report=json:out/coverage.json
 
 # Backwards-compatible alias
 test: test-unit
