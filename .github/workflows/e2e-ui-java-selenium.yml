@@ -33,7 +33,7 @@ jobs:
       # App under test
       # IMPORTANT:
       # - Browser nodes run in containers; "localhost" from the browser ≠ runner host.
-      # - Use host.docker.internal (with host-gateway mapping in docker-compose.selenium.yml).
+      # - Use host.docker.internal (with host-gateway mapping in docker-compose.selenium.yml)
       # -----------------------------------------------------------------------
       target_url: "http://host.docker.internal:3000"
       health_url: "http://localhost:3000/health"
