@@ -10,7 +10,7 @@
 # Assumptions for the python-api-example sample:
 #   - Service directory: python-api-example/
 #   - Dockerfile:        python-api-example/Dockerfile
-#   - App port:          8000 (e.g. FastAPI/uvicorn) — adjust if needed.
+#   - App port:          8000 (e.g. FastAPI/uvicorn) — adjust if needed
 #   - Health endpoint:   GET /health returning 2xx when ready.
 #
 # If your image name or port differs, adjust `image`, `app_port`,
