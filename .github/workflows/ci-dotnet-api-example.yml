@@ -3,14 +3,8 @@ name: "CI — .NET API Example"
 on:
   push:
     branches: [ main, master ]
-    paths:
-      - "dotnet-api-example/**"
-      - ".github/workflows/ci-dotnet-api-example.yml"
   pull_request:
     branches: [ main, master ]
-    paths:
-      - "dotnet-api-example/**"
-      - ".github/workflows/ci-dotnet-api-example.yml"
 
 jobs:
   # 1) Validate brikpipe.build.yml.
