@@ -68,12 +68,14 @@ jobs:
       # Runner
       # -----------------------------------------------------------------------
       runner_language: "python"
-      test_command: |
-        set -euo pipefail
-        cd python-selenium-runner-example
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pytest
+      test_command: >-
+        bash -lc '
+          set -euo pipefail
+          cd python-selenium-runner-example
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pytest -q
+        '
 
       # -----------------------------------------------------------------------
       # Artifacts / audit
