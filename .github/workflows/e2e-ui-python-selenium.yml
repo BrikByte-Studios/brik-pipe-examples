@@ -17,7 +17,7 @@ name: "E2E UI (Python • Selenium Grid)"
 #   - start grid
 #   - wait for app + grid readiness
 #   - run tests per matrix item
-#   - collect logs + export/upload artifacts
+#   - collect logs + export/upload artifacts.
 # -----------------------------------------------------------------------------
 
 on:
