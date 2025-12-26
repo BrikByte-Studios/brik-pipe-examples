@@ -3,14 +3,8 @@ name: "CI — Go API Example"
 on:
   push:
     branches: [ main, master ]
-    paths:
-      - "go-api-example/**"
-      - ".github/workflows/ci-go-api-example.yml"
   pull_request:
     branches: [ main, master ]
-    paths:
-      - "go-api-example/**"
-      - ".github/workflows/ci-go-api-example.yml"
 
 jobs:
   # 1) Validate brikpipe.build.yml.
