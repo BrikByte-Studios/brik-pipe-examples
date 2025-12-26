@@ -126,7 +126,7 @@ jobs:
       working-directory: "java-api-example"
       coverage-file: "./out/coverage.json"
 
-      # Policy + baseline live at repo root, so we go one level up.
+      # Policy + baseline live at repo root, so we go one level up
       policy-file: "../.governance/tests.yml"
       baseline-file: "../.audit/coverage-baseline.json"
 
