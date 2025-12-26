@@ -7,7 +7,7 @@ on:
     branches: [ main, master ]
 
 jobs:
-  # 1) Validate brikpipe.build.yml
+  # 1) Validate brikpipe.build.yml.
   config-validate:
     uses: BrikByte-Studios/.github/.github/workflows/ci-config-validate.yml@main
     with:
