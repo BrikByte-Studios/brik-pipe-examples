@@ -68,7 +68,7 @@ jobs:
         with:
           pattern: "coverage-java-shard*"
           path: "java-api-example/.artifacts/coverage"
-          merge-multiple: false
+          merge-multiple: true
 
       - name: "Select canonical coverage.json"
         working-directory: "java-api-example"
