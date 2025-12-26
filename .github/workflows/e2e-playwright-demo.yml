@@ -8,7 +8,7 @@
 #
 # Assumptions:
 # - Reusable workflow exists at:
-#     BrikByte-Studios/.github/.github/workflows/e2e-playwright.yml
+#     BrikByte-Studios/.github/.github/workflows/e2e-playwright.yml.
 # - Reusable workflow inputs include:
 #     start_app, app_compose_file, app_service_workdir, target_url, health_url, service_workdir, etc.
 
