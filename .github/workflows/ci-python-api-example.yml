@@ -18,20 +18,20 @@ jobs:
       config-file: "brikpipe.build.yml"
 
   # 2) Python CI (build, lint, install)
-  # python-ci:
-  #   name: "Python: Build & Test"
-  #   uses: BrikByte-Studios/.github/.github/workflows/template-python-ci.yml@main
-  #   needs: config-validate
-  #   with:
-  #     python-version: "3.11"
-  #     project-path: "python-api-example"
-  #     force-cache-refresh: "false"
-  #   secrets: inherit
+  python-ci:
+    name: "Python: Build & Test"
+    uses: BrikByte-Studios/.github/.github/workflows/template-python-ci.yml@main
+    needs: config-validate
+    with:
+      python-version: "3.11"
+      project-path: "python-api-example"
+      force-cache-refresh: "false"
+    secrets: inherit
 
   # 3) Python tests + coverage (sharded inside test-python.yml)
   tests:
     name: "Python: Unit Tests + Coverage"
-    # needs: python-ci
+    needs: python-ci
     uses: BrikByte-Studios/.github/.github/workflows/test-python.yml@main
     with:
       python-version: "3.11"
