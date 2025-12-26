@@ -29,6 +29,7 @@ SHELL := /usr/bin/env bash
 # Optional sharding (default: single shard)
 UNIT_SHARD ?= 1
 UNIT_SHARD_TOTAL ?= 1
+OUT_DIR ?= out
 
 .PHONY: help deps build test test-unit test-integration ci clean
 
@@ -68,9 +69,9 @@ test-unit: deps
 	echo "🧪 Running Python UNIT tests (excluding 'integration' mark)..."; \
 	echo "📁 CWD: $$(pwd)"; \
 	echo "🧩 Shard: $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1}"; \
-	mkdir -p out; \
-	\
-	# 1) If runner provided a deterministic list, use it (but filter integration out). \
+	echo "🗂️ OUT_DIR: $(OUT_DIR)"; \
+	mkdir -p "$(OUT_DIR)"; \
+
 	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
 	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
 	  files="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}" | grep -vE '(^|/)(tests/integration|test/integration|integration/)' || true)"; \
@@ -84,8 +85,7 @@ test-unit: deps
 	  echo "ℹ️ No unit tests found after filtering integration; skipping pytest."; \
 	  exit 0; \
 	fi; \
-	\
-	# 2) If we discovered a list (not runner-provided), apply sharding here. \
+
 	if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then \
 	  shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
 	  if [ "$$total" -gt "1" ]; then \
@@ -115,13 +115,11 @@ test-unit: deps
 	  -m "not integration" \
 	  --maxfail=1 \
 	  --disable-warnings \
-	  --junitxml=out/junit.xml \
+	  --junitxml="$(OUT_DIR)/junit.xml" \
 	  --cov=main \
 	  --cov-report=term-missing \
-	  --cov-report=xml:coverage.xml \
-	  --cov-report=json:out/coverage.json
-
-
+	  --cov-report=xml:$(OUT_DIR)/coverage.xml \
+	  --cov-report=json:$(OUT_DIR)/coverage.json
 
 # Backwards-compatible alias
 test: test-unit
@@ -129,7 +127,7 @@ test: test-unit
 test-integration: deps
 	@echo "🌐 Running Python INTEGRATION tests (marked 'integration')..."
 	@if ls $(TEST_DIR)/integration >/dev/null 2>&1; then \
-	  mkdir -p out; \
+	  mkdir -p "$(OUT_DIR)"; \
 	  PYTHONPATH="$$(pwd):$$PYTHONPATH" pytest \
 	    $(TEST_DIR)/integration \
 	    -m "integration" \
