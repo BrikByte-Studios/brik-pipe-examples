@@ -77,29 +77,20 @@ jobs:
             app_port: "8080"
             test_language: "dotnet"
             test_command: >-
-              bash -lc '
-                set -euo pipefail;
+              bash -lc "set -euo pipefail;
+              proj=\$(find . -type f \\( -name '*Integration*.csproj' -o -name '*IntegrationTests*.csproj' \\) | sort | head -n 1 || true);
+              if [ -z \"\${proj:-}\" ]; then
+                proj=\$(find . -type f \\( -name '*.Tests.csproj' -o -name '*Tests.csproj' \\) | sort | head -n 1 || true);
+              fi;
+              if [ -z \"\${proj:-}\" ]; then
+                echo '❌ No test csproj found under' \"\$(pwd)\";
+                find . -maxdepth 5 -type f -name '*.csproj' | sort;
+                exit 2;
+              fi;
+              echo '✅ Using test project:' \"\$proj\";
+              echo '✅ INTEG_ITEM='\"\${INTEG_ITEM:-<unset>}\";
+              dotnet test \"\$proj\" --configuration Release --filter \"Category=Integration&IntegItem=\${INTEG_ITEM}\";"
 
-                # Prefer a dedicated integration project if it ever exists later
-                proj=$(find . -type f \( -name "*Integration*.csproj" -o -name "*IntegrationTests*.csproj" \) | sort | head -n 1 || true);
-
-                # Fallback to the normal test project
-                if [ -z "${proj:-}" ]; then
-                  proj=$(find . -type f \( -name "*.Tests.csproj" -o -name "*Tests.csproj" \) | sort | head -n 1 || true);
-                fi
-
-                if [ -z "${proj:-}" ]; then
-                  echo "❌ No test csproj found under $(pwd)";
-                  find . -maxdepth 5 -type f -name "*.csproj" | sort;
-                  exit 2;
-                fi
-
-                echo "✅ Using test project: $proj";
-                echo "✅ INTEG_ITEM=${INTEG_ITEM:-<unset>}";
-
-                dotnet test "$proj" \
-                  --configuration Release \
-                  --filter "Category=Integration&IntegItem=${INTEG_ITEM}"
 
     uses: BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
     secrets: inherit
