@@ -68,7 +68,7 @@ jobs:
         with:
           pattern: "coverage-java-shard*"
           path: "java-api-example/.artifacts/coverage"
-          merge-multiple: true
+          merge-multiple: false
 
       - name: "Select canonical coverage.json"
         working-directory: "java-api-example"
@@ -126,6 +126,7 @@ jobs:
 
       # Use merged artifact
       coverage-artifact-name: "coverage-java-merged"
+
 
   # --------------------------------------------------------------
   # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*).

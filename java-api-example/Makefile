@@ -65,7 +65,6 @@ test: deps
 	$(MVN) -B -Dtest="$$tests_csv" test; \
 	$(MAKE) post-test
 
-
 post-test:
 	@echo "🔧 Merging Surefire JUnit XML into out/junit.xml..."
 	@mkdir -p out
