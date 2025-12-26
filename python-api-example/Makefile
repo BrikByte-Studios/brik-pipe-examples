@@ -62,7 +62,7 @@ build:
 	fi
 
 # -----------------------------
-# Unit tests (default "test")
+# Unit tests (default "test").
 # -----------------------------
 test-unit: deps
 	@set -euo pipefail; \
