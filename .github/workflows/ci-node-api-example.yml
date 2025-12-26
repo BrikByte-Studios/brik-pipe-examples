@@ -3,14 +3,9 @@ name: "CI — Node API Example"
 on:
   push:
     branches: [ main, master ]
-    paths:
-      - "node-api-example/**"
-      - ".github/workflows/ci-node-api-example.yml"
+
   pull_request:
     branches: [ main, master ]
-    paths:
-      - "node-api-example/**"
-      - ".github/workflows/ci-node-api-example.yml"
 
 permissions:
   contents: read
@@ -57,7 +52,7 @@ jobs:
   #
   # NOTE (v1):
   #   This picks ONE shard’s coverage.json deterministically (prefers shard1).
-  #   True aggregation needs a real merge step (e.g., merge raw coverage inputs)
+  #   True aggregation needs a real merge step (e.g., merge raw coverage inputs).
   # --------------------------------------------------------------
   merge-coverage:
     name: "Merge coverage shards"

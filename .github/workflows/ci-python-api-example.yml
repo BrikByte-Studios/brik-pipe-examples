@@ -3,14 +3,8 @@ name: "CI — Python API Example"
 on:
   push:
     branches: [ main, master ]
-    paths:
-      - "python-api-example/**"
-      - ".github/workflows/ci-python-api-example.yml"
   pull_request:
     branches: [ main, master ]
-    paths:
-      - "python-api-example/**"
-      - ".github/workflows/ci-python-api-example.yml"
 
 permissions:
   contents: read
