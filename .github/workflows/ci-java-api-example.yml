@@ -24,7 +24,7 @@ jobs:
     with:
       project-path: "java-api-example"
       config-file: "brikpipe.build.yml"
-      # schema-file left as default: ".github/schemas/brikpipe-build.schema.json"
+      # schema-file left as default: ".github/schemas/brikpipe-build.schema.json".
 
   # --------------------------------------------------------------
   # 2) Java CI (build / compile / lint etc.)
