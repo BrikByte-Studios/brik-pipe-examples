@@ -6,7 +6,7 @@
 # - This repo-level wrapper calls the org reusable workflow.
 # - It adds per-repo controls via Variables:
 #     - DISABLE_CYPRESS_E2E=1     → disables Cypress runs without deleting YAML
-#     - CYPRESS_NON_BLOCKING=1    → failures won't block merges initially
+#     - CYPRESS_NON_BLOCKING=1    → failures won't block merges initially.
 #
 # Where to set variables:
 # - GitHub repo → Settings → Secrets and variables → Actions → Variables.
