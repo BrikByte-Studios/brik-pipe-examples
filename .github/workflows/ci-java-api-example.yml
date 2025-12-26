@@ -134,7 +134,7 @@ jobs:
       coverage-artifact-name: "coverage-java-merged"
 
   # --------------------------------------------------------------
-  # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
+  # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*).
   # --------------------------------------------------------------
   unit-test-audit:
     name: "Unit Test Audit Export"
