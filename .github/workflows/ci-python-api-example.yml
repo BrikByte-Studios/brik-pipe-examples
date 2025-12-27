@@ -28,7 +28,7 @@ jobs:
       force-cache-refresh: "false"
     secrets: inherit
 
-  # 3) Python tests + coverage (sharded inside test-python.yml).
+  # 3) Python tests + coverage (sharded inside test-python.yml)
   tests:
     name: "Python: Unit Tests + Coverage"
     needs: python-ci
