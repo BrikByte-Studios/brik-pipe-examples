@@ -85,3 +85,4 @@ jobs:
 
       override_shards: 6
       browsers: chromium,firefox
+      flaky_detect: "true"
