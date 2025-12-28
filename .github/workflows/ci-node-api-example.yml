@@ -45,6 +45,7 @@ jobs:
       working-directory: "node-api-example"
       # governed parallelism (clamped to caps in .github/actions/matrix-plan/parallel-matrix.yml):
       override_shards: "4"
+      flaky_detect: "true"
       # matrix_config_path: ""   # leave empty to use default config inside .github repo
 
   # --------------------------------------------------------------
