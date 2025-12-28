@@ -79,7 +79,7 @@ jobs:
       e2e_artifacts_always: true
 
       # ----------------------------------------------------------
-      # Safety switches
+      # Safety switches.
       # ----------------------------------------------------------
       job_timeout_minutes: 30
 
