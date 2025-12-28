@@ -35,6 +35,7 @@ jobs:
       dotnet-version: "8.0.x"
       working-directory: "dotnet-api-example"
       parallel_mode: "static"
+      flaky_detect: "true"
 
   merge:
     name: ".NET: Merge coverage + junit (unit)"
