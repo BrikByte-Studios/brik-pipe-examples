@@ -36,7 +36,7 @@ jobs:
       docker_port: 3000
       flaky_detect: "true"
 
-      # In Docker mode, always target "app" hostname.
+      # In Docker mode, always target "app" hostname
       target_url: "http://app:3000"
       health_path: "/health"
 
