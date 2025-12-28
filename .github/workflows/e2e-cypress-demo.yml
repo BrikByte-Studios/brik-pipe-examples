@@ -9,7 +9,7 @@
 #     - CYPRESS_NON_BLOCKING=1    → failures won't block merges initially.
 #
 # Where to set variables:
-# - GitHub repo → Settings → Secrets and variables → Actions → Variables.
+# - GitHub repo → Settings → Secrets and variables → Actions → Variables
 #
 # ==============================================================================
 name: "E2E - Cypress (node-ui-example)"
@@ -34,6 +34,7 @@ jobs:
       start_with_docker: true
       docker_image_name: "node-ui-example-app"
       docker_port: 3000
+      flaky_detect: "true"
 
       # In Docker mode, always target "app" hostname.
       target_url: "http://app:3000"
