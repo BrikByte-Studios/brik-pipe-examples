@@ -49,6 +49,7 @@ jobs:
       working-directory: "java-api-example"
       # optional governed parallelism (clamped to caps):
       override_shards: "4"
+      flaky_detect: "true"
       # matrix_config_path: ""   # leave empty to use default inside .github repo
 
   # --------------------------------------------------------------
