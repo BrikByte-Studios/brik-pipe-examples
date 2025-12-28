@@ -40,6 +40,7 @@ jobs:
       enable_cache_service: false
 
       test_language: "dotnet"
+      flaky_detect: "true"
 
       # Robust: no assumptions about where the csproj sits inside dotnet-api-example
       test_command: >-

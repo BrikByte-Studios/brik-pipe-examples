@@ -64,3 +64,4 @@ jobs:
 
       # governed parallelism (clamped to integration.cap=4)
       override_shards: "4"
+      flaky_detect: "true"
