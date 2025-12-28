@@ -13,7 +13,7 @@
 #   - Health endpoint:     GET /health → 200 OK.
 #
 # Image naming convention:
-#   ghcr.io/brikbyte-studios/example-dotnet-api:sha-${{ github.sha }}
+#   ghcr.io/brikbyte-studios/example-dotnet-api:sha-${{ github.sha }}.
 
 name: "BrikPipe — .NET API Integration"
 
