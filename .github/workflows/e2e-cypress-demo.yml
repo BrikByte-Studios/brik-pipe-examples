@@ -69,27 +69,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download all flaky shard artifacts
+      # -----------------------------------------------------------------------
+      # Download per-shard flaky evaluation bundles produced by the reusable
+      # workflow (these contain summary.normalized.json + evaluation.json).
+      # -----------------------------------------------------------------------
+      - name: "Download flaky evaluation artifacts (per shard)"
         uses: actions/download-artifact@v4
         with:
-          pattern: flaky-audit-*
-          path: .audit-merge
+          pattern: "flaky-eval-*"
+          path: .flaky-eval-merge
           merge-multiple: true
 
-      - name: Download JUnit shard artifacts
+      # -----------------------------------------------------------------------
+      # OPTIONAL: If you also want to mine E2E artifacts (videos/screenshots),
+      # download them too. Not required for the merged flaky leaderboard logic.
+      # -----------------------------------------------------------------------
+      - name: "Download Cypress E2E artifacts (optional)"
         uses: actions/download-artifact@v4
         with:
-          pattern: junit-*
-          path: .junit-merge
+          pattern: "cypress-artifacts-*"
+          path: .e2e-merge
           merge-multiple: true
 
-      - name: Download flaky evidence artifacts (per shard)
-        uses: actions/download-artifact@v4
-        with:
-          pattern: flaky-node-shard*
-          path: .flaky-evidence
-          merge-multiple: true
-      - name: Merge flaky evidence + JUnit into leaderboard
+      - name: "Merge flaky evidence into leaderboard"
         run: |
           set -euo pipefail
           mkdir -p out/flaky
@@ -100,9 +102,13 @@ jobs:
           from collections import defaultdict
           import xml.etree.ElementTree as ET
 
-          evidence_root = Path(".flaky-evidence")
-          junit_root = Path(".junit-merge")
-          audit_root = Path(".audit-merge")
+          # NOTE:
+          # - For this Cypress wrapper, the reusable workflow uploads:
+          #   flaky-eval-*  -> contains summary.normalized.json (+ evaluation.json)
+          # - There is no junit-* in this workflow unless you explicitly create/upload it.
+          evidence_root = Path(".flaky-eval-merge")
+          junit_root = Path(".junit-merge")       # keep for future compatibility
+          audit_root = Path(".audit-merge")       # keep for future compatibility
 
           def norm_suite(s: str) -> str:
               s = (s or "").strip().lower()
@@ -114,42 +120,46 @@ jobs:
           # -------------------------------------------------------
           # 1) Load totals from per-shard summary.normalized.json
           # -------------------------------------------------------
-          totals = defaultdict(lambda: {"pass":0,"fail":0,"runs":0})
+          totals = defaultdict(lambda: {"pass": 0, "fail": 0, "runs": 0})
           for p in evidence_root.rglob("summary.normalized.json"):
               d = json.loads(p.read_text(encoding="utf-8"))
-              suite = norm_suite(d.get("suite") or "unit")
+              suite = norm_suite(d.get("suite") or "e2e")
               totals[suite]["pass"] += int(d.get("pass_count", 0))
               totals[suite]["fail"] += int(d.get("fail_count", 0))
               totals[suite]["runs"] += int(d.get("total_attempts", 0))
 
           if not totals:
-              raise SystemExit("ERROR: No summary.normalized.json found. Download pattern should be flaky-python-shard* and shard jobs must upload out/flaky/.")
+              raise SystemExit(
+                  "ERROR: No summary.normalized.json found. "
+                  "Verify the shard workflow uploaded out/flaky/ inside a 'flaky-eval-*' artifact, "
+                  "and that this job downloads with pattern: flaky-eval-*"
+              )
 
           # -------------------------------------------------------
-          # 2) Parse JUnit for failing test names (per suite)
+          # 2) Parse JUnit for failing test names (optional)
+          #    (For Cypress, you may not have JUnit unless you generate it.)
           # -------------------------------------------------------
           failed_tests_by_suite = defaultdict(set)
-          junit_files = list(junit_root.rglob("junit.xml")) + list(junit_root.rglob("*.xml"))
-
-          for jf in junit_files:
-              try:
-                  root = ET.parse(jf).getroot()
-                  suites = root.findall("testsuite") if root.tag == "testsuites" else ([root] if root.tag == "testsuite" else [])
-                  for ts in suites:
-                      suite_name = norm_suite(ts.get("name") or ts.get("classname") or "unit")
-                      for tc in ts.findall(".//testcase"):
-                          classname = tc.get("classname") or ""
-                          name = tc.get("name") or ""
-                          full = f"{classname}::{name}" if classname else name
-                          if tc.find("failure") is not None or tc.find("error") is not None:
-                              if full:
-                                  failed_tests_by_suite[suite_name].add(full)
-              except Exception:
-                  pass
+          if junit_root.exists():
+              junit_files = list(junit_root.rglob("junit.xml")) + list(junit_root.rglob("*.xml"))
+              for jf in junit_files:
+                  try:
+                      root = ET.parse(jf).getroot()
+                      suites = root.findall("testsuite") if root.tag == "testsuites" else ([root] if root.tag == "testsuite" else [])
+                      for ts in suites:
+                          suite_name = norm_suite(ts.get("name") or ts.get("classname") or "e2e")
+                          for tc in ts.findall(".//testcase"):
+                              classname = tc.get("classname") or ""
+                              name = tc.get("name") or ""
+                              full = f"{classname}::{name}" if classname else name
+                              if tc.find("failure") is not None or tc.find("error") is not None:
+                                  if full:
+                                      failed_tests_by_suite[suite_name].add(full)
+                  except Exception:
+                      pass
 
           # -------------------------------------------------------
-          # 3) Use audit ledger for metadata (optional)
-          #    (If missing, we still produce correct totals.)
+          # 3) Metadata (optional)
           # -------------------------------------------------------
           meta = {}
           for p in audit_root.rglob("metadata.json"):
@@ -169,7 +179,6 @@ jobs:
               pas = v["pass"]
               rate = (fail / runs) if runs else 0.0
 
-              # simple classification (you can replace with policy logic if you want)
               if fail == 0 and runs > 0:
                   classification = "pass"
               elif rate >= 0.7:
@@ -223,9 +232,10 @@ jobs:
           print("✅ wrote out/flaky/flaky-merged.json and out/flaky/flaky-merged.md")
           PY
 
-      - name: Upload flaky stability report
+      - name: "Upload flaky stability report"
         uses: actions/upload-artifact@v4
         with:
           name: flaky-stability-report
           path: out/flaky/
           retention-days: 30
+
