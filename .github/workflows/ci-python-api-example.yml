@@ -51,40 +51,147 @@ jobs:
       - name: Download all flaky shard artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: flaky-*
-          path: .flaky-merge
+          pattern: flaky-audit-*
+          path: .audit-merge
           merge-multiple: true
 
-      - name: Merge flaky analytics
+      - name: Download JUnit shard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: junit-*
+          path: .junit-merge
+          merge-multiple: true
+
+      - name: Merge flaky audit ledger + JUnit into leaderboard
         run: |
           set -euo pipefail
           mkdir -p out/flaky
 
           python - << 'PY'
-          import json
+          import json, re
           from pathlib import Path
           from collections import defaultdict
+          import xml.etree.ElementTree as ET
 
-          root = Path(".flaky-merge")
-          merged = defaultdict(lambda: {"fail":0,"pass":0,"runs":0})
+          audit_root = Path(".audit-merge")
+          junit_root = Path(".junit-merge")
 
-          for p in root.rglob("summary.normalized.json"):
-              d = json.loads(p.read_text())
-              key = d.get("suite","unknown")
-              merged[key]["fail"] += d.get("fail_count",0)
-              merged[key]["pass"] += d.get("pass_count",0)
-              merged[key]["runs"] += d.get("total_attempts",0)
+          # ---------------------------
+          # 1) Load audit ledger rows
+          # ---------------------------
+          rows = []
+          for p in audit_root.rglob("flaky-summary.json"):
+            try:
+              data = json.loads(p.read_text(encoding="utf-8"))
+              if isinstance(data, list):
+                rows.extend(data)
+              elif isinstance(data, dict):
+                rows.append(data)
+            except Exception:
+              pass
 
-          rows=[]
-          for k,v in merged.items():
-              rate = v["fail"]/v["runs"] if v["runs"] else 0
-              rows.append({
-                  "suite": k,
-                  "fail_rate": round(rate,4),
-                  **v
-              })
+          # If nothing found, fail loudly (prevents silent "unknown-test" fallbacks)
+          if not rows:
+            raise SystemExit("ERROR: No flaky-summary.json found in .audit-merge (did you upload flaky-audit-* artifacts?)")
 
-          Path("out/flaky/flaky-merged.json").write_text(json.dumps(rows,indent=2))
+          # ---------------------------
+          # 2) Parse JUnit to extract failing test names (per shard)
+          # ---------------------------
+          # We'll produce: suite -> set(test_names_that_failed)
+          failed_tests_by_suite = defaultdict(set)
+
+          def norm_suite(s: str) -> str:
+            s = (s or "").strip().lower()
+            if "unit" in s: return "unit"
+            if "integration" in s: return "integration"
+            if "e2e" in s: return "e2e"
+            return s or "unknown"
+
+          # Try read all junit.xml files
+          junit_files = list(junit_root.rglob("junit.xml")) + list(junit_root.rglob("*.xml"))
+          for jf in junit_files:
+            try:
+              tree = ET.parse(jf)
+              root = tree.getroot()
+
+              # JUnit can be <testsuites> or <testsuite>
+              suites = []
+              if root.tag == "testsuites":
+                suites = root.findall("testsuite")
+              elif root.tag == "testsuite":
+                suites = [root]
+
+              for ts in suites:
+                suite_name = norm_suite(ts.get("name") or ts.get("classname") or "unit")
+                for tc in ts.findall(".//testcase"):
+                  classname = tc.get("classname") or ""
+                  name = tc.get("name") or ""
+                  full = f"{classname}::{name}" if classname else name
+
+                  # consider failure/error nodes
+                  if tc.find("failure") is not None or tc.find("error") is not None:
+                    if full:
+                      failed_tests_by_suite[suite_name].add(full)
+            except Exception:
+              continue
+
+          # ---------------------------
+          # 3) Expand audit summary rows into per-test rows when failures exist
+          # ---------------------------
+          expanded = []
+          for r in rows:
+            suite = norm_suite(r.get("suite"))
+            classification = r.get("classification") or "unknown"
+            fail_rate = float(r.get("fail_rate") or 0)
+
+            # If suite is flaky/failing, attach failing test names if available
+            failing_tests = sorted(failed_tests_by_suite.get(suite, []))
+            if failing_tests:
+              for t in failing_tests:
+                rr = dict(r)
+                rr["test_name"] = t
+                expanded.append(rr)
+            else:
+              # keep suite-level row as-is (but avoid "unknown-test" lies)
+              rr = dict(r)
+              if rr.get("test_name") in (None, "", "unknown-test"):
+                rr["test_name"] = None
+              expanded.append(rr)
+
+          # ---------------------------
+          # 4) Output
+          # ---------------------------
+          out = Path("out/flaky")
+          out.mkdir(parents=True, exist_ok=True)
+
+          (out / "flaky-merged.json").write_text(json.dumps(expanded, indent=2), encoding="utf-8")
+
+          # Simple markdown leaderboard
+          # show top by fail_rate then fail_count
+          def sort_key(x):
+            return (float(x.get("fail_rate") or 0), int(x.get("fail_count") or 0))
+
+          top = sorted(expanded, key=sort_key, reverse=True)[:20]
+
+          md = []
+          md.append("# Flaky Stability Report (Merged)")
+          md.append("")
+          md.append("| suite | test | classification | fail_rate | fail_count | pass_count | total_attempts |")
+          md.append("|---|---|---:|---:|---:|---:|---:|")
+          for x in top:
+            md.append("| {suite} | {test} | {cls} | {rate} | {fail} | {pas} | {tot} |".format(
+              suite=x.get("suite",""),
+              test=x.get("test_name") or "(suite-level)",
+              cls=x.get("classification",""),
+              rate=x.get("fail_rate",0),
+              fail=x.get("fail_count",0),
+              pas=x.get("pass_count",0),
+              tot=x.get("total", x.get("total_attempts",0)),
+            ))
+          (out / "flaky-merged.md").write_text("\n".join(md), encoding="utf-8")
+
+          print("Wrote:", out / "flaky-merged.json")
+          print("Wrote:", out / "flaky-merged.md")
           PY
 
       - name: Upload flaky stability report
