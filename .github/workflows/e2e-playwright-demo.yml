@@ -103,7 +103,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: "flaky-eval-*"
-          path: .flaky-eval-merge
+          path: .flaky-evidence
           merge-multiple: true
 
       # -----------------------------------------------------------------------
@@ -113,7 +113,7 @@ jobs:
       - name: "Download Cypress E2E artifacts (optional)"
         uses: actions/download-artifact@v4
         with:
-          pattern: "playwright-artifacts-*"
+          pattern: "playwright-e2e-*"
           path: .e2e-merge
           merge-multiple: true
       - name: Merge flaky evidence + JUnit into leaderboard
