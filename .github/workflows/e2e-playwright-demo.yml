@@ -31,7 +31,7 @@ jobs:
     uses: BrikByte-Studios/.github/.github/workflows/e2e-playwright.yml@main
     with:
       # ----------------------------------------------------------
-      # App under test
+      # App under test.
       # ----------------------------------------------------------
       target_url: "http://localhost:3000"
       health_url: "http://localhost:3000/health"
