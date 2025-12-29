@@ -65,21 +65,59 @@ jobs:
           echo "[MERGE] Listing downloaded coverage artifacts:"
           find .artifacts/coverage -maxdepth 12 -type f -print || true
 
-          # Prefer: */out/coverage.json (new format)
-          out_cov="$(find .artifacts/coverage -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
-          # Fallback: */coverage.json (old/root format)
-          root_cov="$(find .artifacts/coverage -type f -name "coverage.json" -print -quit 2>/dev/null || true)"
+          # Collect candidates: new + old formats
+          mapfile -t candidates < <(
+            find .artifacts/coverage -type f \( -path "*/out/coverage.json" -o -name "coverage.json" \) -print
+          )
 
-          if [[ -n "${out_cov}" ]]; then
-            echo "[MERGE] Using out/coverage.json: ${out_cov}"
-            cp "${out_cov}" out/coverage.json
-          elif [[ -n "${root_cov}" ]]; then
-            echo "[MERGE] Using coverage.json: ${root_cov}"
-            cp "${root_cov}" out/coverage.json
-          else
+          if [[ ${#candidates[@]} -eq 0 ]]; then
             echo "[MERGE] ERROR: No coverage file found under .artifacts/coverage"
             exit 1
           fi
+
+          best=""
+          best_val="-1"
+
+          for f in "${candidates[@]}"; do
+            # Read JSON safely without require() (works regardless of ESM/CJS)
+            val="$(node -e "
+              const fs=require('fs');
+              const p=process.argv[1];
+              try{
+                const j=JSON.parse(fs.readFileSync(p,'utf8'));
+                const line=(j.summary && typeof j.summary.line === 'number') ? j.summary.line : -1;
+                process.stdout.write(String(line));
+              }catch(e){
+                process.stdout.write('-1');
+              }
+            " "$f")"
+
+            echo "[MERGE] candidate: $f line=$val"
+
+            # Choose highest summary.line; tie-breaker: path order (stable)
+            if awk "BEGIN { exit !($val > $best_val) }"; then
+              best_val="$val"
+              best="$f"
+            elif awk "BEGIN { exit !($val == $best_val) }"; then
+              # tie -> stable pick by lexical order
+              if [[ -n "$best" && "$f" < "$best" ]]; then
+                best="$f"
+              fi
+            fi
+          done
+
+          if [[ -z "$best" ]]; then
+            echo "[MERGE] ERROR: Could not select a best coverage file (all invalid?)"
+            echo "[MERGE] Dumping first 60 lines of candidates:"
+            for f in "${candidates[@]}"; do
+              echo "---- $f ----"
+              head -n 60 "$f" || true
+            done
+            exit 1
+          fi
+
+          echo "[MERGE] Selected: $best (line=$best_val)"
+          cp "$best" out/coverage.json
 
           echo "[MERGE] Final python-api-example/out/coverage.json:"
           ls -la out || true

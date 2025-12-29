@@ -79,37 +79,72 @@ jobs:
           mkdir -p out
 
           echo "[MERGE] Listing downloaded files:"
-          find .artifacts/coverage -maxdepth 10 -type f -print || true
+          find .artifacts/coverage -maxdepth 12 -type f -print || true
 
-          # Because merge-multiple: true may flatten directories, prefer these checks:
-          if [[ -f ".artifacts/coverage/out/coverage.json" ]]; then
-            echo "[MERGE] Using flattened: .artifacts/coverage/out/coverage.json"
-            cp ".artifacts/coverage/out/coverage.json" "out/coverage.json"
-          elif [[ -f ".artifacts/coverage/coverage.json" ]]; then
-            echo "[MERGE] Using flattened: .artifacts/coverage/coverage.json"
-            cp ".artifacts/coverage/coverage.json" "out/coverage.json"
-          else
-            # Otherwise, search any nested location:
-            shard1="$(find .artifacts/coverage -type f -path "*shard1*/out/coverage.json" -print -quit 2>/dev/null || true)"
-            if [[ -n "${shard1}" ]]; then
-              echo "[MERGE] Using shard1: ${shard1}"
-              cp "${shard1}" "out/coverage.json"
-            else
-              any_out="$(find .artifacts/coverage -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
-              any_root="$(find .artifacts/coverage -type f -name "coverage.json" -print -quit 2>/dev/null || true)"
+          # Candidates (supports both flattened and nested, and both formats)
+          mapfile -t candidates < <(
+            find .artifacts/coverage -type f \( -path "*/out/coverage.json" -o -name "coverage.json" \) -print
+          )
 
-              if [[ -n "${any_out}" ]]; then
-                echo "[MERGE] Using first out/coverage.json: ${any_out}"
-                cp "${any_out}" "out/coverage.json"
-              elif [[ -n "${any_root}" ]]; then
-                echo "[MERGE] Using first coverage.json: ${any_root}"
-                cp "${any_root}" "out/coverage.json"
-              else
-                echo "[MERGE] ERROR: No coverage file found under .artifacts/coverage"
-                exit 1
+          if [[ ${#candidates[@]} -eq 0 ]]; then
+            echo "[MERGE] ERROR: No coverage file found under .artifacts/coverage"
+            exit 1
+          fi
+
+          best=""
+          best_val="-1"
+          best_kind="2" # 0 = prefer */out/coverage.json, 1 = coverage.json, 2 = unknown
+
+          for f in "${candidates[@]}"; do
+            kind="1"
+            if [[ "$f" == *"/out/coverage.json" ]]; then kind="0"; fi
+
+            # Parse JSON safely (no require(), avoids ESM/CJS gotchas)
+            val="$(node -e "
+              const fs=require('fs');
+              const p=process.argv[1];
+              try{
+                const j=JSON.parse(fs.readFileSync(p,'utf8'));
+                const line=(j.summary && typeof j.summary.line === 'number') ? j.summary.line : -1;
+                process.stdout.write(String(line));
+              }catch(e){
+                process.stdout.write('-1');
+              }
+            " "$f")"
+
+            echo "[MERGE] candidate: $f kind=$kind line=$val"
+
+            # Primary: highest line coverage
+            if awk "BEGIN { exit !($val > $best_val) }"; then
+              best="$f"; best_val="$val"; best_kind="$kind"
+              continue
+            fi
+
+            # Secondary: if equal line coverage, prefer kind (out/coverage.json)
+            if awk "BEGIN { exit !($val == $best_val) }"; then
+              if awk "BEGIN { exit !($kind < $best_kind) }"; then
+                best="$f"; best_kind="$kind"
+                continue
+              fi
+              # Tertiary: stable tie-breaker by path
+              if [[ -n "$best" && "$f" < "$best" ]]; then
+                best="$f"
               fi
             fi
+          done
+
+          if [[ -z "$best" ]]; then
+            echo "[MERGE] ERROR: Could not select a best coverage file (all invalid?)"
+            echo "[MERGE] Dumping first 60 lines of candidates:"
+            for f in "${candidates[@]}"; do
+              echo "---- $f ----"
+              head -n 60 "$f" || true
+            done
+            exit 1
           fi
+
+          echo "[MERGE] Selected: $best (line=$best_val)"
+          cp "$best" out/coverage.json
 
           echo "[MERGE] Final node-api-example/out/coverage.json:"
           ls -la out || true
