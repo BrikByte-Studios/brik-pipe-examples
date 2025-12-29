@@ -69,7 +69,7 @@ jobs:
         with:
           pattern: "coverage-java-shard*"
           path: "java-api-example/.artifacts/coverage"
-          merge-multiple: true
+          merge-multiple: false
 
       - name: "Select canonical coverage.json"
         working-directory: "java-api-example"
@@ -78,27 +78,33 @@ jobs:
           mkdir -p out
 
           echo "[MERGE] Listing downloaded coverage artifacts:"
-          find .artifacts/coverage -maxdepth 10 -type f -print || true
+          find .artifacts/coverage -type f -maxdepth 6 -print || true
 
-          # Prefer the normalized coverage file path first (new format)
-          out_cov="$(find .artifacts/coverage -type f -path "*/out/coverage.json" -print -quit 2>/dev/null || true)"
-          # Fallback: any coverage.json (older/root format)
-          root_cov="$(find .artifacts/coverage -type f -name "coverage.json" -print -quit 2>/dev/null || true)"
+          # Find ALL shard coverage.json files
+          mapfile -t files < <(find .artifacts/coverage -type f -path "*/out/coverage.json" -print)
 
-          if [[ -n "${out_cov}" ]]; then
-            echo "[MERGE] Using out/coverage.json: ${out_cov}"
-            cp "${out_cov}" out/coverage.json
-          elif [[ -n "${root_cov}" ]]; then
-            echo "[MERGE] Using coverage.json: ${root_cov}"
-            cp "${root_cov}" out/coverage.json
-          else
-            echo "[MERGE] ERROR: No coverage file found under .artifacts/coverage"
+          if [[ ${#files[@]} -eq 0 ]]; then
+            echo "[MERGE] ERROR: No shard out/coverage.json found"
             exit 1
           fi
 
+          best=""
+          best_val="-1"
+
+          for f in "${files[@]}"; do
+            val="$(node -e 'const j=require(process.argv[1]); console.log(((j.summary||{}).line ?? -1))' "$f" 2>/dev/null || echo -1)"
+            echo "[MERGE] candidate: $f line=$val"
+            if node -e "process.exit(!(Number('$val') > Number('$best_val')))" ; then
+              best_val="$val"
+              best="$f"
+            fi
+          done
+
+          echo "[MERGE] Selected: $best (line=$best_val)"
+          cp "$best" out/coverage.json
+
           echo "[MERGE] Final java-api-example/out/coverage.json:"
-          ls -la out || true
-          head -n 60 out/coverage.json || true
+          head -n 80 out/coverage.json || true
 
       - name: "Upload merged coverage artifact"
         uses: actions/upload-artifact@v4
