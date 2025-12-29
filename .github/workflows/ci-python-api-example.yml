@@ -17,34 +17,34 @@ jobs:
       project-path: "python-api-example"
       config-file: "brikpipe.build.yml"
 
-  # # 2) Python CI (build, lint, install)
-  # python-ci:
-  #   name: "Python: Build & Test"
-  #   uses: BrikByte-Studios/.github/.github/workflows/template-python-ci.yml@main
-  #   needs: config-validate
-  #   with:
-  #     python-version: "3.11"
-  #     project-path: "python-api-example"
-  #     force-cache-refresh: "false"
-  #   secrets: inherit
+  # 2) Python CI (build, lint, install)
+  python-ci:
+    name: "Python: Build & Test"
+    needs: [config-validate]
+    uses: BrikByte-Studios/.github/.github/workflows/template-python-ci.yml@main
+    with:
+      python-version: "3.11"
+      project-path: "python-api-example"
+      force-cache-refresh: "false"
+    secrets: inherit
 
   # 3) Python tests + coverage (sharded inside test-python.yml)
   tests:
     name: "Python: Unit Tests + Coverage"
-    needs: python-ci
+    needs: [python-ci]
     uses: BrikByte-Studios/.github/.github/workflows/test-python.yml@main
     with:
       python-version: "3.11"
       working-directory: "python-api-example"
       override_shards: "4"
       flaky_detect: "true"
+    secrets: inherit
 
   # 3.5) Merge shard coverage artifacts into one canonical output (v1: pick one)
   merge-coverage:
     name: "Merge coverage shards"
-    needs: tests
+    needs: [tests]
     runs-on: ubuntu-latest
-
     steps:
       - name: "Checkout repository"
         uses: actions/checkout@v4
@@ -65,7 +65,6 @@ jobs:
           echo "[MERGE] Listing downloaded coverage artifacts:"
           find .artifacts/coverage -maxdepth 12 -type f -print || true
 
-          # Collect candidates: new + old formats
           mapfile -t candidates < <(
             find .artifacts/coverage -type f \( -path "*/out/coverage.json" -o -name "coverage.json" \) -print
           )
@@ -79,7 +78,6 @@ jobs:
           best_val="-1"
 
           for f in "${candidates[@]}"; do
-            # Read JSON safely without require() (works regardless of ESM/CJS)
             val="$(node -e "
               const fs=require('fs');
               const p=process.argv[1];
@@ -94,12 +92,10 @@ jobs:
 
             echo "[MERGE] candidate: $f line=$val"
 
-            # Choose highest summary.line; tie-breaker: path order (stable)
             if awk "BEGIN { exit !($val > $best_val) }"; then
               best_val="$val"
               best="$f"
             elif awk "BEGIN { exit !($val == $best_val) }"; then
-              # tie -> stable pick by lexical order
               if [[ -n "$best" && "$f" < "$best" ]]; then
                 best="$f"
               fi
@@ -108,7 +104,6 @@ jobs:
 
           if [[ -z "$best" ]]; then
             echo "[MERGE] ERROR: Could not select a best coverage file (all invalid?)"
-            echo "[MERGE] Dumping first 60 lines of candidates:"
             for f in "${candidates[@]}"; do
               echo "---- $f ----"
               head -n 60 "$f" || true
@@ -127,9 +122,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "coverage-python-merged"
-          # NOTE: keep it simple: store it as out/coverage.json (no extra nesting)
-          path: |
-            python-api-example/out/coverage.json
+          path: python-api-example/out/coverage.json
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 14
@@ -137,7 +130,7 @@ jobs:
   # 4) Coverage Governance Gate
   coverage-gate:
     name: "Coverage Governance Gate"
-    needs: merge-coverage
+    needs: [merge-coverage]
     uses: BrikByte-Studios/.github/.github/workflows/coverage-check.yml@main
     with:
       working-directory: "python-api-example"
@@ -145,14 +138,13 @@ jobs:
       policy-file: "../.governance/tests.yml"
       baseline-file: "../.audit/coverage-baseline.json"
       coverage-artifact-name: "coverage-python-merged"
-
+    secrets: inherit
 
   # 5) Unit Test Audit Export (.audit/<ts>/unit-tests/*)
   unit-test-audit:
     name: "Unit Test Audit Export"
-    needs: merge-coverage
+    needs: [merge-coverage]
     runs-on: ubuntu-latest
-
     steps:
       - name: "Checkout repository"
         uses: actions/checkout@v4
@@ -161,14 +153,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: "coverage-python-merged"
-          path: "."
+          path: "python-api-example/out"
 
       - name: "Export unit test audit bundle"
         if: always()
         uses: BrikByte-Studios/.github/.github/actions/audit-export@main
         with:
           working-directory: "python-api-example"
-          junit: "out/junit.xml"              # ensure your Makefile/pytest writes this
+          junit: "out/junit.xml"
           coverage: "out/coverage.json"
           audit-root: ".audit"
           runtime: "python@3.11"
