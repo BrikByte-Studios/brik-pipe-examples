@@ -97,6 +97,6 @@ jobs:
       services_csv: "payments,users"
       scenarios_csv: "happy_path,declined_card,timeout"
 
-      # governed parallelism (clamped to integration.cap=4).
+      # governed parallelism (clamped to integration.cap=4)
       override_shards: "4"
       flaky_detect: "true"
