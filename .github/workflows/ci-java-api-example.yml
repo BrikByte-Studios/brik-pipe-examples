@@ -80,7 +80,6 @@ jobs:
           echo "[MERGE] Listing downloaded coverage artifacts:"
           find .artifacts/coverage -type f -maxdepth 6 -print || true
 
-          # Find ALL shard coverage.json files
           mapfile -t files < <(find .artifacts/coverage -type f -path "*/out/coverage.json" -print)
 
           if [[ ${#files[@]} -eq 0 ]]; then
@@ -92,13 +91,37 @@ jobs:
           best_val="-1"
 
           for f in "${files[@]}"; do
-            val="$(node -e 'const j=require(process.argv[1]); console.log(((j.summary||{}).line ?? -1))' "$f" 2>/dev/null || echo -1)"
+            # Read JSON safely without require()
+            val="$(node -e "
+              const fs=require('fs');
+              const p=process.argv[1];
+              try{
+                const j=JSON.parse(fs.readFileSync(p,'utf8'));
+                const line=(j.summary && typeof j.summary.line === 'number') ? j.summary.line : -1;
+                console.log(line);
+              }catch(e){
+                console.log(-1);
+              }
+            " "$f")"
+
             echo "[MERGE] candidate: $f line=$val"
-            if node -e "process.exit(!(Number('$val') > Number('$best_val')))" ; then
+
+            # Compare using bash+awk (numeric)
+            if awk "BEGIN { exit !($val > $best_val) }"; then
               best_val="$val"
               best="$f"
             fi
           done
+
+          if [[ -z "$best" ]]; then
+            echo "[MERGE] ERROR: Could not select a best coverage.json (all invalid?)"
+            echo "[MERGE] Dumping candidates:"
+            for f in "${files[@]}"; do
+              echo "---- $f ----"
+              head -n 60 "$f" || true
+            done
+            exit 1
+          fi
 
           echo "[MERGE] Selected: $best (line=$best_val)"
           cp "$best" out/coverage.json
