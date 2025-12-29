@@ -53,28 +53,66 @@ jobs:
       - name: Combine coverage.json (pick best or average)
         run: |
           set -euo pipefail
-          ls -R merged || true
+          echo "[MERGE] Listing merged artifacts:"
+          find merged -maxdepth 12 -type f -print || true
+
           python - << 'PY'
           import json
           from pathlib import Path
+          from datetime import datetime, timezone
 
-          # Strategy: choose max summary.line across shards (safe for “some shards empty”)
-          best = None
+          # Accept both formats:
+          # - */out/coverage.json (preferred)
+          # - */coverage.json (fallback)
+          candidates = []
           for p in Path("merged").rglob("coverage.json"):
-            try:
-              d = json.loads(p.read_text())
-              v = float(d.get("summary", {}).get("line", 0.0))
-              if best is None or v > best["v"]:
-                best = {"v": v, "d": d}
-            except Exception:
-              pass
+              candidates.append(p)
 
-          out = Path("out"); out.mkdir(exist_ok=True)
+          if not candidates:
+              raise SystemExit("[MERGE] ERROR: No coverage.json found under merged/")
+
+          best = None
+          seen = 0
+
+          def get_line_pct(d):
+              try:
+                  return float(((d.get("summary") or {}).get("line", 0.0)))
+              except Exception:
+                  return 0.0
+
+          for p in sorted(candidates):
+              try:
+                  d = json.loads(p.read_text(encoding="utf-8"))
+              except Exception:
+                  continue
+
+              v = get_line_pct(d)
+              seen += 1
+              print(f"[MERGE] candidate: {p} summary.line={v}")
+
+              if best is None or v > best["v"]:
+                  best = {"v": v, "d": d, "path": str(p)}
+
           if best is None:
-            raise SystemExit("No coverage.json found in merged artifacts")
-          (out / "coverage.json").write_text(json.dumps(best["d"], indent=2))
-          print("Merged coverage.summary.line =", best["v"])
+              raise SystemExit("[MERGE] ERROR: coverage.json files exist but none were valid JSON")
+
+          out = Path("out")
+          out.mkdir(parents=True, exist_ok=True)
+
+          merged = best["d"]
+          merged.setdefault("meta", {})
+          merged["meta"]["merge_strategy"] = "max_summary_line"
+          merged["meta"]["selected_file"] = best["path"]
+          merged["meta"]["candidates_seen"] = seen
+          merged["generated_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00","Z")
+
+          (out / "coverage.json").write_text(json.dumps(merged, indent=2), encoding="utf-8")
+          print("[MERGE] Selected:", best["path"])
+          print("[MERGE] Merged coverage.summary.line =", best["v"])
           PY
+
+          echo "[MERGE] Final out/coverage.json:"
+          cat out/coverage.json | head -n 120
 
       - name: Upload merged coverage
         uses: actions/upload-artifact@v4

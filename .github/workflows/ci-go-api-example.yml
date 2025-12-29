@@ -64,47 +64,91 @@ jobs:
           ART_DIR=".artifacts/coverage"
 
           echo "[MERGE] Listing downloaded shard artifacts:"
-          find "${ART_DIR}" -maxdepth 4 -type f -print || true
+          find "${ART_DIR}" -maxdepth 8 -type f -print || true
 
           mapfile -t profiles < <(find "${ART_DIR}" -type f -name "coverage.out" | sort)
-          if [ "${#profiles[@]}" -eq 0 ]; then
-            echo "ERROR: No coverage.out files found in shard artifacts under ${ART_DIR}"
+          if [[ ${#profiles[@]} -eq 0 ]]; then
+            echo "[MERGE] ERROR: No coverage.out files found in shard artifacts under ${ART_DIR}"
             exit 1
           fi
 
-          echo "[MERGE] Found ${#profiles[@]} coverage.out files"
+          echo "[MERGE] Found ${#profiles[@]} coverage.out files:"
           printf "  - %s\n" "${profiles[@]}"
 
-          go install github.com/wadey/gocovmerge@latest
+          # --- Install gocovmerge (PINNED for determinism) ---
+          # Pick a known tag/commit you trust; example tag shown:
+          GOCOVMERGE_VER="v1.0.0"   # <-- change if you prefer a specific tag/commit
+          go install "github.com/wadey/gocovmerge@${GOCOVMERGE_VER}"
           export PATH="$(go env GOPATH)/bin:$PATH"
 
-          gocovmerge "${profiles[@]}" > coverage.out
+          command -v gocovmerge >/dev/null 2>&1 || { echo "[MERGE] ERROR: gocovmerge not in PATH"; exit 1; }
 
+          # --- Merge coverage profiles ---
+          # gocovmerge outputs a single profile, but we ensure exactly one 'mode:' header.
+          tmp_merged="coverage.merged.tmp.out"
+          gocovmerge "${profiles[@]}" > "${tmp_merged}"
+
+          # Normalize: keep first mode line, drop any subsequent mode lines
+          awk '
+            BEGIN { seen_mode=0 }
+            /^mode:/ {
+              if (seen_mode==0) { print; seen_mode=1 }
+              next
+            }
+            { print }
+          ' "${tmp_merged}" > coverage.out
+
+          echo "[MERGE] Merged profile written: coverage.out"
+          head -n 3 coverage.out || true
+
+          # --- Compute total line coverage ---
           go tool cover -func=coverage.out > coverage-func.txt
-          tail -n 5 coverage-func.txt || true
+          tail -n 8 coverage-func.txt || true
 
+          # --- Convert to canonical out/coverage.json ---
           python - << 'PY'
-          import json, re
+          import json, os, re
           from pathlib import Path
+          from datetime import datetime, timezone
 
           txt = Path("coverage-func.txt").read_text(encoding="utf-8", errors="replace").splitlines()
+
           pct = None
           for line in reversed(txt):
-            if line.lower().startswith("total:"):
-              m = re.search(r'(\d+(\.\d+)?)%$', line.strip())
-              if m:
-                pct = float(m.group(1))
-                break
-          if pct is None:
-            raise SystemExit("ERROR: could not find total % in coverage-func.txt")
+              if line.lower().startswith("total:"):
+                  m = re.search(r'(\d+(\.\d+)?)%$', line.strip())
+                  if m:
+                      pct = float(m.group(1))
+                      break
 
-          out = Path("out"); out.mkdir(parents=True, exist_ok=True)
-          Path("out/coverage.json").write_text(json.dumps({"summary":{"line":pct},"files":[]}, indent=2), encoding="utf-8")
-          print("Wrote out/coverage.json summary.line =", pct)
+          if pct is None:
+              raise SystemExit("[MERGE] ERROR: could not find total % in coverage-func.txt (no 'total:' line?)")
+
+          out = Path("out")
+          out.mkdir(parents=True, exist_ok=True)
+
+          cov = {
+            "language": "go",
+            "tool": "go tool cover",
+            "summary": {"line": pct},
+            "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00","Z"),
+            "meta": {
+              "commit": os.environ.get("GITHUB_SHA"),
+              "ref": os.environ.get("GITHUB_REF"),
+              "workflow": os.environ.get("GITHUB_WORKFLOW"),
+              "job": os.environ.get("GITHUB_JOB"),
+              "run_id": os.environ.get("GITHUB_RUN_ID"),
+              "merged_profiles": len([p for p in os.listdir(".") if p.endswith(".out")])  # lightweight hint
+            },
+            "files": []
+          }
+
+          Path("out/coverage.json").write_text(json.dumps(cov, indent=2), encoding="utf-8")
+          print("[MERGE] Wrote out/coverage.json summary.line =", pct)
           PY
 
+          echo "[MERGE] out/coverage.json:"
           cat out/coverage.json
-
 
       - name: Upload merged coverage artifact
         uses: actions/upload-artifact@v4

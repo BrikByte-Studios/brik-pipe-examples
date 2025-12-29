@@ -31,7 +31,7 @@ jobs:
   # 3) Python tests + coverage (sharded inside test-python.yml)
   tests:
     name: "Python: Unit Tests + Coverage"
-    # needs: python-ci
+    needs: python-ci
     uses: BrikByte-Studios/.github/.github/workflows/test-python.yml@main
     with:
       python-version: "3.11"
