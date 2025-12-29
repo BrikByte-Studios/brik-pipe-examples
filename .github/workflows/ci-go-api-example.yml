@@ -62,57 +62,48 @@ jobs:
           mkdir -p out
 
           ART_DIR=".artifacts/coverage"
-
           echo "[MERGE] Listing downloaded shard artifacts:"
           find "${ART_DIR}" -maxdepth 8 -type f -print || true
 
           mapfile -t profiles < <(find "${ART_DIR}" -type f -name "coverage.out" | sort)
           if [[ ${#profiles[@]} -eq 0 ]]; then
-            echo "[MERGE] ERROR: No coverage.out files found in shard artifacts under ${ART_DIR}"
+            echo "[MERGE] ERROR: No coverage.out files found under ${ART_DIR}"
             exit 1
           fi
 
           echo "[MERGE] Found ${#profiles[@]} coverage.out files:"
           printf "  - %s\n" "${profiles[@]}"
 
-          # --- Install gocovmerge (PINNED for determinism) ---
-          # Pick a known tag/commit you trust; example tag shown:
-          GOCOVMERGE_VER="v1.0.0"   # <-- change if you prefer a specific tag/commit
-          go install "github.com/wadey/gocovmerge@${GOCOVMERGE_VER}"
-          export PATH="$(go env GOPATH)/bin:$PATH"
+          if [[ ${#profiles[@]} -eq 1 ]]; then
+            echo "[MERGE] Single profile → using as-is"
+            cp "${profiles[0]}" coverage.out
+          else
+            # Install merge tool (choose one)
+            go install github.com/wadey/gocovmerge@latest
+            export PATH="$(go env GOPATH)/bin:$PATH"
 
-          command -v gocovmerge >/dev/null 2>&1 || { echo "[MERGE] ERROR: gocovmerge not in PATH"; exit 1; }
+            tmp_merged="coverage.merged.tmp.out"
+            gocovmerge "${profiles[@]}" > "${tmp_merged}"
 
-          # --- Merge coverage profiles ---
-          # gocovmerge outputs a single profile, but we ensure exactly one 'mode:' header.
-          tmp_merged="coverage.merged.tmp.out"
-          gocovmerge "${profiles[@]}" > "${tmp_merged}"
+            awk '
+              BEGIN { seen_mode=0 }
+              /^mode:/ { if (seen_mode==0) { print; seen_mode=1 } next }
+              { print }
+            ' "${tmp_merged}" > coverage.out
+          fi
 
-          # Normalize: keep first mode line, drop any subsequent mode lines
-          awk '
-            BEGIN { seen_mode=0 }
-            /^mode:/ {
-              if (seen_mode==0) { print; seen_mode=1 }
-              next
-            }
-            { print }
-          ' "${tmp_merged}" > coverage.out
-
-          echo "[MERGE] Merged profile written: coverage.out"
+          echo "[MERGE] coverage.out head:"
           head -n 3 coverage.out || true
 
-          # --- Compute total line coverage ---
           go tool cover -func=coverage.out > coverage-func.txt
           tail -n 8 coverage-func.txt || true
 
-          # --- Convert to canonical out/coverage.json ---
           python - << 'PY'
           import json, os, re
           from pathlib import Path
           from datetime import datetime, timezone
 
           txt = Path("coverage-func.txt").read_text(encoding="utf-8", errors="replace").splitlines()
-
           pct = None
           for line in reversed(txt):
               if line.lower().startswith("total:"):
@@ -120,13 +111,10 @@ jobs:
                   if m:
                       pct = float(m.group(1))
                       break
-
           if pct is None:
-              raise SystemExit("[MERGE] ERROR: could not find total % in coverage-func.txt (no 'total:' line?)")
+              raise SystemExit("[MERGE] ERROR: could not find total % in coverage-func.txt")
 
-          out = Path("out")
-          out.mkdir(parents=True, exist_ok=True)
-
+          out = Path("out"); out.mkdir(parents=True, exist_ok=True)
           cov = {
             "language": "go",
             "tool": "go tool cover",
@@ -138,12 +126,11 @@ jobs:
               "workflow": os.environ.get("GITHUB_WORKFLOW"),
               "job": os.environ.get("GITHUB_JOB"),
               "run_id": os.environ.get("GITHUB_RUN_ID"),
-              "merged_profiles": len([p for p in os.listdir(".") if p.endswith(".out")])  # lightweight hint
+              "profiles_count": int(os.environ.get("PROFILES_COUNT", "0") or "0"),
             },
             "files": []
           }
-
-          Path("out/coverage.json").write_text(json.dumps(cov, indent=2), encoding="utf-8")
+          (out / "coverage.json").write_text(json.dumps(cov, indent=2), encoding="utf-8")
           print("[MERGE] Wrote out/coverage.json summary.line =", pct)
           PY
 
