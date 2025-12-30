@@ -6,7 +6,7 @@ jobs:
   build:
     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/build-java.yml@main
     with:
-      working_directory: "node-api-example"
+      working_directory: "java-api-example"
       run_lint: false
       run_tests: true
       upload_artifacts: true

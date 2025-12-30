@@ -1,0 +1,12 @@
+name: "Example: dotnet build"
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/build-dotnet.yml@main
+    with:
+      working_directory: "dotnet-api-example"
+      run_lint: false
+      run_tests: true
+      upload_artifacts: true
