@@ -1,0 +1,12 @@
+name: "Example: node build"
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/build-node.yml@main
+    with:
+      working_directory: "python-api-example"
+      run_lint: false
+      run_tests: true
+      upload_artifacts: true
