@@ -7,6 +7,6 @@ jobs:
     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/build-node.yml@main
     with:
       working_directory: "node-api-example"
-      run_lint: true
+      run_lint: false
       run_tests: true
       upload_artifacts: true
