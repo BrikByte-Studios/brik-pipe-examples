@@ -23,7 +23,7 @@ BUILD_DIR := dist
 # Default NPM commands (aligned with runtime-matrix)
 NPM       := npm
 
-.PHONY: help build test ci clean install
+.PHONY: help build test ci clean install lint lint-fix
 
 help:
 	@echo "Node API Example — Make targets"
@@ -32,6 +32,9 @@ help:
 	@echo "  make ci      - CI-safe pipeline: clean + install + build + test"
 	@echo "  make install - Install dependencies (npm ci)"
 	@echo "  make clean   - Remove build artifacts and node_modules cache (optional)"
+	@echo "  make lint    - Run linter (npm run lint)"
+	@echo "  make lint-fix- Auto-fix lint issues (npm run lint:fix)"
+
 
 install:
 	@echo "📦 Installing Node dependencies via npm ci...."
@@ -40,6 +43,16 @@ install:
 build:
 	@echo "🏗️ Building Node.js application..."
 	$(NPM) run build
+
+lint: install
+	@set -euo pipefail; \
+	echo "🧹 Linting Node.js project..."; \
+	$(NPM) run lint
+
+lint-fix: install
+	@set -euo pipefail; \
+	echo "🛠️ Lint fixing Node.js project..."; \
+	$(NPM) run lint:fix
 
 test: install
 	@set -euo pipefail; \
