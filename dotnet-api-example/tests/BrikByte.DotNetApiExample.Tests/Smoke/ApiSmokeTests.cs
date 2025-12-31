@@ -71,7 +71,7 @@ namespace BrikByte.DotNetApiExample.Tests.Smoke
             {
                 amount = 100,
                 currency = "ZAR",
-                source  = "smoke-test"
+                source = "smoke-test"
             };
 
             var json = JsonSerializer.Serialize(payload);

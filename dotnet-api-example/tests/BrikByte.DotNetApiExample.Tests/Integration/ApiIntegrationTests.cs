@@ -45,7 +45,7 @@ namespace BrikByte.DotNetApiExample.Tests.Integration
 
         [Fact]
         [Trait("Category", "Integration")]
-        [Trait("IntegItem", "payments::approved")] 
+        [Trait("IntegItem", "payments::approved")]
         public async Task RootEndpoint_ReturnsOkJson()
         {
             using var client = CreateClient();
@@ -70,7 +70,7 @@ namespace BrikByte.DotNetApiExample.Tests.Integration
 
         [Fact]
         [Trait("Category", "Integration")]
-        [Trait("IntegItem", "payments::approved")] 
+        [Trait("IntegItem", "payments::approved")]
         public async Task HealthEndpoint_ReturnsStatusOk()
         {
             using var client = CreateClient();

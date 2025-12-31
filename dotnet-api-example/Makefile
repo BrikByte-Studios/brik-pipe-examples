@@ -48,9 +48,15 @@ restore:
 	$(DOTNET) restore $(SOLUTION_FILE)
 
 lint: restore
-	@echo "🔎 Linting .NET solution (no tests)..."
-	$(DOTNET) -B build $(SOLUTION_FILE) --configuration $(CONFIG) --no-restore
-	$(DOTNET) -B format --verify-no-changes || (echo "❌ dotnet format required (run dotnet format)"; exit 1)
+	@echo "🔎 Linting .NET solution (dotnet-format, no changes allowed)..."
+	$(DOTNET) tool restore
+	$(DOTNET) tool run dotnet-format $(SOLUTION_FILE) --check
+
+lint-fix: restore
+	@echo "🧹 Fixing .NET formatting (dotnet-format writes changes)..."
+	$(DOTNET) tool restore
+	$(DOTNET) tool run dotnet-format $(SOLUTION_FILE)
+
 
 build: restore
 	@echo "🏗️ Building .NET solution (Release)..."

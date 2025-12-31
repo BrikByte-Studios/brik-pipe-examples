@@ -11,11 +11,11 @@ namespace DotNetApiExample.IntegrationTests
         private static string BuildConnectionString()
         {
             // Match the ENV defaults used by the BrikPipe integ runner
-            var host     = GetEnvOrDefault("DB_HOST", "db");
-            var port     = GetEnvOrDefault("DB_PORT", "5432");
-            var user     = GetEnvOrDefault("DB_USER", "testuser");
+            var host = GetEnvOrDefault("DB_HOST", "db");
+            var port = GetEnvOrDefault("DB_PORT", "5432");
+            var user = GetEnvOrDefault("DB_USER", "testuser");
             var password = GetEnvOrDefault("DB_PASSWORD", "testpass");
-            var dbName   = GetEnvOrDefault("DB_NAME", "testdb");
+            var dbName = GetEnvOrDefault("DB_NAME", "testdb");
 
             return $"Host={host};Port={port};Username={user};Password={password};Database={dbName};";
         }
@@ -62,7 +62,7 @@ namespace DotNetApiExample.IntegrationTests
             await using (var cmd = new NpgsqlCommand(countSql, conn))
             {
                 var result = await cmd.ExecuteScalarAsync();
-                var count  = Convert.ToInt64(result);
+                var count = Convert.ToInt64(result);
 
                 Assert.True(count > 0, $"Expected at least 1 row in payments, got {count}.");
             }
