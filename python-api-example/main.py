@@ -13,7 +13,6 @@ Used for:
 - Runtime consistency across Node / Go / .NET / Java / Python services
 """
 
-import os
 from pydantic import BaseModel
 from fastapi import FastAPI
 
