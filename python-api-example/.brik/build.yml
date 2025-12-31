@@ -2,16 +2,19 @@ schemaVersion: 1
 stack: python
 workingDirectory: "."
 runtime:
-  version: ""
+  version: "3.12"
 tool:
-  kind: ""      # pip|poetry
+  kind: pip
 flags:
-  runLint: false
+  runLint: true
   runTests: true
 commands:
-  install: ""
-  lint: ""
-  test: ""
-  build: ""
+  install: "make deps"
+  lint: "make lint"
+  test: "make test-unit"
+  build: "make build"
 artifacts:
-  paths: ["__pycache__/**"]
+  paths:
+    - "dist/**"
+    - "out/**"
+    - "__pycache__/**"

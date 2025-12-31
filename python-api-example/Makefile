@@ -31,7 +31,7 @@ UNIT_SHARD ?= 1
 UNIT_SHARD_TOTAL ?= 1
 OUT_DIR ?= out
 
-.PHONY: help deps build test test-unit test-integration ci clean
+.PHONY: help deps build test test-unit test-integration ci clean lint lint-fix
 
 help:
 	@echo "Python API Example — Make targets"
@@ -51,6 +51,16 @@ deps:
 	else \
 		echo "ℹ️ No requirements.txt found; skipping dependency installation."; \
 	fi
+
+lint: deps
+	@echo "🧹 Linting (ruff)..."
+	@$(PYTHON) -m pip install -q ruff
+	@$(PYTHON) -m ruff check .
+
+lint-fix: deps
+	@echo "🛠️ Lint fixing (ruff)..."
+	@$(PYTHON) -m pip install -q ruff
+	@$(PYTHON) -m ruff check . --fix
 
 build:
 	@echo "🏗️ Building Python package (if build configuration present)..."

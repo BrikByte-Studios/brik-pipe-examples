@@ -6,7 +6,14 @@ jobs:
   build:
     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/build-python.yml@main
     with:
-      working_directory: "python-api-example"
-      run_lint: false
+      working_directory: python-api-example
+      runtime_version: "3.12"
+      package_manager: "pip"
+      run_lint: true
       run_tests: true
+      lint_command: "make lint"
+      test_command: "make test-unit"
+      build_command: "make build"
       upload_artifacts: true
+      artifact_paths: "dist/**,out/**,__pycache__/**"
+
