@@ -1,0 +1,17 @@
+schemaVersion: 1
+stack: python
+workingDirectory: "."
+runtime:
+  version: ""
+tool:
+  kind: ""      # pip|poetry
+flags:
+  runLint: false
+  runTests: true
+commands:
+  install: ""
+  lint: ""
+  test: ""
+  build: ""
+artifacts:
+  paths: ["__pycache__/**"]
