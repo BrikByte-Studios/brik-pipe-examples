@@ -1,0 +1,20 @@
+schemaVersion: 1
+stack: node
+workingDirectory: "."
+runtime:
+  version: ""            # empty => runtime matrix default
+tool:
+  kind: ""               # empty => matrix default (npm|pnpm|yarn)
+flags:
+  runLint: true
+  runTests: true
+commands:
+  install: "make install"
+  lint: "make lint"
+  test: "make test"
+  build: "make build"
+artifacts:
+  paths:
+    - "dist/**"
+    - "coverage/**"
+    - "out/**"

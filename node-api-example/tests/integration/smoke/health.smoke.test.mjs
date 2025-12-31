@@ -35,7 +35,7 @@ test('health endpoint responds successfully (smoke)', async () => {
     let body;
     try {
       body = JSON.parse(raw);
-    } catch (err) {
+    } catch {
       throw new Error(
         `Health endpoint advertises JSON but body is not valid JSON. Raw body: ${raw}`
       );

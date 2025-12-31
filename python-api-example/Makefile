@@ -42,6 +42,8 @@ help:
 	@echo "  make test            - Alias for test-unit"
 	@echo "  make ci              - CI-safe: deps + build + test-unit"
 	@echo "  make clean           - Remove build artifacts"
+	@echo "  make lint    		   - Run linter (python -m ruff check .)"
+	@echo "  make lint-fix- Auto-fix lint issues (python -m ruff check . --fix)"
 
 deps:
 	@echo "📦 Installing Python dependencies..."

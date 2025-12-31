@@ -6,7 +6,7 @@
  * App → Mocked External Provider → App → Client
  */
 
-import test, { describe, it, before, after } from "node:test";
+import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 
 import {
