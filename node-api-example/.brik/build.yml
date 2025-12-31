@@ -2,9 +2,9 @@ schemaVersion: 1
 stack: node
 workingDirectory: "."
 runtime:
-  version: ""            # empty => runtime matrix default
+  version: "20"
 tool:
-  kind: ""               # empty => matrix default (npm|pnpm|yarn)
+  kind: "npm"
 flags:
   runLint: true
   runTests: true
