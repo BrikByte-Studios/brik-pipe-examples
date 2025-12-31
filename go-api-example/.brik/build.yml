@@ -9,7 +9,7 @@ flags:
   runLint: true
   runTests: true
 commands:
-  install: ""
+  install: "make install"
   lint: "make lint"
   test: "make test"
   build: "make build"

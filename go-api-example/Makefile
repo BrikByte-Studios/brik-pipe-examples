@@ -32,7 +32,7 @@ GOLANGCI_LINT ?= golangci-lint
 UNIT_SHARD ?= 1
 UNIT_SHARD_TOTAL ?= 1
 
-.PHONY: help build test-unit test-integration test ci clean
+.PHONY: help build test-unit test-integration test ci clean install
 
 help:
 	@echo "Go API Example — Make targets"
@@ -42,6 +42,11 @@ help:
 	@echo "  make test            - Alias for test-unit"
 	@echo "  make ci              - CI-safe: build + test-unit"
 	@echo "  make clean           - Remove $(BIN_DIR)/ directory"
+	
+
+install:
+	@echo "Go installing"
+	$(GO) mod download
 
 # Internal helper: ensure go-junit-report is installed on PATH.
 # This is used by both test-unit and test-integration
