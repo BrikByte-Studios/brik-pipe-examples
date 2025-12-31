@@ -1,0 +1,20 @@
+schemaVersion: 1
+stack: go
+workingDirectory: "."
+runtime:
+  version: ""
+tool:
+  kind: "go"
+flags:
+  runLint: true
+  runTests: true
+commands:
+  install: ""
+  lint: "make lint"
+  test: "make test"
+  build: "make build"
+artifacts:
+  paths:
+    - "bin/**"
+    - "out/**"
+    - "coverage.out"

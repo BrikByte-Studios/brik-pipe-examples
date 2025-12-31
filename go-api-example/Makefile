@@ -26,6 +26,7 @@ SHELL := /usr/bin/env bash
 GO          ?= go
 BIN_DIR     := bin
 BUILD_OUT   := $(BIN_DIR)/app
+GOLANGCI_LINT ?= golangci-lint
 
 # Shard contract (optional)
 UNIT_SHARD ?= 1
@@ -53,6 +54,17 @@ ensure-go-junit-report:
 	else \
 	  echo "✅ go-junit-report already available on PATH."; \
 	fi
+
+lint:
+	@echo "🧹 Running Go lint..."
+	@if ! command -v $(GOLANGCI_LINT) >/dev/null 2>&1; then \
+	  echo "📦 Installing golangci-lint..."; \
+	  curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+	    | sh -s -- -b $$HOME/.local/bin v1.55.2; \
+	  export PATH="$$HOME/.local/bin:$$PATH"; \
+	fi
+	$(GOLANGCI_LINT) run ./...
+
 
 build:
 	@echo "🏗️ Building Go binary..."

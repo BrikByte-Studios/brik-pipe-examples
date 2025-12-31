@@ -1,0 +1,32 @@
+schemaVersion: 1
+stack: java
+workingDirectory: "."
+# runtime.version and tool.kind MUST be non-empty (schema minLength=1).
+# Use matrix defaults only if your schema allows omitting the whole block.
+runtime:
+  version: "17"
+tool:
+  kind: "maven"
+
+flags:
+  runLint: true
+  runTests: true
+
+commands:
+  # Your Makefile: deps target resolves dependencies.
+  install: "make deps"
+
+  # Lint for Maven: use 'verify' without tests (fast, checks compilation + plugins).
+  # If you later add Checkstyle/SpotBugs/PMD, they'll run here too.
+  lint: "make lint"
+
+  # Your Makefile shards tests + writes out/junit.xml
+  test: "make test"
+
+  # Your Makefile build target packages the app
+  build: "make build"
+
+artifacts:
+  paths:
+    - "target/**"
+    - "out/**"

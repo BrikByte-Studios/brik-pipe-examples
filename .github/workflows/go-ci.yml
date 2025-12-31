@@ -6,7 +6,12 @@ jobs:
   build:
     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/build-go.yml@main
     with:
-      working_directory: "go-api-example"
-      run_lint: false
+      working_directory: go-api-example
+      runtime_version: ""               # or "20" if you want explicit
+      run_lint: true
       run_tests: true
+      lint_command: "make lint"
+      test_command: "make test"
+      build_command: "make build"
       upload_artifacts: true
+      artifact_paths: "bin/**,out/**,coverage.out"

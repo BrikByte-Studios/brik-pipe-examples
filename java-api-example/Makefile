@@ -17,24 +17,44 @@ MVN          ?= mvn
 POM_FILE     := pom.xml
 TARGET_DIR   := target
 SHELL := /usr/bin/env bash
+.SHELLFLAGS := -euo pipefail -c
 
-.PHONY: help build test ci clean deps post-test
+.PHONY: help deps lint build test post-test ci clean
 
 help:
 	@echo "Java API Example — Make targets"
+	@echo "  make deps   - Resolve Maven dependencies"
+	@echo "  make lint   - Static verification (compile + plugins, no tests)"
 	@echo "  make build  - Maven clean + package"
-	@echo "  make test   - Maven test"
-	@echo "  make ci     - Maven clean verify (CI-safe build+test)"
+	@echo "  make test   - Maven test (shard-aware)"
+	@echo "  make ci     - deps → lint → build → test"
 	@echo "  make clean  - Remove target/ directory"
 
-build:
-	@echo "🏗️ Building Java project with Maven..."
-	$(MVN) -B clean package
-
+# --------------------------------------------------------------------
+# Dependency resolution (fast, deterministic)
+# --------------------------------------------------------------------
 deps:
 	@echo "📦 Resolving Maven dependencies..."
 	$(MVN) -B dependency:resolve
 
+# --------------------------------------------------------------------
+# Lint / Static verification (PIPE-CORE-1.1.3 contract)
+# This is where Checkstyle / SpotBugs / PMD will live.
+# --------------------------------------------------------------------
+lint:
+	@echo "🧹 Running Maven static verification (lint)..."
+	$(MVN) -B -DskipTests verify
+
+# --------------------------------------------------------------------
+# Build (artifact creation)
+# --------------------------------------------------------------------
+build:
+	@echo "🏗️ Building Java project with Maven..."
+	$(MVN) -B clean package
+
+# --------------------------------------------------------------------
+# Test (shard-aware)
+# --------------------------------------------------------------------
 test: deps
 	@set -euo pipefail; \
 	echo "🧪 Running Maven tests..."; \
@@ -75,9 +95,11 @@ post-test:
 	  echo "⚠️ No TEST-*.xml files found under target/surefire-reports; skipping JUnit merge."; \
 	fi
 
-ci:
-	@echo "🚦 Running CI pipeline (Maven clean verify)..."
-	$(MVN) -B clean verify
+# --------------------------------------------------------------------
+# CI pipeline (PIPE-CORE-1.1.3 contract order)
+# --------------------------------------------------------------------
+ci: deps lint build test
+	@echo "🚦 Running CI pipeline (deps → lint → build → test)..."
 	@echo "✅ CI pipeline (Java) completed successfully."
 
 clean:
