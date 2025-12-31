@@ -32,7 +32,7 @@ GOLANGCI_LINT ?= golangci-lint
 UNIT_SHARD ?= 1
 UNIT_SHARD_TOTAL ?= 1
 
-.PHONY: help build test-unit test-integration test ci clean install
+.PHONY: help build test-unit test-integration test ci clean install lint
 
 help:
 	@echo "Go API Example — Make targets"

@@ -33,7 +33,7 @@ JUNIT_FILE      ?= $(OUT_DIR)/junit.xml
 UNIT_SHARD       ?= 1
 UNIT_SHARD_TOTAL ?= 1
 
-.PHONY: help restore build test ci clean
+.PHONY: help restore build test ci clean lint
 
 help:
 	@echo ".NET API Example — Make targets"
@@ -46,6 +46,11 @@ help:
 restore:
 	@echo "📦 Restoring .NET dependencies..."
 	$(DOTNET) restore $(SOLUTION_FILE)
+
+lint: restore
+	@echo "🔎 Linting .NET solution (no tests)..."
+	$(DOTNET) -B build $(SOLUTION_FILE) --configuration $(CONFIG) --no-restore
+	$(DOTNET) -B format --verify-no-changes || (echo "❌ dotnet format required (run dotnet format)"; exit 1)
 
 build: restore
 	@echo "🏗️ Building .NET solution (Release)..."

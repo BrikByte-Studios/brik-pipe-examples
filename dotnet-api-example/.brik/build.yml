@@ -1,0 +1,26 @@
+schemaVersion: 1
+stack: dotnet
+workingDirectory: "."
+
+runtime:
+  version: "auto"        # resolved from runtime-matrix.yml (or pin like "8.0")
+
+tool:
+  kind: "dotnet"         # required for schema (minLength: 1)
+
+flags:
+  runLint: true
+  runTests: true
+
+commands:
+  install: "make restore"
+  lint: "make lint"
+  test: "make test"
+  build: "make build"
+
+artifacts:
+  paths:
+    - "out/**"
+    - "TestResults/**"
+    - "**/bin/**"
+    - "**/obj/**"
