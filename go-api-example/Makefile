@@ -125,7 +125,7 @@ test-unit: ensure-go-junit-report
 	  -coverpkg=./... \
 	  -coverprofile=coverage.out \
 	  -json > out/test-unit-report.json; \
-	go-junit-report < out/test-unit-report.json > out/junit.xml; \
+	"$(GO_JUNIT_REPORT)" < out/test-unit-report.json > out/junit.xml; \
 	echo "✅ Wrote out/junit.xml and coverage.out"
 
 # Optional: integration tests (only when explicitly run, and typically
@@ -137,7 +137,7 @@ test-integration: ensure-go-junit-report
 		-tags=integration \
 		-json > out/test-integration-report.json
 	@echo "📄 Converting INTEGRATION test JSON → JUnit XML..."
-	go-junit-report < out/test-integration-report.json > out/junit-integration.xml
+	"$(GO_JUNIT_REPORT)" < out/test-integration-report.json > out/junit-integration.xml
 	@echo "✅ INTEGRATION JUnit report written to out/junit-integration.xml"
 
 # Default "test" is just unit tests for standard CI.
