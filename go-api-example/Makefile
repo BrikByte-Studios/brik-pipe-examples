@@ -27,12 +27,14 @@ GO          ?= go
 BIN_DIR     := bin
 BUILD_OUT   := $(BIN_DIR)/app
 GOLANGCI_LINT ?= golangci-lint
+GOPATH_BIN      := $(shell $(GO) env GOPATH)/bin
+GO_JUNIT_REPORT := $(GOPATH_BIN)/go-junit-report
 
 # Shard contract (optional)
 UNIT_SHARD ?= 1
 UNIT_SHARD_TOTAL ?= 1
 
-.PHONY: help build test-unit test-integration test ci clean install lint
+.PHONY: help build test-unit test-integration test ci clean install lint ensure-go-junit-report fmt
 
 help:
 	@echo "Go API Example — Make targets"
@@ -52,12 +54,12 @@ install:
 # This is used by both test-unit and test-integration
 ensure-go-junit-report:
 	@echo "🔎 Checking for go-junit-report..."
-	@if ! command -v go-junit-report >/dev/null 2>&1; then \
-	  echo "📦 Installing go-junit-report via '$(GO) install github.com/jstemmer/go-junit-report/v2@latest'..."; \
+	@if [ ! -x "$(GO_JUNIT_REPORT)" ]; then \
+	  echo "📦 Installing go-junit-report to GOPATH/bin..."; \
 	  $(GO) install github.com/jstemmer/go-junit-report/v2@latest; \
-	  echo "✅ go-junit-report installed."; \
+	  echo "✅ Installed: $(GO_JUNIT_REPORT)"; \
 	else \
-	  echo "✅ go-junit-report already available on PATH."; \
+	  echo "✅ go-junit-report already present: $(GO_JUNIT_REPORT)"; \
 	fi
 
 fmt:
