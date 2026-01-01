@@ -60,7 +60,11 @@ ensure-go-junit-report:
 	  echo "✅ go-junit-report already available on PATH."; \
 	fi
 
-lint:
+fmt:
+	@echo "🛠️ Formatting Go files..."
+	gofmt -w .
+
+lint: fmt
 	@echo "🔎 Linting Go code (gofmt check + go vet)..."
 	@set -euo pipefail; \
 	files="$$(find . -name '*.go' -not -path './vendor/*' -print)"; \

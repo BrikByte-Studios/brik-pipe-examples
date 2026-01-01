@@ -22,11 +22,12 @@ type healthResponse struct {
 // HealthHandler responds with a static health payload.
 //
 // GET /health → 200 OK
-// {
-//   "status": "ok",
-//   "service": "go-api-example",
-//   "version": "1.0.0"
-// }
+//
+//	{
+//	  "status": "ok",
+//	  "service": "go-api-example",
+//	  "version": "1.0.0"
+//	}
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		// We only support GET for this example.

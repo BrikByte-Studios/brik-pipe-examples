@@ -22,19 +22,21 @@ import (
 // Local test DTOs to avoid clashing with production structs.
 //
 // GET /
-// {
-//   "message": "Go API Example — BrikByteOS pipelines OK"
-// }
+//
+//	{
+//	  "message": "Go API Example — BrikByteOS pipelines OK"
+//	}
 type rootPayload struct {
 	Message string `json:"message"`
 }
 
 // GET /health
-// {
-//   "status":  "ok",
-//   "service": "go-api-example",
-//   "version": "1.0.0"
-// }
+//
+//	{
+//	  "status":  "ok",
+//	  "service": "go-api-example",
+//	  "version": "1.0.0"
+//	}
 type healthPayload struct {
 	Status  string `json:"status"`
 	Service string `json:"service"`

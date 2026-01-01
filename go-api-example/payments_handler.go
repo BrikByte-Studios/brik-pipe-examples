@@ -9,7 +9,7 @@ import (
 )
 
 type PaymentRequest struct {
-	Amount   float64 `json:"amount"`           // accept 100.0
+	Amount   float64 `json:"amount"` // accept 100.0
 	Currency string  `json:"currency"`
 	Source   string  `json:"source,omitempty"` // used by smoke tests
 }
