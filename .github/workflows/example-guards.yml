@@ -1,0 +1,49 @@
+name: Example Repo Guards (determinism + minimalism)
+
+on:
+  pull_request:
+    paths:
+      - "**"
+  push:
+    branches: ["main"]
+
+jobs:
+  guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail on large files or vendor-ish dirs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Hard caps (tune as needed)
+          MAX_FILE_KB=500
+          MAX_REPO_MB=40
+
+          echo "🔎 Checking repo size..."
+          size_mb=$(du -sm . | awk '{print $1}')
+          echo "Repo size: ${size_mb}MB"
+          if [ "$size_mb" -gt "$MAX_REPO_MB" ]; then
+            echo "❌ Repo too large (${size_mb}MB > ${MAX_REPO_MB}MB). Keep examples minimal."
+            exit 1
+          fi
+
+          echo "🔎 Checking for oversized files..."
+          big=$(find . -type f -not -path "./.git/*" -size +"${MAX_FILE_KB}"k | head -n 20 || true)
+          if [ -n "$big" ]; then
+            echo "❌ Oversized files found (> ${MAX_FILE_KB}KB):"
+            echo "$big"
+            exit 1
+          fi
+
+          echo "🔎 Checking forbidden directories..."
+          forbid=$(find . -maxdepth 3 -type d \( -name vendor -o -name node_modules -o -name dist -o -name bin -o -name target \) | head -n 50 || true)
+          if [ -n "$forbid" ]; then
+            echo "❌ Forbidden dirs (examples must not commit build outputs/vendor caches):"
+            echo "$forbid"
+            exit 1
+          fi
+
+          echo "✅ Example repo guards passed."
