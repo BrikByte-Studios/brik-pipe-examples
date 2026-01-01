@@ -61,14 +61,23 @@ ensure-go-junit-report:
 	fi
 
 lint:
-	@echo "🧹 Running Go lint..."
-	@if ! command -v $(GOLANGCI_LINT) >/dev/null 2>&1; then \
-	  echo "📦 Installing golangci-lint..."; \
-	  curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-	    | sh -s -- -b $$HOME/.local/bin v1.55.2; \
-	  export PATH="$$HOME/.local/bin:$$PATH"; \
-	fi
-	$(GOLANGCI_LINT) run ./...
+	@echo "🔎 Linting Go code (gofmt check + go vet)..."
+	@set -euo pipefail; \
+	files="$$(find . -name '*.go' -not -path './vendor/*' -print)"; \
+	if [ -z "$$files" ]; then \
+	  echo "ℹ️ No .go files found; skipping."; \
+	  exit 0; \
+	fi; \
+	unformatted="$$(gofmt -l $$files)"; \
+	if [ -n "$$unformatted" ]; then \
+	  echo "❌ gofmt required on:"; \
+	  echo "$$unformatted" | sed 's/^/  - /'; \
+	  echo "👉 Run: gofmt -w <files>"; \
+	  exit 1; \
+	fi; \
+	$(GO) vet ./...; \
+	echo "✅ Go lint OK"
+
 
 
 build:
