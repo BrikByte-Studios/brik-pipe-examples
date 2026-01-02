@@ -1,101 +1,51 @@
-# ==============================================================================
-# ☕ Java / Spring Boot API Multi-Stage Dockerfile (BrikByteOS Standard)
-# ------------------------------------------------------------------------------
-# Overview:
-#   - Stage 1 (builder): Uses Maven image to compile + package the JAR
-#   - Stage 2 (runtime): Uses lightweight JRE-only image to run the JAR
+# -----------------------------------------------------------------------------
+# BrikByteOS v1 — Java Dockerfile Scaffold (Maven)
 #
-# Requirements:
-#   - Java 17 project with:
-#       • pom.xml
-#       • src/main/java/...
-#       • src/main/resources/...
-#   - Produces a single fat JAR in target/*.jar (Spring Boot default)
-#
-# Run:
-#   docker build -t demo-java-app .
-#   docker run -p 8001:8080 demo-java-app
-#
-# Note:
-#   - Container listens on port 8080 (Spring Boot default), so:
-#       host:8001 → container:8080   (-p 8001:8080)
-# ==============================================================================
+# Goals:
+# - Cache-friendly: pom.xml before source
+# - Multi-stage: build -> runtime
+# - Non-root runtime
+# - OCI labels via safe build args
+# -----------------------------------------------------------------------------
 
-# syntax=docker/dockerfile:1.7
+ARG IMAGE_SOURCE="unknown"
+ARG VCS_REF="unknown"
+ARG BUILD_DATE="unknown"
 
-# ------------------------------------------------------------------------------
-# 🔧 Build Arguments
-# ------------------------------------------------------------------------------
-ARG JAVA_VERSION=17          # Java major version
-ARG APP_VERSION=dev          # Image version (CI can override)
-ARG GIT_COMMIT=local         # Commit SHA for traceability
-ARG APP_DIR=/workspace       # Build working directory inside container
-
-
-# ==============================================================================
-# 🏗 STAGE 1 — BUILDER (Maven + JDK)
-# - Compiles and packages the application
-# ==============================================================================
-
-# Use Maven image with Eclipse Temurin 17 as the builder
-FROM maven:3.9-eclipse-temurin-17 AS builder
-
-# Re-declare APP_DIR so it’s usable in this stage
-ARG APP_DIR
-
-# Set working directory where the build will happen
-WORKDIR ${APP_DIR}
-
-# ------------------------------------------------------------------------------
-# Step 1: Copy pom.xml and pre-download dependencies
-# ------------------------------------------------------------------------------
-# Copy only the pom.xml first to leverage Docker layer caching.
-# Dependencies are downloaded only when pom.xml changes.
-COPY pom.xml ./
-
-RUN mvn -B -ntp dependency:go-offline
-
-# ------------------------------------------------------------------------------
-# Step 2: Copy source code and build the JAR
-# ------------------------------------------------------------------------------
-COPY src ./src
-
-# Clean & package the application; skip tests can be toggled as needed
-RUN mvn -B -ntp clean package -DskipTests=false
-
-
-# ==============================================================================
-# 🚀 STAGE 2 — RUNTIME (JRE only)
-# - Runs the packaged application JAR
-# ==============================================================================
-
-FROM eclipse-temurin:${JAVA_VERSION}-jre-jammy AS runtime
-
-ARG APP_VERSION=dev
-ARG GIT_COMMIT=local
-
-# Create a non-root user for better security
-RUN useradd --create-home --shell /usr/sbin/nologin appuser
-
-# Application runtime directory
+FROM maven:3.9-eclipse-temurin-21 AS builder
 WORKDIR /app
 
-# Copy the built JAR from the builder image
-# Assumes a single fat JAR is produced (Spring Boot default)
-COPY --from=builder /workspace/target/*.jar ./app.jar
+# Copy pom first for dependency cache
+COPY pom.xml ./pom.xml
+RUN mvn -q -e -DskipTests dependency:go-offline
 
-# OCI image labels for metadata & traceability
-LABEL org.opencontainers.image.title="Java API Example" \
-      org.opencontainers.image.description="Example Java API for BrikByteOS" \
-      org.opencontainers.image.source="https://github.com/BrikByte-Studios/brik-pipe-examples" \
-      org.opencontainers.image.version="${APP_VERSION}" \
-      org.opencontainers.image.revision="${GIT_COMMIT}"
+# Copy source after deps are cached
+COPY src ./src
 
-# Drop privileges and run as non-root
-USER appuser
+# Build jar (adjust if your jar name differs)
+RUN mvn -q -e -DskipTests package
 
-# Expose Spring Boot default port
+FROM eclipse-temurin:21-jre-jammy AS runtime
+WORKDIR /app
+
+# Non-root user
+RUN useradd -m -u 10001 javaapp
+
+ARG IMAGE_SOURCE
+ARG VCS_REF
+ARG BUILD_DATE
+LABEL org.opencontainers.image.source=$IMAGE_SOURCE \
+      org.opencontainers.image.revision=$VCS_REF \
+      org.opencontainers.image.created=$BUILD_DATE \
+      org.opencontainers.image.title="brikbyte-java-service" \
+      org.opencontainers.image.description="BrikByteOS v1 Java scaffold" \
+      org.opencontainers.image.licenses="UNLICENSED"
+
+# Copy built jar
+COPY --from=builder /app/target/*.jar /app/app.jar
+
+USER 10001
 EXPOSE 8080
 
-# Entry point to run the application
-ENTRYPOINT ["java","-jar","./app.jar"]
+# JVM flags kept minimal; tune per service
+CMD ["java", "-jar", "/app/app.jar"]

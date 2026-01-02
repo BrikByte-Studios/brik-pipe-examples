@@ -1,49 +1,54 @@
-# Based on: .github/templates/Dockerfile.dotnet
+# -----------------------------------------------------------------------------
+# BrikByteOS v1 — .NET Dockerfile Scaffold
+#
+# Goals:
+# - Cache-friendly: csproj restore before source
+# - Multi-stage: build/publish -> runtime
+# - Non-root runtime
+# - OCI labels via safe build args
+# -----------------------------------------------------------------------------
 
-# syntax=docker/dockerfile:1.7
+ARG IMAGE_SOURCE="unknown"
+ARG VCS_REF="unknown"
+ARG BUILD_DATE="unknown"
 
-ARG DOTNET_VERSION=8.0
-ARG APP_VERSION=dev
-ARG GIT_COMMIT=local
-ARG APP_DIR=/src
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS builder
+WORKDIR /src
 
-FROM mcr.microsoft.com/dotnet/sdk:${DOTNET_VERSION} AS builder
-
-# Re-declare APP_DIR so it’s usable in this stage
-ARG APP_DIR
-
-# Set working directory where the build will happen
-WORKDIR ${APP_DIR}
-
+# Copy csproj(s) first for restore caching
+# NOTE: adjust paths to your solution structure
 COPY *.sln ./
-COPY src/ ./src/
-COPY tests/ ./tests/
+COPY src/**/*.csproj ./src/
 
+# Restore
 RUN dotnet restore
-RUN dotnet build --configuration Release --no-restore
-RUN dotnet publish src/BrikByte.DotNetApiExample/BrikByte.DotNetApiExample.csproj \
-      --configuration Release \
-      --no-restore \
-      --output /app/publish
 
-FROM mcr.microsoft.com/dotnet/aspnet:${DOTNET_VERSION} AS runtime
+# Copy remaining source
+COPY . .
 
-ARG APP_VERSION=dev
-ARG GIT_COMMIT=local
+# Publish (self-contained false; relies on runtime image)
+RUN dotnet publish -c Release -o /out --no-restore
 
-RUN useradd --create-home --shell /sbin/nologin appuser
-
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-COPY --from=builder /app/publish .
+# Non-root user (aspnet images support user creation)
+RUN useradd -m -u 10001 dotnetapp
 
-LABEL org.opencontainers.image.title="DotNet API Example" \
-      org.opencontainers.image.description="Example ASP.NET Core API for BrikByteOS" \
-      org.opencontainers.image.source="https://github.com/BrikByte-Studios/brik-pipe-examples" \
-      org.opencontainers.image.version="${APP_VERSION}" \
-      org.opencontainers.image.revision="${GIT_COMMIT}"
+ARG IMAGE_SOURCE
+ARG VCS_REF
+ARG BUILD_DATE
+LABEL org.opencontainers.image.source=$IMAGE_SOURCE \
+      org.opencontainers.image.revision=$VCS_REF \
+      org.opencontainers.image.created=$BUILD_DATE \
+      org.opencontainers.image.title="brikbyte-dotnet-service" \
+      org.opencontainers.image.description="BrikByteOS v1 .NET scaffold" \
+      org.opencontainers.image.licenses="UNLICENSED"
 
-USER appuser
+COPY --from=builder /out /app
+
+USER 10001
 EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "BrikByte.DotNetApiExample.dll"]
+# NOTE: replace with your assembly name
+CMD ["dotnet", "YourService.dll"]
