@@ -33,7 +33,7 @@ jobs:
       cache_mode: "registry"
       cache_repo: "ghcr.io/${{ github.repository_owner }}/node-api-example-cache"
 
-      # Build args / labels (optional)
+      # Build args / labels (optional).
       build_args: |
         NODE_ENV=production
       labels: |
