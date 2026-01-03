@@ -12,7 +12,7 @@ jobs:
     name: Kaniko build (BrikByteOS v1)
     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/container-build-kaniko.yml@main
     with:
-      # Where the Dockerfile + app live (root = ".")
+      # Where the Dockerfile + app live (root = ".").
       working_directory: "node-api-example"
       context: "node-api-example"
       dockerfile: "Dockerfile"
