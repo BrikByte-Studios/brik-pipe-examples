@@ -1,77 +1,60 @@
-# BrikByteOS Pipelines — Node API Kaniko Example (Registry + Cache)
-#
-# This workflow:
-#   - Runs on pushes to main that touch node-api-example.
-#   - Builds a Node API image using the reusable Kaniko workflow.
-#   - Tags it with:
-#       - v0.1.0 (semver-like)
-#       - sha-<GITHUB_SHA>
-#   - Pushes to GHCR (ghcr.io/brikbyte-studios/example-node-api).
-#   - Enables Kaniko caching using a derived cache repo:
-#       ghcr.io/brikbyte-studios/example-node-api-cache
-#
-# Repo structure:
-#   brik-pipe-examples/
-#     .github/workflows/node-api-use-kaniko.yml   (this file)
-#     node-api-example/
-#       Dockerfile
-#       ...
-
-name: "CI — Build & Push (Node, Kaniko Example)"
+name: Node API - Container Build (Kaniko via BrikByteOS)
 
 on:
   push:
-    branches: [ main ]
-    paths:
-      - "node-api-example/**"
-      - ".github/workflows/node-api-use-kaniko.yml"
-
-env:
-  APP_VERSION: 0.1.0
+    branches: ["main"]
+    tags:
+      - "v*.*.*" # release builds
+  pull_request:
 
 jobs:
-  build-and-push:
-    # Calls the reusable workflow in BrikByte-Studios/.github
-    uses: BrikByte-Studios/.github/.github/workflows/ci-build-kaniko.yml@main
-
+  container_kaniko:
+    name: Kaniko build (BrikByteOS v1)
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/container-build-kaniko.yml@main
     with:
-      # Full image name hosted on GHCR
-      image_name: ghcr.io/brikbyte-studios/example-node-api
+      # Where the Dockerfile + app live (root = ".")
+      working_directory: "node-api-example"
+      context: "node-api-example"
+      dockerfile: "Dockerfile"
 
-      # Path to Dockerfile inside this monorepo
-      dockerfile: ./node-api-example/Dockerfile
+      # Canonical image name (no tag). Example uses GHCR.
+      image_name: "ghcr.io/${{ github.repository_owner }}/node-api-example"
 
-      # Build context for the app.
-      context: ./node-api-example
-
-      # Two tags:
-      #   - semver-like (hard-coded here as v0.1.0 for the example)
-      #   - SHA-based
-      tags: |
-        v0.1.0
+      # Tags: always include SHA tag; add SemVer tag on release
+      # - For PRs / main pushes: sha-<shortsha>
+      # - For tag pushes (vX.Y.Z): sha-<shortsha>,vX.Y.Z
+      tags: >-
         sha-${{ github.sha }}
 
-      # Optional build arguments for the Docker build.
+      push: ${{ github.event_name != 'pull_request' }}
+
+      # Cache defaults for kaniko v1
+      cache_enabled: true
+      cache_mode: "registry"
+      cache_repo: "ghcr.io/${{ github.repository_owner }}/node-api-example-cache"
+
+      # Build args / labels (optional)
       build_args: |
         NODE_ENV=production
-        APP_NAME=example-node-api
+      labels: |
+        org.opencontainers.image.title=node-api-service
+        org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+        org.opencontainers.image.revision=${{ github.sha }}
+        org.opencontainers.image.created=${{ github.run_id }}
 
-      # Registry host; defaults to ghcr.io in the reusable workflow,
-      # but we pass it for clarity.
-      registry: ghcr.io
+      registry: "ghcr.io"
+      auth_mode: "secrets" # v1 baseline for GHCR push
 
-      # Enable caching (default is true, but we set explicitly for clarity)
-      cache_enabled: true
+      # Evidence handling
+      upload_artifacts: true
+      validate_evidence_schema: true
 
-      # Optional explicit cache repo (commented out):
-      cache_repo: ghcr.io/brikbyte-studios/cache/example-node-api
+      # --- PIPE-CORE-1.2.5 Tag Policy (v1) ---
+      enforce_tag_policy: true
+      allow_latest: false
+      release: ${{ startsWith(github.ref, 'refs/tags/v') }}
 
     secrets:
-      # Map repo/org secrets into the reusable workflow.
-      #
-      # For GHCR, this can often be the built-in GITHUB_TOKEN as long as
-      # the repo has packages: write permission.
-      REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Optional – if you define REGISTRY_USERNAME at org/env level:
-      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      # Only required when push=true and auth_mode=secrets
+      registry_username: ${{ github.actor }}
+      registry_password: ${{ secrets.GITHUB_TOKEN }}
