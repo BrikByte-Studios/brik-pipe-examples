@@ -1,0 +1,36 @@
+name: Go Build & Publish (Buildx).
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  container:
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/container-build-buildx.yml@main
+
+    with:
+      working_directory: go-api-example
+      context: .
+      dockerfile: Dockerfile
+
+      image_name: ghcr.io/BrikByte-Studios/go-api-example
+      tags: sha-${{ github.sha }}
+
+      push: ${{ github.ref == 'refs/heads/main' }}
+
+      registry: ghcr.io
+      auth_mode: secrets
+
+      cache_enabled: true
+      cache_mode: gha
+
+      enforce_tag_policy: true
+      allow_latest: false
+      release: false
+
+      upload_artifacts: true
+
+    secrets:
+      registry_username: ${{ github.actor }}
+      registry_password: ${{ secrets.GITHUB_TOKEN }}
