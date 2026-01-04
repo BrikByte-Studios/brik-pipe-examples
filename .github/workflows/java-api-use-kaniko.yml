@@ -1,63 +1,60 @@
-# BrikByteOS Pipelines — Java API Kaniko Example
-#
-# This workflow:
-#   - Runs on pushes to main that touch java-service-example.
-#   - Builds a Java microservice container image using Kaniko.
-#   - Tags image with:
-#       - v0.1.0 (semver-like)
-#       - sha-<GITHUB_SHA>
-#   - Pushes to GHCR → ghcr.io/brikbyte-studios/example-java-service
-#
-# Repo structure expected:
-#   brik-pipe-examples/
-#     .github/workflows/java-api-use-kaniko.yml   (← this file)
-#     java-service-example/
-#       Dockerfile
-#       (Maven/Gradle sources here)
-
-name: "CI — Build & Push (Java, Kaniko Example)"
+name: Java API - Container Build (Kaniko via BrikByteOS)
 
 on:
   push:
-    branches: [ main ]
-    paths:
-      - "java-api-example/**"
-      - ".github/workflows/java-api-use-kaniko.yml"
+    branches: ["main"]
+    tags:
+      - "v*.*.*" # release builds
+  pull_request:
 
 jobs:
-  build-and-push:
-    # Reusable workflow reference
-    uses: BrikByte-Studios/.github/.github/workflows/ci-build-kaniko.yml@main
-
+  container_kaniko:
+    name: Kaniko build (BrikByteOS v1)
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/container-build-kaniko.yml@main
     with:
-      # GHCR target (DO NOT include tag here — tags are below)
-      image_name: ghcr.io/brikbyte-studios/example-java-api
+      # Where the Dockerfile + app live (root = ".")
+      working_directory: "java-api-example"
+      context: "."
+      dockerfile: "Dockerfile"
 
-      # Dockerfile path for the java service container
-      dockerfile: ./java-api-example/Dockerfile
+      # Canonical image name (no tag). Example uses GHCR.
+      image_name: "ghcr.io/${{ github.repository_owner }}/java-api-example"
 
-      # Build context directory (Kaniko build root)
-      context: ./java-api-example
-
-      # Deployment tags → reusable workflow converts into full destinations:
-      #   ghcr.io/brikbyte-studios/example-java-service:v0.1.0
-      #   ghcr.io/brikbyte-studios/example-java-service:sha-xxxxxx
-      tags: |
-        v0.1.0
+      # Tags: always include SHA tag; add SemVer tag on release
+      # - For PRs / main pushes: sha-<shortsha>
+      # - For tag pushes (vX.Y.Z): sha-<shortsha>,vX.Y.Z
+      tags: >-
         sha-${{ github.sha }}
 
-      # Optional build args (environment specific)
-      build_args: |
-        JAVA_ENV=production
-        SERVICE_NAME=example-java-service
+      push: ${{ github.event_name != 'pull_request' }}
 
-      # explicit cache repo for Java builds
+      # Cache defaults for kaniko v1.
       cache_enabled: true
-      cache_repo: ghcr.io/brikbyte-studios/cache/example-java-api
+      cache_mode: "registry"
+      cache_repo: "ghcr.io/${{ github.repository_owner }}/java-api-example-cache"
 
-      # Registry endpoint for login + push
-      registry: ghcr.io
+      # Build args / labels (optional).
+      build_args: |
+        NODE_ENV=production
+      labels: |
+        org.opencontainers.image.title=node-api-service
+        org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+        org.opencontainers.image.revision=${{ github.sha }}
+        org.opencontainers.image.created=${{ github.run_id }}
+
+      registry: "ghcr.io"
+      auth_mode: "secrets" # v1 baseline for GHCR push
+
+      # Evidence handling
+      upload_artifacts: true
+      validate_evidence_schema: true
+
+      # --- PIPE-CORE-1.2.5 Tag Policy (v1) ---
+      enforce_tag_policy: true
+      allow_latest: false
+      release: ${{ startsWith(github.ref, 'refs/tags/v') }}
 
     secrets:
-      REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GHCR push token
-      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      # Only required when push=true and auth_mode=secrets
+      registry_username: ${{ github.actor }}
+      registry_password: ${{ secrets.GITHUB_TOKEN }}
