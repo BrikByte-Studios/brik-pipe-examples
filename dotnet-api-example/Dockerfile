@@ -1,11 +1,5 @@
 # -----------------------------------------------------------------------------
-# BrikByteOS v1 — .NET Dockerfile Scaffold (Fixed)
-#
-# Goals:
-# - Cache-friendly: restore using sln + csproj files first
-# - Multi-stage: build/publish -> runtime
-# - Non-root runtime
-# - OCI labels via safe build args
+# BrikByteOS v1 — .NET Dockerfile (Kaniko-safe, cache-friendly)
 # -----------------------------------------------------------------------------
 
 ARG IMAGE_SOURCE="unknown"
@@ -15,29 +9,29 @@ ARG BUILD_DATE="unknown"
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS builder
 WORKDIR /src
 
-# 1) Copy solution + project files FIRST for restore caching
-COPY *.sln ./
+# Copy solution
+COPY dotnet-api-example.sln ./
 
-# Copy csproj(s) while preserving expected folder layout
-# IMPORTANT: include tests if the .sln references them.
-COPY src/**/*.csproj ./src/
-COPY tests/**/*.csproj ./tests/
+# Copy csproj files WHILE preserving their directories (explicit)
+COPY src/BrikByte.DotNetApiExample/BrikByte.DotNetApiExample.csproj \
+     src/BrikByte.DotNetApiExample/
 
-# 2) Restore (solution restore is fine now that all referenced csproj exist)
-RUN dotnet restore
+COPY tests/BrikByte.DotNetApiExample.Tests/BrikByte.DotNetApiExample.Tests.csproj \
+     tests/BrikByte.DotNetApiExample.Tests/
 
-# 3) Copy the remaining source
+# Restore now works (projects exist at paths referenced by the .sln)
+RUN dotnet restore dotnet-api-example.sln
+
+# Copy everything else
 COPY . .
 
-# 4) Publish explicitly (avoid ambiguity)
-# NOTE: set this to your actual API project path.
-ARG APP_PROJECT="src/BrikByte.DotNetApiExample/BrikByte.DotNetApiExample.csproj"
-RUN dotnet publish "$APP_PROJECT" -c Release -o /out --no-restore
+# Publish explicitly
+RUN dotnet publish src/BrikByte.DotNetApiExample/BrikByte.DotNetApiExample.csproj \
+    -c Release -o /out --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-# Non-root user
 RUN useradd -m -u 10001 dotnetapp
 
 ARG IMAGE_SOURCE
@@ -54,6 +48,4 @@ COPY --from=builder /out /app
 
 USER 10001
 EXPOSE 8080
-
-# NOTE: set to your assembly name.
 CMD ["dotnet", "BrikByte.DotNetApiExample.dll"]
