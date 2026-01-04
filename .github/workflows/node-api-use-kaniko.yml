@@ -28,7 +28,7 @@ jobs:
 
       push: ${{ github.event_name != 'pull_request' }}
 
-      # Cache defaults for kaniko v1
+      # Cache defaults for kaniko v1.
       cache_enabled: true
       cache_mode: "registry"
       cache_repo: "ghcr.io/${{ github.repository_owner }}/node-api-example-cache"
