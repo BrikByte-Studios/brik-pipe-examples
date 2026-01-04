@@ -55,5 +55,5 @@ COPY --from=builder /out /app
 USER 10001
 EXPOSE 8080
 
-# NOTE: set to your assembly name
+# NOTE: set to your assembly name.
 CMD ["dotnet", "BrikByte.DotNetApiExample.dll"]
