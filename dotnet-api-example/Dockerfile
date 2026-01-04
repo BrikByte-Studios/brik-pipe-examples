@@ -1,8 +1,8 @@
 # -----------------------------------------------------------------------------
-# BrikByteOS v1 — .NET Dockerfile Scaffold
+# BrikByteOS v1 — .NET Dockerfile Scaffold (Fixed)
 #
 # Goals:
-# - Cache-friendly: csproj restore before source
+# - Cache-friendly: restore using sln + csproj files first
 # - Multi-stage: build/publish -> runtime
 # - Non-root runtime
 # - OCI labels via safe build args
@@ -15,24 +15,29 @@ ARG BUILD_DATE="unknown"
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS builder
 WORKDIR /src
 
-# Copy csproj(s) first for restore caching
-# NOTE: adjust paths to your solution structure
+# 1) Copy solution + project files FIRST for restore caching
 COPY *.sln ./
-COPY src/**/*.csproj ./src/
 
-# Restore
+# Copy csproj(s) while preserving expected folder layout
+# IMPORTANT: include tests if the .sln references them.
+COPY src/**/*.csproj ./src/
+COPY tests/**/*.csproj ./tests/
+
+# 2) Restore (solution restore is fine now that all referenced csproj exist)
 RUN dotnet restore
 
-# Copy remaining source
+# 3) Copy the remaining source
 COPY . .
 
-# Publish (self-contained false; relies on runtime image)
-RUN dotnet publish -c Release -o /out --no-restore
+# 4) Publish explicitly (avoid ambiguity)
+# NOTE: set this to your actual API project path.
+ARG APP_PROJECT="src/BrikByte.DotNetApiExample/BrikByte.DotNetApiExample.csproj"
+RUN dotnet publish "$APP_PROJECT" -c Release -o /out --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-# Non-root user (aspnet images support user creation)
+# Non-root user
 RUN useradd -m -u 10001 dotnetapp
 
 ARG IMAGE_SOURCE
@@ -50,5 +55,5 @@ COPY --from=builder /out /app
 USER 10001
 EXPOSE 8080
 
-# NOTE: replace with your assembly name
-CMD ["dotnet", "YourService.dll"]
+# NOTE: set to your assembly name
+CMD ["dotnet", "BrikByte.DotNetApiExample.dll"]
