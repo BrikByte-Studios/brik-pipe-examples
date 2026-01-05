@@ -1,4 +1,4 @@
-name: "Example: python build."
+name: "Example: python build"
 
 on: [push, pull_request]
 
