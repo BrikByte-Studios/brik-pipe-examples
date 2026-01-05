@@ -6,7 +6,7 @@ jobs:
   build:
     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/build-python.yml@main
     with:
-      working_directory: python-api-example
+      working_directory: "python-api-example"
       runtime_version: "3.12"
       package_manager: "pip"
       run_lint: true

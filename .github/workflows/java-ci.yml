@@ -6,7 +6,7 @@ jobs:
   build:
     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/build-java.yml@main
     with:
-      working_directory: java-api-example
+      working_directory: "java-api-example"
       runtime_version: ""               # or "20" if you want explicit
       run_lint: true
       run_tests: true
