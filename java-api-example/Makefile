@@ -9,11 +9,20 @@
 #
 # Targets:
 #   - make build : mvn -B clean package
-#   - make test  : mvn -B test
-#   - make ci    : mvn -B clean verify (build + tests).
+#   - make test  : mvn -B test (shard-aware, unit tests only)
+#   - make ci    : deps → lint → build → test
 # -----------------------------------------------------------------------------
 
 MVN          ?= mvn
+
+# CI-hardening + deterministic local Maven repo (inside workspace for caching)
+MVN_FLAGS ?= -B \
+  -Dmaven.wagon.http.retryHandler.count=3 \
+  -Dmaven.wagon.http.retryHandler.requestSentEnabled=true \
+  -Dmaven.wagon.httpconnectionManager.ttlSeconds=25 \
+  -Dhttp.keepAlive=false \
+  -Dmaven.repo.local=$(CURDIR)/.m2/repository
+
 POM_FILE     := pom.xml
 TARGET_DIR   := target
 SHELL := /usr/bin/env bash
@@ -26,7 +35,7 @@ help:
 	@echo "  make deps   - Resolve Maven dependencies"
 	@echo "  make lint   - Static verification (compile + plugins, no tests)"
 	@echo "  make build  - Maven clean + package"
-	@echo "  make test   - Maven test (shard-aware)"
+	@echo "  make test   - Maven unit tests (shard-aware)"
 	@echo "  make ci     - deps → lint → build → test"
 	@echo "  make clean  - Remove target/ directory"
 
@@ -35,7 +44,7 @@ help:
 # --------------------------------------------------------------------
 deps:
 	@echo "📦 Resolving Maven dependencies..."
-	$(MVN) -B dependency:resolve
+	$(MVN) $(MVN_FLAGS) dependency:resolve
 
 # --------------------------------------------------------------------
 # Lint / Static verification (PIPE-CORE-1.1.3 contract)
@@ -43,17 +52,18 @@ deps:
 # --------------------------------------------------------------------
 lint:
 	@echo "🧹 Running Maven static verification (lint)..."
-	$(MVN) -B -DskipTests verify
+	$(MVN) $(MVN_FLAGS) -DskipTests verify
 
 # --------------------------------------------------------------------
 # Build (artifact creation)
 # --------------------------------------------------------------------
 build:
 	@echo "🏗️ Building Java project with Maven..."
-	$(MVN) -B clean package
+	$(MVN) $(MVN_FLAGS) clean package
 
 # --------------------------------------------------------------------
-# Test (shard-aware)
+# Test (shard-aware) — UNIT tests only
+#  - Excludes integration tests by name and folder to avoid forcing them via -Dtest
 # --------------------------------------------------------------------
 test: deps
 	@set -euo pipefail; \
@@ -64,8 +74,13 @@ test: deps
 	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
 	  files="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}")"; \
 	else \
-	  echo "📌 Discovering tests under src/test/java (recursive)"; \
-	  files="$$(find src/test/java -type f \( -name '*Test.java' -o -name '*Tests.java' \) 2>/dev/null | sort || true)"; \
+	  echo "📌 Discovering UNIT tests under src/test/java (recursive)"; \
+	  files="$$(find src/test/java -type f \
+	    \( -name '*Test.java' -o -name '*Tests.java' \) \
+	    ! -name '*IT.java' \
+	    ! -name '*IntegrationTest.java' \
+	    ! -path '*/integration/*' \
+	    2>/dev/null | sort || true)"; \
 	  shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
 	  if [ "$$total" -gt "1" ]; then \
 	    files="$$(FILES="$$files" UNIT_SHARD="$$shard" UNIT_SHARD_TOTAL="$$total" \
@@ -82,7 +97,7 @@ test: deps
 	classes="$$(echo "$$files" | sed -E 's|^src/test/java/||; s|/|.|g; s|\.java$$||')"; \
 	tests_csv="$$(echo "$$classes" | paste -sd, -)"; \
 	echo "🧪 Surefire -Dtest=$$tests_csv"; \
-	$(MVN) -B -Dtest="$$tests_csv" test; \
+	$(MVN) $(MVN_FLAGS) -Dtest="$$tests_csv" test; \
 	$(MAKE) post-test
 
 post-test:
