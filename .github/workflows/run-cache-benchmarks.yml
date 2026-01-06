@@ -1,0 +1,51 @@
+# -----------------------------------------------------------------------------
+# brik-pipe-examples — Cache Benchmark Runner
+#
+# Purpose:
+#   Calls BrikByteOS reusable benchmark harness from brik-pipe-actions.
+#   Produces auditable benchmark evidence artifacts for Node/Python/JVM examples.
+#
+# Triggers:
+#   - workflow_dispatch (manual)
+#   - schedule (weekly)
+# -----------------------------------------------------------------------------
+
+name: "bench: cache (weekly)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      stacks:
+        description: "Comma-separated: node,python,jvm"
+        required: false
+        default: "node,python,jvm"
+  schedule:
+    # Weekly on Sundays 03:00 Africa/Johannesburg-ish (UTC shown in GitHub; adjust if desired)
+    - cron: "0 1 * * 0"
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/cache-benchmarks.yml@main
+    with:
+      target_repo: "BrikByte-Studios/brik-pipe-examples"
+      target_ref: ${{ github.sha }}
+      stacks: ${{ github.event.inputs.stacks || 'node,python,jvm' }}
+
+      # These should match your repo layout:
+      node_workdir: "node-api-example"
+      python_workdir: "python-api-example"
+      jvm_workdir: "java-api-example"
+
+      node_tool: "npm"
+      python_tool: "pip"
+      jvm_tool: "maven"
+
+      node_version: "20"
+      python_version: "3.12"
+      java_version: "21"
+
+      run_tests: true
+      upload_artifacts: true
