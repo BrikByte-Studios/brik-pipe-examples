@@ -1,4 +1,4 @@
-name: "Example: go build"
+name: "Example: go build."
 
 on: [push, pull_request]
 
