@@ -120,16 +120,19 @@ test-unit: deps
 	echo "📄 Selected test files ($$(echo "$$selected" | wc -l | tr -d ' ')):"; \
 	echo "$$selected" | sed 's/^/  - /'; \
 	\
+	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
+	mkdir -p "$$ARTIFACT_ROOT/test-results" "$$ARTIFACT_ROOT/coverage" out; \
+	\
 	PYTHONPATH="$$(pwd):$${PYTHONPATH:-}" pytest -q \
 	  $$selected \
 	  -m "not integration" \
 	  --maxfail=1 \
 	  --disable-warnings \
-	  --junitxml=out/junit.xml \
+	  --junitxml="$$ARTIFACT_ROOT/test-results/junit.xml" \
 	  --cov=main \
 	  --cov-report=term-missing \
-	  --cov-report=xml:coverage.xml \
-	  --cov-report=json:out/coverage.json
+	  --cov-report=xml:"$$ARTIFACT_ROOT/coverage/coverage.xml" \
+	  --cov-report=json:"$$ARTIFACT_ROOT/coverage/coverage.json"
 
 # Backwards-compatible alias
 test: test-unit
