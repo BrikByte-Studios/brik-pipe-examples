@@ -37,8 +37,8 @@ help:
 
 
 install:
-	@echo "📦 Installing Node dependencies via npm ci...."
-	$(NPM) ci
+	@echo "📦 Installing Node dependencies via npm ci (including dev deps)..."
+	NODE_ENV=development $(NPM) ci --include=dev
 
 build:
 	@echo "🏗️ Building Node.js application..."
@@ -64,11 +64,9 @@ test: install
 	  find . -maxdepth 3 -type d \( -name "tests" -o -name "__tests__" \) || true; \
 	  exit 1; \
 	fi; \
-	\
 	SHARD="$${UNIT_SHARD:-1}"; \
 	TOTAL="$${UNIT_SHARD_TOTAL:-1}"; \
 	echo "🧩 Shard: $$SHARD/$$TOTAL"; \
-	\
 	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
 	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
 	  LIST="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}")"; \
@@ -76,19 +74,17 @@ test: install
 	  echo "📌 Using repo sharder: scripts/shard-tests.cjs"; \
 	  LIST="$$(node scripts/shard-tests.cjs tests/unit "$$SHARD" "$$TOTAL")"; \
 	fi; \
-	\
 	if [ -z "$$LIST" ]; then \
 	  echo "ℹ️ No tests selected for shard $$SHARD/$$TOTAL (nothing to run)."; \
 	  exit 0; \
 	fi; \
-	\
 	echo "📄 Selected test files ($$(echo "$$LIST" | wc -l | tr -d ' ')):"; \
 	echo "$$LIST" | sed 's/^/  - /'; \
-	\
 	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
 	mkdir -p "$$ARTIFACT_ROOT/test-results" "$$ARTIFACT_ROOT/coverage"; \
+	FILES_OR_GLOB="$$(printf "%s\n" "$$LIST" | tr '\n' ' ')"; \
+	TEST_FILES="$$FILES_OR_GLOB" ARTIFACT_ROOT="$$ARTIFACT_ROOT" $(NPM) run test:shard
 
-	npm run test:shard
 
 ci: clean install build test
 	@echo "✅ CI pipeline (Node) completed successfully."
