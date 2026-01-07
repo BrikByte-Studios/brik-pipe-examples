@@ -14,7 +14,7 @@
 #   - make test-unit       : Run unit tests only (exclude @pytest.mark.integration)
 #   - make test-integration: Run integration tests only (@pytest.mark.integration)
 #   - make test            : Alias for unit tests (for backwards compatibility)
-#   - make ci              : CI-safe: deps → build → unit tests
+#   - make ci              : CI-safe: deps → build → unit tests.
 # -----------------------------------------------------------------------------
 
 PYTHON     ?= python
