@@ -135,8 +135,9 @@ post-test:
 	  echo "✅ Copied JUnit: $$src -> $$JUNIT_CANON"; \
 	else \
 	  echo "✅ Merging $$count Surefire XML files -> $$JUNIT_CANON"; \
-	  # naive concat (OK for “exists” contract). Prefer your merge script later. \
-	  cat $$(cat "$$tmp_list") > "$$JUNIT_CANON"; \
+	  python3 "$${GITHUB_WORKSPACE:-$$(pwd)}/brik-pipe-actions/.github/actions/collect-raw-reports/merge_junit_xml.py" \
+	    --input-list "$$tmp_list" \
+	    --output "$$JUNIT_CANON"; \
 	fi; \
 	rm -f "$$tmp_list"
 
