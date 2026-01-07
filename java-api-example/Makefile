@@ -110,21 +110,22 @@ post-test:
 	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
 	SUREFIRE_DIR="$$ARTIFACT_ROOT/test-results/surefire"; \
 	JUNIT_CANON="$$ARTIFACT_ROOT/test-results/junit.xml"; \
+	LIST_DIR="$$ARTIFACT_ROOT/test-results/raw"; \
+	MERGER="$(CURDIR)/../brik-pipe-actions/.github/actions/collect-raw-reports/merge_junit_xml.py"; \
 	echo "🔧 Canonicalizing JUnit into $$JUNIT_CANON..."; \
-	mkdir -p "$$(dirname "$$JUNIT_CANON")"; \
+	mkdir -p "$$(dirname "$$JUNIT_CANON")" "$$LIST_DIR"; \
 	\
-	tmp_list="$$(mktemp)"; \
+	tmp_list="$$LIST_DIR/junit-files.txt"; \
 	( \
 	  ls -1 "$$SUREFIRE_DIR"/TEST-*.xml 2>/dev/null || true; \
 	  ls -1 target/surefire-reports/TEST-*.xml 2>/dev/null || true; \
 	  find . -path '*/target/surefire-reports/TEST-*.xml' -type f 2>/dev/null | sort || true; \
-	  find . -path '*/target/surefire-reports/*.xml' -type f 2>/dev/null | sort || true; \
+	  find . -path '*/target/surefire-reports/TEST-*.xml' -type f 2>/dev/null | sort || true; \
 	) | awk 'NF' | sort -u > "$$tmp_list"; \
 	\
 	count="$$(wc -l < "$$tmp_list" | tr -d ' ')"; \
 	if [ "$$count" = "0" ]; then \
 	  echo "::error::No Surefire XML reports found. Checked: $$SUREFIRE_DIR and */target/surefire-reports/"; \
-	  echo "Debug: listing target/surefire-reports (if exists)"; \
 	  ls -la target/surefire-reports 2>/dev/null || true; \
 	  exit 2; \
 	fi; \
@@ -134,13 +135,9 @@ post-test:
 	  cp "$$src" "$$JUNIT_CANON"; \
 	  echo "✅ Copied JUnit: $$src -> $$JUNIT_CANON"; \
 	else \
-	  echo "✅ Merging $$count Surefire XML files -> $$JUNIT_CANON"; \
-	  # naive concat (OK for “exists” contract). Prefer your merge script later. \
-	  cat $$(cat "$$tmp_list") > "$$JUNIT_CANON"; \
-	fi; \
-	rm -f "$$tmp_list"
-
-
+	  echo "✅ Merging $$count Surefire XML files -> $$JUNIT_CANON (via merge_junit_xml.py)"; \
+	  python3 "$$MERGER" --input-list "$$tmp_list" --output "$$JUNIT_CANON"; \
+	fi
 
 # --------------------------------------------------------------------
 # CI pipeline (PIPE-CORE-1.1.3 contract order)
