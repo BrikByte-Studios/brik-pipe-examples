@@ -111,15 +111,26 @@ post-test:
 	SUREFIRE_DIR="$$ARTIFACT_ROOT/test-results/surefire"; \
 	JUNIT_CANON="$$ARTIFACT_ROOT/test-results/junit.xml"; \
 	LIST_DIR="$$ARTIFACT_ROOT/test-results/raw"; \
-	MERGER="$(CURDIR)/../brik-pipe-actions/.github/actions/collect-raw-reports/merge_junit_xml.py"; \
 	echo "🔧 Canonicalizing JUnit into $$JUNIT_CANON..."; \
 	mkdir -p "$$(dirname "$$JUNIT_CANON")" "$$LIST_DIR"; \
+	\
+	# Prefer the checked-out action copy in GitHub Actions, fallback to vendored/local paths.
+	MERGER="$${GITHUB_ACTION_PATH:-}"; \
+	if [ -n "$$MERGER" ] && [ -f "$$MERGER/merge_junit_xml.py" ]; then \
+	  MERGER="$$MERGER/merge_junit_xml.py"; \
+	elif [ -f "/home/runner/work/_actions/BrikByte-Studios/brik-pipe-actions/main/.github/actions/collect-raw-reports/merge_junit_xml.py" ]; then \
+	  MERGER="/home/runner/work/_actions/BrikByte-Studios/brik-pipe-actions/main/.github/actions/collect-raw-reports/merge_junit_xml.py"; \
+	elif [ -f "./scripts/merge_junit_xml.py" ]; then \
+	  MERGER="./scripts/merge_junit_xml.py"; \
+	else \
+	  echo "::error::merge_junit_xml.py not found. Vendor it to ./scripts/merge_junit_xml.py or ensure brik-pipe-actions is available."; \
+	  exit 2; \
+	fi; \
 	\
 	tmp_list="$$LIST_DIR/junit-files.txt"; \
 	( \
 	  ls -1 "$$SUREFIRE_DIR"/TEST-*.xml 2>/dev/null || true; \
 	  ls -1 target/surefire-reports/TEST-*.xml 2>/dev/null || true; \
-	  find . -path '*/target/surefire-reports/TEST-*.xml' -type f 2>/dev/null | sort || true; \
 	  find . -path '*/target/surefire-reports/TEST-*.xml' -type f 2>/dev/null | sort || true; \
 	) | awk 'NF' | sort -u > "$$tmp_list"; \
 	\
@@ -135,7 +146,7 @@ post-test:
 	  cp "$$src" "$$JUNIT_CANON"; \
 	  echo "✅ Copied JUnit: $$src -> $$JUNIT_CANON"; \
 	else \
-	  echo "✅ Merging $$count Surefire XML files -> $$JUNIT_CANON (via merge_junit_xml.py)"; \
+	  echo "✅ Merging $$count Surefire XML files -> $$JUNIT_CANON (via $$MERGER)"; \
 	  python3 "$$MERGER" --input-list "$$tmp_list" --output "$$JUNIT_CANON"; \
 	fi
 
