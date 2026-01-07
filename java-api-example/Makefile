@@ -97,7 +97,12 @@ test: deps
 	classes="$$(echo "$$files" | sed -E 's|^src/test/java/||; s|/|.|g; s|\.java$$||')"; \
 	tests_csv="$$(echo "$$classes" | paste -sd, -)"; \
 	echo "🧪 Surefire -Dtest=$$tests_csv"; \
-	$(MVN) $(MVN_FLAGS) -Dtest="$$tests_csv" test; \
+	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
+	mkdir -p "$$ARTIFACT_ROOT/test-results"; \
+	$(MVN) $(MVN_FLAGS) \
+		-Dtest="$$tests_csv" \
+		-Dsurefire.reportsDirectory="$$ARTIFACT_ROOT/test-results/surefire" \
+		test
 	$(MAKE) post-test
 
 post-test:
