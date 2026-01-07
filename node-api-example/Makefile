@@ -88,8 +88,7 @@ test: install
 	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
 	mkdir -p "$$ARTIFACT_ROOT/test-results" "$$ARTIFACT_ROOT/coverage"; \
 
-	TEST_FILES="$$LIST" npm run test:shard --silent
-
+	TEST_FILES="$$LIST" npm run test:shard
 
 ci: clean install build test
 	@echo "✅ CI pipeline (Node) completed successfully."
