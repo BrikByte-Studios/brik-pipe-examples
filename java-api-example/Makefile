@@ -113,7 +113,6 @@ post-test:
 	echo "🔧 Canonicalizing JUnit into $$JUNIT_CANON..."; \
 	mkdir -p "$$(dirname "$$JUNIT_CANON")"; \
 	\
-	# Collect candidate XMLs (custom + Maven defaults)
 	tmp_list="$$(mktemp)"; \
 	( \
 	  ls -1 "$$SUREFIRE_DIR"/TEST-*.xml 2>/dev/null || true; \
@@ -136,9 +135,11 @@ post-test:
 	  echo "✅ Copied JUnit: $$src -> $$JUNIT_CANON"; \
 	else \
 	  echo "✅ Merging $$count Surefire XML files -> $$JUNIT_CANON"; \
-	  cat "$$(cat "$$tmp_list")" > "$$JUNIT_CANON"; \
+	  # naive concat (OK for “exists” contract). Prefer your merge script later. \
+	  cat $$(cat "$$tmp_list") > "$$JUNIT_CANON"; \
 	fi; \
 	rm -f "$$tmp_list"
+
 
 
 # --------------------------------------------------------------------
