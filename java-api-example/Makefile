@@ -114,7 +114,6 @@ post-test:
 	echo "🔧 Canonicalizing JUnit into $$JUNIT_CANON..."; \
 	mkdir -p "$$(dirname "$$JUNIT_CANON")" "$$LIST_DIR"; \
 	\
-	# Prefer the checked-out action copy in GitHub Actions, fallback to vendored/local paths.
 	MERGER="$${GITHUB_ACTION_PATH:-}"; \
 	if [ -n "$$MERGER" ] && [ -f "$$MERGER/merge_junit_xml.py" ]; then \
 	  MERGER="$$MERGER/merge_junit_xml.py"; \
