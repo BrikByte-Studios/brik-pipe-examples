@@ -16,3 +16,13 @@ jobs:
       upload_artifacts: true
       artifact_paths: "dist/**,coverage/**,out/**"
 
+  unit-tests:
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-node.yml@main
+    with:
+      working_directory: "node-api-example"
+      node_version: "20"
+      package_manager: "npm"
+      test_command: "make test"
+      coverage_mode: "optional"
+      enforcement_mode: "warn"
+
