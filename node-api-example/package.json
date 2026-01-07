@@ -9,7 +9,7 @@
     "build": "mkdir -p dist && cp -r src dist/",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test:shard": "mkdir -p out coverage && NODE_OPTIONS='--experimental-vm-modules' c8 --reporter=json --reporter=json-summary --report-dir=coverage node --test --test-reporter=junit --test-reporter-destination=out/junit.xml $TEST_FILES",
+    "test:shard": "ARTIFACT_ROOT=\"${GITHUB_WORKSPACE:-$(pwd)}/test-artifacts\"; mkdir -p \"$ARTIFACT_ROOT/test-results\" \"$ARTIFACT_ROOT/coverage\" && NODE_OPTIONS='--experimental-vm-modules' c8 --reporter=json --reporter=json-summary --report-dir=\"$ARTIFACT_ROOT/coverage\" node --test --test-reporter=junit --test-reporter-destination=\"$ARTIFACT_ROOT/test-results/junit.xml\" $TEST_FILES",
     "test:integration": "NODE_OPTIONS='--experimental-vm-modules' node --test tests/integration",
     "test:integration:smoke": "NODE_OPTIONS='--experimental-vm-modules' node --test tests/integration/smoke"
   },
@@ -26,13 +26,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
-    "eslint": "^9.0.0",
-    "globals": "^15.0.0",
-
     "@types/express": "^5.0.5",
     "axios": "^1.13.2",
     "c8": "^10.1.2",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0",
     "jest": "^30.2.0",
+    "jest-junit": "^16.0.0",
     "supertest": "^7.1.4"
   }
 }

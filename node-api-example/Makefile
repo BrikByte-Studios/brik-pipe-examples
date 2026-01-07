@@ -85,6 +85,9 @@ test: install
 	echo "📄 Selected test files ($$(echo "$$LIST" | wc -l | tr -d ' ')):"; \
 	echo "$$LIST" | sed 's/^/  - /'; \
 	\
+	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
+	mkdir -p "$$ARTIFACT_ROOT/test-results" "$$ARTIFACT_ROOT/coverage"; \
+
 	TEST_FILES="$$LIST" npm run test:shard
 
 
