@@ -102,7 +102,7 @@ test: deps
 	$(MVN) $(MVN_FLAGS) \
 		-Dtest="$$tests_csv" \
 		-Dsurefire.reportsDirectory="$$ARTIFACT_ROOT/test-results/surefire" \
-		test
+		test; \
 	$(MAKE) post-test
 
 post-test:
@@ -110,15 +110,35 @@ post-test:
 	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
 	SUREFIRE_DIR="$$ARTIFACT_ROOT/test-results/surefire"; \
 	JUNIT_CANON="$$ARTIFACT_ROOT/test-results/junit.xml"; \
-	echo "🔧 Merging Surefire JUnit XML into $$JUNIT_CANON..."; \
+	echo "🔧 Canonicalizing JUnit into $$JUNIT_CANON..."; \
 	mkdir -p "$$(dirname "$$JUNIT_CANON")"; \
-	if ls "$$SUREFIRE_DIR"/TEST-*.xml >/dev/null 2>&1; then \
-	  cat "$$SUREFIRE_DIR"/TEST-*.xml > "$$JUNIT_CANON"; \
-	  echo "✅ Wrote $$JUNIT_CANON"; \
-	else \
-	  echo "::error::No TEST-*.xml found under $$SUREFIRE_DIR"; \
+	\
+	# Collect candidate XMLs (custom + Maven defaults)
+	tmp_list="$$(mktemp)"; \
+	( \
+	  ls -1 "$$SUREFIRE_DIR"/TEST-*.xml 2>/dev/null || true; \
+	  ls -1 target/surefire-reports/TEST-*.xml 2>/dev/null || true; \
+	  find . -path '*/target/surefire-reports/TEST-*.xml' -type f 2>/dev/null | sort || true; \
+	  find . -path '*/target/surefire-reports/*.xml' -type f 2>/dev/null | sort || true; \
+	) | awk 'NF' | sort -u > "$$tmp_list"; \
+	\
+	count="$$(wc -l < "$$tmp_list" | tr -d ' ')"; \
+	if [ "$$count" = "0" ]; then \
+	  echo "::error::No Surefire XML reports found. Checked: $$SUREFIRE_DIR and */target/surefire-reports/"; \
+	  echo "Debug: listing target/surefire-reports (if exists)"; \
+	  ls -la target/surefire-reports 2>/dev/null || true; \
 	  exit 2; \
-	fi
+	fi; \
+	\
+	if [ "$$count" = "1" ]; then \
+	  src="$$(cat "$$tmp_list")"; \
+	  cp "$$src" "$$JUNIT_CANON"; \
+	  echo "✅ Copied JUnit: $$src -> $$JUNIT_CANON"; \
+	else \
+	  echo "✅ Merging $$count Surefire XML files -> $$JUNIT_CANON"; \
+	  cat "$$(cat "$$tmp_list")" > "$$JUNIT_CANON"; \
+	fi; \
+	rm -f "$$tmp_list"
 
 
 # --------------------------------------------------------------------
