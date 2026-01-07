@@ -15,3 +15,13 @@ jobs:
       build_command: "make build"
       upload_artifacts: true
       artifact_paths: "target/**,out/**"
+
+  unit-tests:
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-java.yml@main
+    with:
+      working_directory: "java-api-example"
+      java_version: "17"
+      build_tool: "maven"
+      test_command: "make test"
+      coverage_mode: "optional"
+      enforcement_mode: "warn"
