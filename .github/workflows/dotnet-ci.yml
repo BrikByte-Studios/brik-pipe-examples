@@ -15,3 +15,12 @@ jobs:
       build_command: "make build"
       upload_artifacts: true
       artifact_paths: "TestResults/**,out/**,**/bin/**,**/obj/**"
+
+  unit-tests:
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-dotnet.yml@main
+    with:
+      working_directory: "dotnet-api-example"
+      dotnet_version: "8.0.x"
+      test_command: "make test"
+      coverage_mode: "optional"
+      enforcement_mode: "warn"

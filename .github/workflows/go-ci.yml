@@ -15,3 +15,12 @@ jobs:
       build_command: "make build"
       upload_artifacts: true
       artifact_paths: "bin/**,out/**,coverage.out"
+
+  unit-tests:
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-go.yml@main
+    with:
+      working_directory: "go-api-example"
+      go_version: "1.22.x"
+      test_command: "make test"
+      coverage_mode: "optional"
+      enforcement_mode: "warn"
