@@ -93,8 +93,11 @@ build:
 
 test-unit: ensure-go-junit-report
 	@echo "🧪 Running Go UNIT tests..."
-	@mkdir -p out
-	@shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
+	@set -euo pipefail; \
+	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
+	mkdir -p "$$ARTIFACT_ROOT/test-results" "$$ARTIFACT_ROOT/coverage" "$$ARTIFACT_ROOT/test-results/raw"; \
+	\
+	shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
 	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
 	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
 	  pkgs="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}" | sort -u)"; \
@@ -110,9 +113,9 @@ test-unit: ensure-go-junit-report
 	\
 	if [ -z "$$pkgs" ]; then \
 	  echo "ℹ️ No packages selected for shard $$shard/$$total (nothing to run)."; \
-	  printf "mode: atomic\n" > coverage.out; \
-	  : > out/test-unit-report.json; \
-	  : > out/junit.xml; \
+	  echo "" > "$$ARTIFACT_ROOT/test-results/go-test.json"; \
+	  echo "" > "$$ARTIFACT_ROOT/test-results/junit.xml"; \
+	  echo "mode: atomic" > "$$ARTIFACT_ROOT/coverage/coverage.out"; \
 	  exit 0; \
 	fi; \
 	\
@@ -120,13 +123,16 @@ test-unit: ensure-go-junit-report
 	echo "📦 Selected packages ($$(printf "%s\n" "$$pkgs" | wc -l | tr -d ' ')):"; \
 	printf "%s\n" "$$pkgs" | sed 's/^/  - /'; \
 	\
+	# Contract v1 canonical Go JSON (required)
 	$(GO) test $$(printf "%s\n" "$$pkgs") \
 	  -covermode=atomic \
 	  -coverpkg=./... \
-	  -coverprofile=coverage.out \
-	  -json > out/test-unit-report.json; \
-	"$(GO_JUNIT_REPORT)" < out/test-unit-report.json > out/junit.xml; \
-	echo "✅ Wrote out/junit.xml and coverage.out"
+	  -coverprofile="$$ARTIFACT_ROOT/coverage/coverage.out" \
+	  -json > "$$ARTIFACT_ROOT/test-results/go-test.json"; \
+	\
+	# Optional: JUnit for nicer UI + reuse existing collectors
+	"$(GO_JUNIT_REPORT)" < "$$ARTIFACT_ROOT/test-results/go-test.json" > "$$ARTIFACT_ROOT/test-results/junit.xml"; \
+	echo "✅ Wrote $$ARTIFACT_ROOT/test-results/go-test.json, junit.xml, coverage/coverage.out"
 
 # Optional: integration tests (only when explicitly run, and typically
 # driven by the BrikPipe integration-test runner with -tags=integration).
