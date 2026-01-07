@@ -1,4 +1,4 @@
-name: "Example: java ci (Build + unit test)"
+name: "Example: java ci (Build + unit test)."
 
 on: [push, pull_request]
 
