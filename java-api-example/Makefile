@@ -106,14 +106,20 @@ test: deps
 	$(MAKE) post-test
 
 post-test:
-	@echo "🔧 Merging Surefire JUnit XML into out/junit.xml..."
-	@mkdir -p out
-	@if ls target/surefire-reports/TEST-*.xml >/dev/null 2>&1; then \
-	  cat target/surefire-reports/TEST-*.xml > out/junit.xml; \
-	  echo "✅ Wrote out/junit.xml from target/surefire-reports/TEST-*.xml"; \
+	@set -euo pipefail; \
+	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
+	SUREFIRE_DIR="$$ARTIFACT_ROOT/test-results/surefire"; \
+	JUNIT_CANON="$$ARTIFACT_ROOT/test-results/junit.xml"; \
+	echo "🔧 Merging Surefire JUnit XML into $$JUNIT_CANON..."; \
+	mkdir -p "$$(dirname "$$JUNIT_CANON")"; \
+	if ls "$$SUREFIRE_DIR"/TEST-*.xml >/dev/null 2>&1; then \
+	  cat "$$SUREFIRE_DIR"/TEST-*.xml > "$$JUNIT_CANON"; \
+	  echo "✅ Wrote $$JUNIT_CANON"; \
 	else \
-	  echo "⚠️ No TEST-*.xml files found under target/surefire-reports; skipping JUnit merge."; \
+	  echo "::error::No TEST-*.xml found under $$SUREFIRE_DIR"; \
+	  exit 2; \
 	fi
+
 
 # --------------------------------------------------------------------
 # CI pipeline (PIPE-CORE-1.1.3 contract order)
