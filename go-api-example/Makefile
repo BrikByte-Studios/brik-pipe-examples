@@ -92,8 +92,8 @@ build:
 	$(GO) build -o $(BUILD_OUT) ./...
 
 test-unit: ensure-go-junit-report
-	@echo "🧪 Running Go UNIT tests..."
 	@set -euo pipefail; \
+	echo "🧪 Running Go UNIT tests..."; \
 	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
 	mkdir -p "$$ARTIFACT_ROOT/test-results" "$$ARTIFACT_ROOT/coverage" "$$ARTIFACT_ROOT/test-results/raw"; \
 	\
@@ -105,6 +105,7 @@ test-unit: ensure-go-junit-report
 	  echo "📌 Discovering packages via 'go list ./...'"; \
 	  pkgs="$$( $(GO) list ./... | sort )"; \
 	fi; \
+	\
 	if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then \
 	  if [ "$$total" -gt 1 ]; then \
 	    pkgs="$$(printf "%s\n" "$$pkgs" | awk -v t="$$total" -v s="$$shard" '((NR-1) % t) == (s-1)')"; \
@@ -113,8 +114,8 @@ test-unit: ensure-go-junit-report
 	\
 	if [ -z "$$pkgs" ]; then \
 	  echo "ℹ️ No packages selected for shard $$shard/$$total (nothing to run)."; \
-	  echo "" > "$$ARTIFACT_ROOT/test-results/go-test.json"; \
-	  echo "" > "$$ARTIFACT_ROOT/test-results/junit.xml"; \
+	  : > "$$ARTIFACT_ROOT/test-results/go-test.json"; \
+	  : > "$$ARTIFACT_ROOT/test-results/junit.xml"; \
 	  echo "mode: atomic" > "$$ARTIFACT_ROOT/coverage/coverage.out"; \
 	  exit 0; \
 	fi; \
@@ -123,14 +124,12 @@ test-unit: ensure-go-junit-report
 	echo "📦 Selected packages ($$(printf "%s\n" "$$pkgs" | wc -l | tr -d ' ')):"; \
 	printf "%s\n" "$$pkgs" | sed 's/^/  - /'; \
 	\
-	# Contract v1 canonical Go JSON (required)
 	$(GO) test $$(printf "%s\n" "$$pkgs") \
 	  -covermode=atomic \
 	  -coverpkg=./... \
 	  -coverprofile="$$ARTIFACT_ROOT/coverage/coverage.out" \
 	  -json > "$$ARTIFACT_ROOT/test-results/go-test.json"; \
 	\
-	# Optional: JUnit for nicer UI + reuse existing collectors
 	"$(GO_JUNIT_REPORT)" < "$$ARTIFACT_ROOT/test-results/go-test.json" > "$$ARTIFACT_ROOT/test-results/junit.xml"; \
 	echo "✅ Wrote $$ARTIFACT_ROOT/test-results/go-test.json, junit.xml, coverage/coverage.out"
 
