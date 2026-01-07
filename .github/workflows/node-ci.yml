@@ -1,4 +1,4 @@
-name: "Example: node build."
+name: "Example: node ci (Build + unit test)"
 
 on: [push, pull_request]
 
