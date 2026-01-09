@@ -26,9 +26,9 @@ jobs:
       dotnet_cache_mode: "packages-only" # or "packages+http"
 
   unit-tests:
-    # Keep your advanced enforcement / coverage logic as-is
-    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-dotnet.yml@main
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test.yml@main
     with:
+      stack: "dotnet"
       working_directory: "dotnet-api-example"
       dotnet_version: "8.0.x"
       test_command: "make test"

@@ -26,9 +26,9 @@ jobs:
       allow_cache_write: true
 
   unit-tests:
-    # Keep your advanced enforcement / coverage logic as-is
-    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-node.yml@main
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test.yml@main
     with:
+      stack: "node"
       working_directory: "node-api-example"
       node_version: "20"
       package_manager: "npm"

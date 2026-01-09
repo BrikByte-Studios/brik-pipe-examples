@@ -26,12 +26,12 @@ jobs:
       allow_cache_write: true
 
   unit-tests:
-    # Keep your advanced enforcement / coverage logic as-is
-    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-java.yml@main
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test.yml@main
     with:
+      stack: "java"
       working_directory: "java-api-example"
       java_version: "17"
       build_tool: "maven"
       test_command: "make test"
       coverage_mode: "optional"
-      enforcement_mode: "warn"
+      enforcement_mode: "warn

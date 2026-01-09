@@ -26,9 +26,9 @@ jobs:
       poetry_cache_mode: "pip-only"
 
   unit-tests:
-    # Keep your advanced enforcement / coverage logic as-is
-    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-python.yml@main
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test.yml@main
     with:
+      stack: "python"
       working_directory: "python-api-example"
       python_version: "3.12"
       dependency_manager: "pip"

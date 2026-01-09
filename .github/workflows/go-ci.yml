@@ -26,9 +26,9 @@ jobs:
       go_cache_mode: "deps+build-cache"
 
   unit-tests:
-    # Keep your advanced enforcement / coverage logic as-is
-    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-go.yml@main
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test.yml@main
     with:
+      stack: "go"
       working_directory: "go-api-example"
       go_version: "1.22.x"
       test_command: "make test"
