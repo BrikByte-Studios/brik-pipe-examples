@@ -1,27 +1,27 @@
 services:
-
-  # ---------------------------------------------------------------------------
-  # Python API under test
-  # ---------------------------------------------------------------------------
   api:
+    # Build locally from this repo (CI-friendly, no registry login needed)
     build:
       context: .
       dockerfile: Dockerfile
-    image: brikbyte/python-api-example:integration
-    container_name: python-api
-    ports:
-      - "8000:8000"
+
+    # Optional: name the built image for easier debugging
+    image: brikbyte/python-api-example:ci
+
+    # Ensure compose doesn't try to pull from a registry
+    pull_policy: never
+
     environment:
-      # DB contract (matches PIPE-CORE-2.2.3 env contract)
-      TEST_DB_VENDOR: postgres
-      TEST_DB_HOST: db
-      TEST_DB_PORT: 5432
+      # Your app currently doesn't require DB env vars, but keep the contract ready
+      TEST_DB_VENDOR: ${TEST_DB_VENDOR:-postgres}
+      TEST_DB_HOST: ${TEST_DB_HOST:-db}
+      TEST_DB_PORT: ${TEST_DB_PORT:-5432}
       TEST_DB_NAME: ${TEST_DB_NAME:-app_test}
       TEST_DB_USER: ${TEST_DB_USER:-app}
       TEST_DB_PASSWORD: ${TEST_DB_PASSWORD:-app}
 
-      # Cache / mocks (future-proof)
-      TEST_REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
 
     depends_on:
       db:
@@ -30,44 +30,38 @@ services:
         condition: service_healthy
 
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health | grep -q ok"]
+      # python:3.11-slim doesn't include curl by default, so use python stdlib
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read(); print('ok')\""
+        ]
       interval: 3s
       timeout: 3s
-      retries: 30
-    restart: unless-stopped
+      retries: 40
 
-
-  # ---------------------------------------------------------------------------
-  # Postgres fixture
-  # ---------------------------------------------------------------------------
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: ${TEST_DB_NAME:-app_test}
-      POSTGRES_USER: ${TEST_DB_USER:-app}
-      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD:-app}
+      POSTGRES_DB: app_test
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${TEST_DB_USER:-app} -d ${TEST_DB_NAME:-app_test}"]
+      test: ["CMD-SHELL", "pg_isready -U app -d app_test"]
       interval: 3s
       timeout: 3s
       retries: 40
     volumes:
       - ./integration/seed/data:/docker-entrypoint-initdb.d:ro
-    restart: unless-stopped
 
-
-  # ---------------------------------------------------------------------------
-  # Redis fixture
-  # ---------------------------------------------------------------------------
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 3s
       timeout: 3s
       retries: 30
-    restart: unless-stopped
