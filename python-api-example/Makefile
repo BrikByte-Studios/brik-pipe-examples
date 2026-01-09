@@ -139,17 +139,20 @@ test: test-unit
 
 test-integration: deps
 	@echo "🌐 Running Python INTEGRATION tests (marked 'integration')..."
-	@if ls $(TEST_DIR)/integration >/dev/null 2>&1; then \
-	  mkdir -p "$(OUT_DIR)"; \
-	  PYTHONPATH="$$(pwd):$$PYTHONPATH" pytest \
+	@set -euo pipefail; \
+	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
+	mkdir -p "$$ARTIFACT_ROOT/integration/test-results" "$(OUT_DIR)"; \
+	if ls $(TEST_DIR)/integration >/dev/null 2>&1; then \
+	  PYTHONPATH="$$(pwd):$${PYTHONPATH:-}" pytest \
 	    $(TEST_DIR)/integration \
 	    -m "integration" \
 	    --maxfail=1 \
 	    --disable-warnings \
-	    --junitxml=out/junit-integration.xml; \
+	    --junitxml="$$ARTIFACT_ROOT/integration/test-results/junit.xml"; \
 	else \
 	  echo "ℹ️ No integration tests directory found; skipping integration pytest."; \
 	fi
+
 
 
 ci: deps build test-unit

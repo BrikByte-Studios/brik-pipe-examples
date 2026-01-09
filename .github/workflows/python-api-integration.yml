@@ -1,4 +1,4 @@
-name: "Integration Tests (Python Example) — BrikByteOS."
+name: "Integration Tests (Python Example) — BrikByteOS"
 
 on:
   workflow_dispatch: {}
@@ -11,14 +11,13 @@ jobs:
   integration:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
     environment: integration
-
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 1) Secure env contract resolution (GitHub Environment/Secrets)
       - name: Provision Integration Env
         uses: BrikByte-Studios/brik-pipe-actions/.github/actions/provision-integration-env@main
         id: integ_env
@@ -33,7 +32,11 @@ jobs:
           TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
           TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
           TEST_DB_VENDOR: postgres
+          # Optional defaults (safe)
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: "5432"
 
+      # 2) Bring up fixtures (compose)
       - name: Provision Integration Lab
         uses: BrikByte-Studios/brik-pipe-actions/.github/actions/provision-integration-lab@main
         with:
@@ -47,24 +50,72 @@ jobs:
             db::psql -U app -d app_test -c "select 1;"
           evidence_dir: "test-artifacts/integration/raw"
         env:
-          # Pass resolved env path to compose if your compose consumes it
           BB_INTEGRATION_ENV: ${{ steps.integ_env.outputs.resolved_env_path }}
 
-      # Example: your integration tests would run here (pytest -m integration, etc.)
-      - name: Run Integration Tests (example placeholder)
+      # 3) Run integration tests using Makefile (writes JUnit under test-artifacts/)
+      - name: Run Integration Tests
         shell: bash
+        working-directory: python-api-example
+        env:
+          # Provide the resolved env file to the app/test runner (optional but recommended)
+          BB_INTEGRATION_ENV: ${{ steps.integ_env.outputs.resolved_env_path }}
+          # Explicitly pass contract values for test runtime
+          TEST_DB_VENDOR: postgres
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: "5432"
+          TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
+          TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
+          TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
         run: |
           set -euo pipefail
-          echo "Run integration tests here."
-          mkdir -p test-artifacts/test-results
-          echo "<testsuites></testsuites>" > test-artifacts/test-results/junit.xml
 
-      # You will later add: parse + export-audit-integration in PIPE-CORE-2.2.4
+          # If you want the tests to source env file automatically:
+          # (only if the env file exists and is safe to source)
+          if [ -n "${BB_INTEGRATION_ENV:-}" ] && [ -f "${BB_INTEGRATION_ENV}" ]; then
+            set +x
+            # shellcheck disable=SC1090
+            source "${BB_INTEGRATION_ENV}"
+            set -x || true
+            set +x
+          fi
+
+          # Run integration tests (your Makefile target)
+          make test-integration
+
+          # Ensure artifacts are in the canonical folder for parsers
+          # Your Makefile writes unit JUnit to: test-artifacts/test-results/junit.xml
+          # Integration target writes to: out/junit-integration.xml (currently)
+          # So we copy it to the canonical location for parsing:
+          mkdir -p "${GITHUB_WORKSPACE}/test-artifacts/integration/test-results"
+          if [ -f "out/junit-integration.xml" ]; then
+            cp "out/junit-integration.xml" "${GITHUB_WORKSPACE}/test-artifacts/integration/test-results/junit.xml"
+          fi
+
+      # 4) Parse normalized integration results (expects raw reports under test-artifacts/integration/test-results)
+      - name: Parse integration results
+        uses: BrikByte-Studios/brik-pipe-actions/.github/actions/parse-integration-results@main
+        with:
+          stack: python
+          raw_reports_dir: test-artifacts/integration/test-results
+          out: test-artifacts/integration/test-results.json
+          format: auto
+          fail_on_missing: true
+
+      # 5) Export .audit bundle (even on test failure)
+      - name: Export integration audit
+        if: always()
+        uses: BrikByte-Studios/brik-pipe-actions/.github/actions/export-audit-integration@main
+        with:
+          normalized_results: test-artifacts/integration/test-results.json
+          raw_reports_dir: test-artifacts/integration/test-results
+          coverage_summary: test-artifacts/coverage/coverage-summary.json
+
       - name: Upload raw evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: integ-raw-evidence
           path: test-artifacts/integration/raw
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
           include-hidden-files: true
