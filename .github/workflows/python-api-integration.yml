@@ -1,4 +1,4 @@
-name: "Integration Tests (Python Example) — BrikByteOS"
+name: "Python API — Integration (BrikByteOS)"
 
 on:
   workflow_dispatch: {}
@@ -9,117 +9,33 @@ on:
 
 jobs:
   integration:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    environment: integration
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/reuse-integration-python.yml@main
+    secrets:
+      TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
+      TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
+      TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    with:
+      # Service location
+      working_directory: python-api-example
 
-      # 1) Secure env contract resolution (GitHub Environment/Secrets)
-      - name: Provision Integration Env
-        uses: BrikByte-Studios/brik-pipe-actions/.github/actions/provision-integration-env@main
-        id: integ_env
-        with:
-          mode: github-secrets
-          working_directory: python-api-example
-          required_keys: TEST_DB_PASSWORD TEST_DB_USER TEST_DB_NAME
-          enforcement_mode: enforce
-          mask_secrets: true
-        env:
-          TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
-          TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
-          TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
-          TEST_DB_VENDOR: postgres
-          # (Optional; safe defaults)
-          TEST_DB_PORT: "5432"
+      # Compose lab
+      compose_file: docker-compose.integration.yml
+      services: api,db,redis
 
-      # 2) Bring up fixtures + API (compose)
-      - name: Provision Integration Lab
-        uses: BrikByte-Studios/brik-pipe-actions/.github/actions/provision-integration-lab@main
-        with:
-          working_directory: "python-api-example"
-          compose_file: "docker-compose.integration.yml"
+      # Health gate
+      health_timeout_seconds: "180"
 
-          # IMPORTANT: include api in health gating (your integration test hits /health)
-          services: api,db,redis
+      # App base URL (host reachable)
+      app_base_url: http://localhost:8080
 
-          health_timeout_seconds: 180
-          seed_commands: |
-            echo "Seeding can run here (host)."
+      # Integration seed hooks
+      seed_exec: |
+        db::psql -U app -d app_test -c "select 1;"
 
-          # Seed exec should target the db service (not postgres)
-          seed_exec: |
-            db::psql -U app -d app_test -c "select 1;"
+      # Evidence / audit
+      evidence_dir: test-artifacts/integration/raw
+      raw_results_dir: test-artifacts/integration/test-results
 
-          evidence_dir: "test-artifacts/integration/raw"
-          teardown: "false"
-        env:
-          # IMPORTANT: Compose var substitutions need these available at "compose up" time
-          TEST_DB_VENDOR: postgres
-          TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
-          TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
-          TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
-          TEST_DB_PORT: "5432"
-
-          # Keep this (useful for later), but compose won't read it unless action supports --env-file
-          BB_INTEGRATION_ENV: ${{ steps.integ_env.outputs.resolved_env_path }}
-
-      # 3) Run integration tests using Makefile (writes JUnit under test-artifacts/)
-      - name: Run Integration Tests
-        shell: bash
-        working-directory: python-api-example
-        env:
-          TEST_DB_VENDOR: postgres
-          TEST_DB_HOST: localhost
-          TEST_DB_PORT: "5432"
-          TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
-          TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
-          TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
-          APP_BASE_URL: http://localhost:8080
-        run: |
-          set -euo pipefail
-
-          make test-integration
-
-          # Canonical path for parsers
-          mkdir -p "${GITHUB_WORKSPACE}/test-artifacts/integration/test-results"
-          if [ -f "out/junit-integration.xml" ]; then
-            cp "out/junit-integration.xml" "${GITHUB_WORKSPACE}/test-artifacts/integration/test-results/junit.xml"
-          fi
-
-      - name: Teardown Integration Lab
-        if: always()
-        shell: bash
-        working-directory: python-api-example
-        run: docker compose -f docker-compose.integration.yml down -v
-
-      # 4) Parse normalized integration results
-      - name: Parse integration results
-        uses: BrikByte-Studios/brik-pipe-actions/.github/actions/parse-integration-results@main
-        with:
-          stack: python
-          raw_reports_dir: test-artifacts/integration/test-results
-          out: test-artifacts/integration/test-results.json
-          format: auto
-          fail_on_missing: true
-
-      # 5) Export .audit bundle (even on test failure)
-      - name: Export integration audit
-        if: always()
-        uses: BrikByte-Studios/brik-pipe-actions/.github/actions/export-audit-integration@main
-        with:
-          normalized_results: test-artifacts/integration/test-results.json
-          raw_reports_dir: test-artifacts/integration/test-results
-          coverage_summary: test-artifacts/coverage/coverage-summary.json
-
-      - name: Upload raw evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: integ-raw-evidence
-          path: test-artifacts/integration/raw
-          if-no-files-found: warn
-          retention-days: 7
-          include-hidden-files: true
+      # Python runtime
+      python_version: "3.12"
