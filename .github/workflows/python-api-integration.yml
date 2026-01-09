@@ -1,4 +1,4 @@
-name: "Example: node integration (Compose Lab + Integration Tests)"
+name: "Example: python integration (Compose Lab + Integration Tests)"
 
 on: [push, pull_request]
 
@@ -6,14 +6,14 @@ jobs:
   integration:
     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/integration-test.yml@main
     with:
-      stack: "node"
+      stack: "python"
 
       # repo layout
-      working_directory: "node-api-example"
+      working_directory: "python-api-example"
 
       # compose lab
       compose_file: "docker-compose.integration.yml"
-      services: "api,db,mock"
+      services: "api,db,redis"
       required_services: ""            # empty => same as services
       health_timeout_seconds: "180"
       health_poll_seconds: "3"
@@ -25,8 +25,8 @@ jobs:
       seed_exec: ""
 
       # test runner
-      app_base_url: "http://localhost:3000"
-      node_version: "20.x"
+      app_base_url: "http://localhost:8080"
+      python_version: "3.12"
       integration_command: "make test-integration"
       junit_source_path: "out/junit-integration.xml"   # relative to working_directory
 

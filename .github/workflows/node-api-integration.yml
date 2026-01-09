@@ -1,49 +1,50 @@
-name: "Integration Tests (Node Example) — BrikByteOS."
+name: "Example: node integration (Compose Lab + Integration Tests)"
 
-on:
-  workflow_dispatch: {}
-  push:
-    paths:
-      - "node-api-example/**"
-      - ".github/workflows/node-api-integration.yml"
+on: [push, pull_request]
 
 jobs:
   integration:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/integration-test.yml@main
+    with:
+      stack: "node"
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # repo layout
+      working_directory: "node-api-example"
 
-      - name: Provision Integration Lab
-        uses: BrikByte-Studios/brik-pipe-actions/.github/actions/provision-integration-lab@main
-        with:
-          working_directory: "node-api-example"
-          compose_file: "docker-compose.integration.yml"
-          services: db
-          health_timeout_seconds: 180
-          seed_commands: |
-            echo "Seeding can run here (host)."
-          seed_exec: |
-            db::psql -U app -d app_test -c "select 1;"
-          evidence_dir: "test-artifacts/integration/raw"
+      # compose lab
+      compose_file: "docker-compose.integration.yml"
+      services: "api,db,mock"
+      required_services: ""            # empty => same as services
+      health_timeout_seconds: "180"
+      health_poll_seconds: "3"
+      down_volumes: "true"
+      compose_profiles: ""
 
-      # Example: your integration tests would run here (pytest -m integration, etc.)
-      - name: Run Integration Tests (example placeholder)
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "Run integration tests here."
-          mkdir -p test-artifacts/test-results
-          echo "<testsuites></testsuites>" > test-artifacts/test-results/junit.xml
+      # seeding (optional)
+      seed_commands: ""
+      seed_exec: ""
 
-      # You will later add: parse + export-audit-integration in PIPE-CORE-2.2.4
-      - name: Upload raw evidence
-        uses: actions/upload-artifact@v4
-        with:
-          name: integ-raw-evidence
-          path: test-artifacts/integration/raw
-          if-no-files-found: error
-          retention-days: 7
-          include-hidden-files: true
+      # test runner
+      app_base_url: "http://localhost:3000"
+      node_version: "20.x"
+      integration_command: "make test-integration"
+      junit_source_path: "out/junit-integration.xml"   # relative to working_directory
+
+      # evidence
+      evidence_dir: "test-artifacts/integration/raw"
+      raw_results_dir: "test-artifacts/integration/test-results"
+      normalized_results_out: "test-artifacts/integration/test-results.json"
+      upload_artifacts: true
+      artifact_retention_days: 7
+      timeout_minutes: 20
+
+      # env contract
+      provision_env_mode: "github-secrets"
+      required_keys: "TEST_DB_PASSWORD TEST_DB_USER TEST_DB_NAME"
+      enforcement_mode: "enforce"
+      mask_secrets: true
+
+    secrets:
+      TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
+      TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
+      TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
