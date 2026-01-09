@@ -54,6 +54,7 @@ jobs:
             db::psql -U app -d app_test -c "select 1;"
 
           evidence_dir: "test-artifacts/integration/raw"
+          teardown: "false"
         env:
           # IMPORTANT: Compose var substitutions need these available at "compose up" time
           TEST_DB_VENDOR: postgres
@@ -86,6 +87,12 @@ jobs:
           if [ -f "out/junit-integration.xml" ]; then
             cp "out/junit-integration.xml" "${GITHUB_WORKSPACE}/test-artifacts/integration/test-results/junit.xml"
           fi
+
+      - name: Teardown Integration Lab
+        if: always()
+        shell: bash
+        working-directory: python-api-example
+        run: docker compose -f docker-compose.integration.yml down -v
 
       # 4) Parse normalized integration results
       - name: Parse integration results
