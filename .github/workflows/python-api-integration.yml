@@ -1,73 +1,49 @@
-# Python API Example — Containerized Integration Tests
-# ----------------------------------------------------
-# This workflow:
-#   - Triggers on changes to python-api-example/ and to this workflow file.
-#   - Delegates orchestration to the reusable BrikPipe integration-test workflow
-#     in the .github governance repo.
-#   - Builds/uses the real Python service image and runs integration tests
-#     against app + DB (and optional cache if enabled).
-#
-# Assumptions for the python-api-example sample:
-#   - Service directory: python-api-example/
-#   - Dockerfile:        python-api-example/Dockerfile
-#   - App port:          8000 (e.g. FastAPI/uvicorn) — adjust if needed
-#   - Health endpoint:   GET /health returning 2xx when ready.
-#
-# If your image name or port differs, adjust `image`, `app_port`,
-# and `healthcheck_path` values in the `with:` block
-
-name: "Python API — Integration Tests"
+name: "Integration Tests (Python Example) — BrikByteOS"
 
 on:
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch: {}
   push:
-    branches: [ main ]
+    paths:
+      - "python-api-example/**"
+      - ".github/workflows/python-api-integration.yml"
 
 jobs:
   integration:
-    name: "Python API — Containerized Integration Tests"
-    # Reuse the central workflow from the .github governance repo.
-    # Use @main until you create a version tag (e.g. @v1).
-    uses: BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
-    secrets: inherit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
 
-    with:
-      # Full image tag for the Python API service.
-      # IMPORTANT: Align this with whatever PIPE-CONTAINER-KANIKO-INTEG-003 pushes.
-      # Example pattern (adjust name if needed):
-      #   ghcr.io/brikbyte-studios/example-python-api:sha-<GITHUB_SHA>
-      image: ghcr.io/brikbyte-studios/example-python-api:sha-${{ github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      # Where to build from if the image is not found in GHCR.
-      dockerfile: python-api-example/Dockerfile
-      context: python-api-example
+      - name: Provision Integration Lab
+        uses: BrikByte-Studios/brik-pipe-actions/.github/actions/provision-integration-lab@main
+        with:
+          working_directory: "python-api-example"
+          compose_file: "docker-compose.integration.yml"
+          services: "postgres,redis"
+          health_timeout_seconds: "180"
+          seed_commands: |
+            echo "Seeding can run here (host)."
+          seed_exec: |
+            postgres::psql -U app -d app_test -c "select 1;"
+          evidence_dir: "test-artifacts/integration/raw"
 
-      # Integration dependencies
-      db_image: postgres:16
+      # Example: your integration tests would run here (pytest -m integration, etc.)
+      - name: Run Integration Tests (example placeholder)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Run integration tests here."
+          mkdir -p test-artifacts/test-results
+          echo "<testsuites></testsuites>" > test-artifacts/test-results/junit.xml
 
-      # If this sample also uses Redis / MQ, set cache_image and enable_cache_service to true
-      # For a simple Python API sample, you can leave cache disabled (false).
-      cache_image: redis:7
-      enable_cache_service: true
-
-      # Test execution
-      test_language: "python"
-      # Optional: override to a custom command if you don't use pytest -m integration:
-      test_command: "pytest tests/integration -m 'integration'"
-
-      # Health checks
-      healthcheck_path: "/health"
-      healthcheck_timeout: "60"
-
-      # Network ports
-      app_port: "8080"   # Adjust to your Python service port (8000 for FastAPI by default)
-      db_port: "5432"
-
-      # matrix inputs (service × scenario)
-      services_csv: "payments,users"
-      scenarios_csv: "happy_path,declined_card,timeout"
-
-      # governed parallelism (clamped to integration.cap=4).
-      override_shards: "4"
-      flaky_detect: "true"
+      # You will later add: parse + export-audit-integration in PIPE-CORE-2.2.4
+      - name: Upload raw evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: integ-raw-evidence
+          path: test-artifacts/integration/raw
+          if-no-files-found: error
+          retention-days: 7
+          include-hidden-files: true
