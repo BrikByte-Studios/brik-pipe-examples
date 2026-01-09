@@ -1,41 +1,50 @@
-name: "Python API — Integration (BrikByteOS)"
+name: "Example: python integration (Compose Lab + Integration Tests)"
 
-on:
-  workflow_dispatch: {}
-  push:
-    paths:
-      - "python-api-example/**"
-      - ".github/workflows/python-api-integration.yml"
+on: [push, pull_request]
 
 jobs:
   integration:
-    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/reuse-integration-python.yml@main
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/integration-test.yml@main
+    with:
+      stack: "python"
+
+      # repo layout
+      working_directory: "python-api-example"
+
+      # compose lab
+      compose_file: "docker-compose.integration.yml"
+      services: "api,db,redis"
+      required_services: ""            # empty => same as services
+      health_timeout_seconds: "180"
+      health_poll_seconds: "3"
+      down_volumes: "true"
+      compose_profiles: ""
+
+      # seeding (optional)
+      seed_commands: ""
+      seed_exec: ""
+
+      # test runner
+      app_base_url: "http://localhost:8080"
+      python_version: "3.12"
+      integration_command: "make test-integration"
+      junit_source_path: "out/junit-integration.xml"   # relative to working_directory
+
+      # evidence
+      evidence_dir: "test-artifacts/integration/raw"
+      raw_results_dir: "test-artifacts/integration/test-results"
+      normalized_results_out: "test-artifacts/integration/test-results.json"
+      upload_artifacts: true
+      artifact_retention_days: 7
+      timeout_minutes: 20
+
+      # env contract
+      provision_env_mode: "github-secrets"
+      required_keys: "TEST_DB_PASSWORD TEST_DB_USER TEST_DB_NAME"
+      enforcement_mode: "enforce"
+      mask_secrets: true
+
     secrets:
       TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
       TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
       TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
-
-    with:
-      # Service location
-      working_directory: python-api-example
-
-      # Compose lab
-      compose_file: docker-compose.integration.yml
-      services: api,db,redis
-
-      # Health gate
-      health_timeout_seconds: "180"
-
-      # App base URL (host reachable)
-      app_base_url: http://localhost:8080
-
-      # Integration seed hooks
-      seed_exec: |
-        db::psql -U app -d app_test -c "select 1;"
-
-      # Evidence / audit
-      evidence_dir: test-artifacts/integration/raw
-      raw_results_dir: test-artifacts/integration/test-results
-
-      # Python runtime
-      python_version: "3.12"
