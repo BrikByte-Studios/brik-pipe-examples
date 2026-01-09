@@ -16,7 +16,7 @@ def get_app_base_url() -> str:
     Locally (fallback):
       - Use http://localhost:8080
     """
-    return os.getenv("APP_BASE_URL", "http://localhost:8080")
+    return os.getenv("APP_BASE_URL", "http://localhost:8080").rstrip("/")
 
 
 def test_health_endpoint_smoke():

@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     image: brikbyte/python-api-example:ci
     ports:
-      - "8000:8000"
+      - "8080:8000"
     environment:
       # optional, but useful if later you wire DB usage into the app
       TEST_DB_VENDOR: postgres
@@ -16,6 +16,7 @@ services:
       TEST_DB_PASSWORD: app
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      PORT: 8000
     depends_on:
       db:
         condition: service_healthy
