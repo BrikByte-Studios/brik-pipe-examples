@@ -32,24 +32,37 @@ jobs:
           TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
           TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
           TEST_DB_VENDOR: postgres
-          # Optional defaults (safe)
-          TEST_DB_HOST: localhost
+          # (Optional; safe defaults)
           TEST_DB_PORT: "5432"
 
-      # 2) Bring up fixtures (compose)
+      # 2) Bring up fixtures + API (compose)
       - name: Provision Integration Lab
         uses: BrikByte-Studios/brik-pipe-actions/.github/actions/provision-integration-lab@main
         with:
           working_directory: "python-api-example"
           compose_file: "docker-compose.integration.yml"
-          services: db,redis
+
+          # IMPORTANT: include api in health gating (your integration test hits /health)
+          services: api,db,redis
+
           health_timeout_seconds: 180
           seed_commands: |
             echo "Seeding can run here (host)."
+
+          # Seed exec should target the db service (not postgres)
           seed_exec: |
             db::psql -U app -d app_test -c "select 1;"
+
           evidence_dir: "test-artifacts/integration/raw"
         env:
+          # IMPORTANT: Compose var substitutions need these available at "compose up" time
+          TEST_DB_VENDOR: postgres
+          TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
+          TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
+          TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+          TEST_DB_PORT: "5432"
+
+          # Keep this (useful for later), but compose won't read it unless action supports --env-file
           BB_INTEGRATION_ENV: ${{ steps.integ_env.outputs.resolved_env_path }}
 
       # 3) Run integration tests using Makefile (writes JUnit under test-artifacts/)
@@ -57,9 +70,6 @@ jobs:
         shell: bash
         working-directory: python-api-example
         env:
-          # Provide the resolved env file to the app/test runner (optional but recommended)
-          BB_INTEGRATION_ENV: ${{ steps.integ_env.outputs.resolved_env_path }}
-          # Explicitly pass contract values for test runtime
           TEST_DB_VENDOR: postgres
           TEST_DB_HOST: localhost
           TEST_DB_PORT: "5432"
@@ -69,29 +79,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          # If you want the tests to source env file automatically:
-          # (only if the env file exists and is safe to source)
-          if [ -n "${BB_INTEGRATION_ENV:-}" ] && [ -f "${BB_INTEGRATION_ENV}" ]; then
-            set +x
-            # shellcheck disable=SC1090
-            source "${BB_INTEGRATION_ENV}"
-            set -x || true
-            set +x
-          fi
-
-          # Run integration tests (your Makefile target)
           make test-integration
 
-          # Ensure artifacts are in the canonical folder for parsers
-          # Your Makefile writes unit JUnit to: test-artifacts/test-results/junit.xml
-          # Integration target writes to: out/junit-integration.xml (currently)
-          # So we copy it to the canonical location for parsing:
+          # Canonical path for parsers
           mkdir -p "${GITHUB_WORKSPACE}/test-artifacts/integration/test-results"
           if [ -f "out/junit-integration.xml" ]; then
             cp "out/junit-integration.xml" "${GITHUB_WORKSPACE}/test-artifacts/integration/test-results/junit.xml"
           fi
 
-      # 4) Parse normalized integration results (expects raw reports under test-artifacts/integration/test-results)
+      # 4) Parse normalized integration results
       - name: Parse integration results
         uses: BrikByte-Studios/brik-pipe-actions/.github/actions/parse-integration-results@main
         with:
