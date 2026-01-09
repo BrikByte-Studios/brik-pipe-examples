@@ -17,16 +17,13 @@ services:
 
   mock:
     image: wiremock/wiremock:3.9.1
-    ports:
-      - "8080:8080"
+    # Optional: don't publish to host unless you need it
+    # ports:
+    #   - "8080:8080"
     volumes:
       - ./integration/mocks/wiremock/mappings:/home/wiremock/mappings:ro
       - ./integration/mocks/wiremock/__files:/home/wiremock/__files:ro
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/__admin/health | grep -q '\"status\"'"]
-      interval: 3s
-      timeout: 3s
-      retries: 40
+    # REMOVE healthcheck (avoid wget/curl dependency)
 
   api:
     build:
@@ -37,34 +34,26 @@ services:
         VCS_REF: ${VCS_REF:-unknown}
         BUILD_DATE: ${BUILD_DATE:-unknown}
     environment:
-      # App environment contract (adjust names to match your Node app)
       NODE_ENV: test
       PORT: "3000"
-
-      # DB connectivity (internal compose DNS name = service name)
       TEST_DB_HOST: db
       TEST_DB_PORT: "5432"
       TEST_DB_NAME: app_test
       TEST_DB_USER: app
       TEST_DB_PASSWORD: app
-
-      # WireMock base URL (internal)
       EXTERNAL_API_BASE_URL: http://mock:8080
-
     depends_on:
       db:
         condition: service_healthy
       mock:
-        condition: service_healthy
-
-    # Expose to host so CI runner can hit http://localhost:3000
+        condition: service_started
     ports:
       - "3000:3000"
-
-    # If your app has /health, keep this.
-    # If not, either implement /health or change this check.
+    # Optional: remove api healthcheck too (same wget issue)
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health | grep -q '\"status\"'"]
+      test:
+        ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/health').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))\""]
       interval: 3s
       timeout: 3s
       retries: 40
+
