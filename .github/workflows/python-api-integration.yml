@@ -1,4 +1,4 @@
-name: "Integration Tests (Python Example) — BrikByteOS."
+name: "Integration Tests (Python Example) — BrikByteOS"
 
 on:
   workflow_dispatch: {}
