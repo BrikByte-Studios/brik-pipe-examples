@@ -26,7 +26,7 @@ jobs:
           seed_commands: |
             echo "Seeding can run here (host)."
           seed_exec: |
-            postgres::psql -U app -d app_test -c "select 1;"
+            db::psql -U app -d app_test -c "select 1;"
           evidence_dir: "test-artifacts/integration/raw"
 
       # Example: your integration tests would run here (pytest -m integration, etc.)
