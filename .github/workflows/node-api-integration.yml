@@ -1,4 +1,4 @@
-name: "Example: node integration (Compose Lab + Integration Tests)"
+name: "Example: node integration (Compose Lab + Integration Tests)."
 
 on: [push, pull_request]
 
