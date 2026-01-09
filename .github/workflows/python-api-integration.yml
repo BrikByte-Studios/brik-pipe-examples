@@ -16,12 +16,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Provision Integration Env
+        uses: BrikByte-Studios/brik-pipe-actions/.github/actions/provision-integration-env@main
+        id: integ_env
+        with:
+          mode: github-secrets
+          working_directory: python-api-example
+          required_keys: "TEST_DB_PASSWORD"
+          enforcement_mode: enforce
+        env:
+          TEST_DB_USER: app
+          TEST_DB_NAME: app_test
+          TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+          TEST_DB_VENDOR: postgres
+
       - name: Provision Integration Lab
         uses: BrikByte-Studios/brik-pipe-actions/.github/actions/provision-integration-lab@main
         with:
           working_directory: "python-api-example"
           compose_file: "docker-compose.integration.yml"
-          services: db
+          services: db,redis
           health_timeout_seconds: 180
           seed_commands: |
             echo "Seeding can run here (host)."
