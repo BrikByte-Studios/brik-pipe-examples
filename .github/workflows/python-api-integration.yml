@@ -21,8 +21,8 @@ jobs:
         with:
           working_directory: "python-api-example"
           compose_file: "docker-compose.integration.yml"
-          services: "postgres,redis"
-          health_timeout_seconds: "180"
+          services: db
+          health_timeout_seconds: 180
           seed_commands: |
             echo "Seeding can run here (host)."
           seed_exec: |
