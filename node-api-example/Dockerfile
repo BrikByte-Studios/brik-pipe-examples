@@ -1,66 +1,70 @@
-# -----------------------------------------------------------------------------
-# BrikByteOS v1 — Node Dockerfile Scaffold
-#
-# Goals:
-# - Deterministic installs via lockfile
-# - Cache-friendly: deps before source
-# - Multi-stage: builder -> runtime
-# - Non-root runtime
-# - OCI labels via build args (traceability)
-# -----------------------------------------------------------------------------
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: app_test
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+    volumes:
+      - ./integration/seed/data:/docker-entrypoint-initdb.d:ro
 
-# ---- Base build args (used for labels; safe non-secret values only)
-ARG IMAGE_SOURCE="unknown"
-ARG VCS_REF="unknown"
-ARG BUILD_DATE="unknown"
+  mock:
+    image: wiremock/wiremock:3.9.1
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./integration/mocks/wiremock/mappings:/home/wiremock/mappings:ro
+      - ./integration/mocks/wiremock/__files:/home/wiremock/__files:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/__admin/health | grep -q '\"status\"'"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
 
-# ---- Builder stage
-FROM node:20-bookworm-slim AS builder
-WORKDIR /app
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        IMAGE_SOURCE: ${IMAGE_SOURCE:-unknown}
+        VCS_REF: ${VCS_REF:-unknown}
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+    environment:
+      # App environment contract (adjust names to match your Node app)
+      NODE_ENV: test
+      PORT: "3000"
 
-# Copy only dependency manifests first for better caching
-COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
+      # DB connectivity (internal compose DNS name = service name)
+      TEST_DB_HOST: db
+      TEST_DB_PORT: "5432"
+      TEST_DB_NAME: app_test
+      TEST_DB_USER: app
+      TEST_DB_PASSWORD: app
 
-# Install dependencies deterministically.
-# NOTE: choose one by repo convention; this default assumes npm + package-lock.
-RUN npm ci
+      # WireMock base URL (internal)
+      EXTERNAL_API_BASE_URL: http://mock:8080
 
-# Now copy the rest of the source
-COPY . .
+    depends_on:
+      db:
+        condition: service_healthy
+      mock:
+        condition: service_healthy
 
-# Build output: expects "npm run build" to produce ./dist
-RUN npm run build
+    # Expose to host so CI runner can hit http://localhost:3000
+    ports:
+      - "3000:3000"
 
-# Prune dev deps for smaller runtime image (npm only)
-RUN npm prune --omit=dev
-
-# ---- Runtime stage
-FROM node:20-bookworm-slim AS runtime
-WORKDIR /app
-
-# Create non-root user
-RUN useradd -m -u 10001 nodeapp
-
-# OCI labels (standardized)
-ARG IMAGE_SOURCE
-ARG VCS_REF
-ARG BUILD_DATE
-LABEL org.opencontainers.image.source=$IMAGE_SOURCE \
-      org.opencontainers.image.revision=$VCS_REF \
-      org.opencontainers.image.created=$BUILD_DATE \
-      org.opencontainers.image.title="brikbyte-node-service" \
-      org.opencontainers.image.description="BrikByteOS v1 Node scaffold" \
-      org.opencontainers.image.licenses="UNLICENSED"
-
-# Copy only what we need to run
-COPY --from=builder /app/package.json /app/package.json
-COPY --from=builder /app/node_modules /app/node_modules
-COPY --from=builder /app/dist /app/dist
-
-USER 10001
-
-# Adjust if your service uses a different port
-EXPOSE 3000
-
-# Default: run built output
-CMD ["node", "dist/index.js"]
+    # If your app has /health, keep this.
+    # If not, either implement /health or change this check.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health | grep -q '\"status\"'"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
