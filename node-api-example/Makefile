@@ -23,7 +23,7 @@ BUILD_DIR := dist
 # Default NPM commands (aligned with runtime-matrix)
 NPM       := npm
 
-.PHONY: help build test ci clean install lint lint-fix
+.PHONY: help build test ci clean install lint lint-fix test-integration test-integration-smoke
 
 help:
 	@echo "Node API Example — Make targets"
@@ -84,6 +84,34 @@ test: install
 	mkdir -p "$$ARTIFACT_ROOT/test-results" "$$ARTIFACT_ROOT/coverage"; \
 	FILES_OR_GLOB="$$(printf "%s\n" "$$LIST" | tr '\n' ' ')"; \
 	TEST_FILES="$$FILES_OR_GLOB" ARTIFACT_ROOT="$$ARTIFACT_ROOT" $(NPM) run test:shard
+
+# --- Integration tests (BrikByteOS convention)
+test-integration: install
+	@set -euo pipefail; \
+	echo "🧪 Running Node.js integration tests..."; \
+	echo "📁 CWD: $$(pwd)"; \
+	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
+	mkdir -p "$$ARTIFACT_ROOT/integration/test-results"; \
+	APP_BASE_URL="$${APP_BASE_URL:-http://localhost:3000}"; \
+	echo "🌐 APP_BASE_URL=$$APP_BASE_URL"; \
+	# Run integration tests (node:test) \
+	APP_BASE_URL="$$APP_BASE_URL" $(NPM) run test:integration; \
+	# Normalize JUnit path for BrikByte parsers \
+	if [ -f "$$ARTIFACT_ROOT/test-results/junit.xml" ]; then \
+	  cp "$$ARTIFACT_ROOT/test-results/junit.xml" "$$ARTIFACT_ROOT/integration/test-results/junit.xml"; \
+	fi
+
+test-integration-smoke: install
+	@set -euo pipefail; \
+	echo "🧪 Running Node.js integration smoke tests..."; \
+	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
+	mkdir -p "$$ARTIFACT_ROOT/integration/test-results"; \
+	APP_BASE_URL="$${APP_BASE_URL:-http://localhost:3000}"; \
+	echo "🌐 APP_BASE_URL=$$APP_BASE_URL"; \
+	APP_BASE_URL="$$APP_BASE_URL" $(NPM) run test:integration:smoke; \
+	if [ -f "$$ARTIFACT_ROOT/test-results/junit.xml" ]; then \
+	  cp "$$ARTIFACT_ROOT/test-results/junit.xml" "$$ARTIFACT_ROOT/integration/test-results/junit.xml"; \
+	fi
 
 
 ci: clean install build test
