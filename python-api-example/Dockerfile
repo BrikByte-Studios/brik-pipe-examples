@@ -58,5 +58,5 @@ COPY . .
 USER 10001
 EXPOSE 8000
 
-# Default assumes ASGI app at app:app (FastAPI/Starlette)
-CMD ["python", "-m", "uvicorn", "app:app", "--host=0.0.0.0", "--port=8000"]
+# Default assumes ASGI app at main:app (FastAPI/Starlette)
+CMD ["python", "-m", "uvicorn", "main:app", "--host=0.0.0.0", "--port=8000"]
