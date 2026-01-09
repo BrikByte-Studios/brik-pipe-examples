@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    environment: integration
+
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,11 +25,12 @@ jobs:
         with:
           mode: github-secrets
           working_directory: python-api-example
-          required_keys: "TEST_DB_PASSWORD"
+          required_keys: TEST_DB_PASSWORD TEST_DB_USER TEST_DB_NAME
           enforcement_mode: enforce
+          mask_secrets: true
         env:
-          TEST_DB_USER: app
-          TEST_DB_NAME: app_test
+          TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
+          TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
           TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
           TEST_DB_VENDOR: postgres
 
@@ -42,6 +46,9 @@ jobs:
           seed_exec: |
             db::psql -U app -d app_test -c "select 1;"
           evidence_dir: "test-artifacts/integration/raw"
+        env:
+          # Pass resolved env path to compose if your compose consumes it
+          BB_INTEGRATION_ENV: ${{ steps.integ_env.outputs.resolved_env_path }}
 
       # Example: your integration tests would run here (pytest -m integration, etc.)
       - name: Run Integration Tests (example placeholder)
