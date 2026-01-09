@@ -34,4 +34,4 @@ jobs:
       build_tool: "maven"
       test_command: "make test"
       coverage_mode: "optional"
-      enforcement_mode: "warn
+      enforcement_mode: "warn"
