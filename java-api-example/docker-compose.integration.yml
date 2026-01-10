@@ -30,12 +30,12 @@ services:
       redis:
         condition: service_healthy
 
-    # If your app exposes /health, keep this (recommended)
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health | grep -q 'OK'"]
-      interval: 3s
-      timeout: 3s
-      retries: 40
+    # # If your app exposes /health, keep this (recommended)
+    # healthcheck:
+    #   test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health | grep -q 'OK'"]
+    #   interval: 3s
+    #   timeout: 3s
+    #   retries: 40
 
   db:
     image: postgres:16-alpine
