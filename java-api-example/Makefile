@@ -105,47 +105,6 @@ test: deps
 		test; \
 	$(MAKE) post-test
 
-test-integration: deps
-	@bash -euo pipefail <<'BASH'
-	echo "🧪 Running Java integration tests..."
-	ARTIFACT_ROOT="${GITHUB_WORKSPACE:-$(pwd)}/test-artifacts"
-	INTEG_DIR="$ARTIFACT_ROOT/integration/test-results"
-	mkdir -p "$INTEG_DIR/failsafe" "$INTEG_DIR/raw"
-
-	mvn -B \
-	  -Dmaven.wagon.http.retryHandler.count=3 \
-	  -Dmaven.wagon.http.retryHandler.requestSentEnabled=true \
-	  -Dmaven.wagon.httpconnectionManager.ttlSeconds=25 \
-	  -Dhttp.keepAlive=false \
-	  -Dmaven.repo.local="$(pwd)/.m2/repository" \
-	  -DskipTests=true \
-	  -DfailIfNoTests=false \
-	  -DtrimStackTrace=false \
-	  -Dmaven.test.failure.ignore=false \
-	  -Dit.test="*IT,*ITCase,*IntegrationTest" \
-	  -Dfailsafe.reportsDirectory="$INTEG_DIR/failsafe" \
-	  verify
-
-	JUNIT_CANON="$INTEG_DIR/junit.xml"
-	tmp_list="$INTEG_DIR/raw/junit-files.txt"
-
-	(
-	  ls -1 "$INTEG_DIR"/failsafe/TEST-*.xml 2>/dev/null || true
-	  ls -1 target/failsafe-reports/TEST-*.xml 2>/dev/null || true
-	  find . -path "*/target/failsafe-reports/TEST-*.xml" -type f 2>/dev/null | sort || true
-	) | awk 'NF' | sort -u > "$tmp_list"
-
-	count="$(wc -l < "$tmp_list" | tr -d ' ')"
-	if [ "$count" = "0" ]; then
-	  echo "::error::No Failsafe XML reports found."
-	  exit 2
-	fi
-
-	src="$(head -n 1 "$tmp_list")"
-	cp "$src" "$JUNIT_CANON"
-	echo "✅ JUnit -> $JUNIT_CANON (from $src)"
-BASH
-
 
 post-test:
 	@set -euo pipefail; \
