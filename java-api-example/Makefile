@@ -106,34 +106,31 @@ test: deps
 	$(MAKE) post-test
 
 test-integration: deps
-	@set -euo pipefail; \
+	@bash -lc 'set -euo pipefail; \
 	echo "🧪 Running Java integration tests..."; \
 	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
 	INTEG_DIR="$$ARTIFACT_ROOT/integration/test-results"; \
-	mkdir -p "$$INTEG_DIR"; \
+	mkdir -p "$$INTEG_DIR/failsafe" "$$INTEG_DIR/raw"; \
 	\
-	# Run integration tests (Failsafe). If Failsafe isn't configured yet,
-	# add maven-failsafe-plugin in pom.xml, or adjust patterns below.
+	# Run integration tests (Failsafe)
 	$(MVN) $(MVN_FLAGS) \
-		-DskipTests=true \
-		-DfailIfNoTests=false \
-		-DtrimStackTrace=false \
-		-Dmaven.test.failure.ignore=false \
-		-Dit.test="*IT,*ITCase,*IntegrationTest" \
-		-Dfailsafe.reportsDirectory="$$INTEG_DIR/failsafe" \
-		verify; \
+	  -DskipTests=true \
+	  -DfailIfNoTests=false \
+	  -DtrimStackTrace=false \
+	  -Dmaven.test.failure.ignore=false \
+	  -Dit.test="*IT,*ITCase,*IntegrationTest" \
+	  -Dfailsafe.reportsDirectory="$$INTEG_DIR/failsafe" \
+	  verify; \
 	\
-	# Canonicalize: copy/merge to the exact file parsers expect.
+	# Canonicalize to: test-artifacts/integration/test-results/junit.xml
 	JUNIT_CANON="$$INTEG_DIR/junit.xml"; \
-	LIST_DIR="$$INTEG_DIR/raw"; \
-	mkdir -p "$$LIST_DIR"; \
-	tmp_list="$$LIST_DIR/junit-files.txt"; \
+	tmp_list="$$INTEG_DIR/raw/junit-files.txt"; \
 	( \
 	  ls -1 "$$INTEG_DIR"/failsafe/TEST-*.xml 2>/dev/null || true; \
 	  ls -1 target/failsafe-reports/TEST-*.xml 2>/dev/null || true; \
-	  find . -path '*/target/failsafe-reports/TEST-*.xml' -type f 2>/dev/null | sort || true; \
-	) | awk 'NF' | sort -u > "$$tmp_list"; \
-	count="$$(wc -l < "$$tmp_list" | tr -d ' ')"; \
+	  find . -path "*/target/failsafe-reports/TEST-*.xml" -type f 2>/dev/null | sort || true; \
+	) | awk "NF" | sort -u > "$$tmp_list"; \
+	count="$$(wc -l < "$$tmp_list" | tr -d " ")"; \
 	if [ "$$count" = "0" ]; then \
 	  echo "::error::No Failsafe XML reports found. Checked $$INTEG_DIR/failsafe and */target/failsafe-reports/"; \
 	  ls -la target/failsafe-reports 2>/dev/null || true; \
@@ -154,8 +151,7 @@ test-integration: deps
 	else \
 	  echo "✅ Merging $$count XML files -> $$JUNIT_CANON"; \
 	  python3 "$$MERGER" --input-list "$$tmp_list" --output "$$JUNIT_CANON"; \
-	fi
-
+	fi'
 
 post-test:
 	@set -euo pipefail; \
