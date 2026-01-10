@@ -27,7 +27,7 @@ jobs:
       # test runner
       app_base_url: "http://localhost:8080"
       java_version: "17"
-      integration_command: "make test"
+      integration_command: "make test-integration"
       junit_source_path: "out/junit-integration.xml"   # relative to working_directory
 
       # evidence
