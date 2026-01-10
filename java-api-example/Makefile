@@ -146,6 +146,7 @@ test-integration: deps
 	echo "✅ JUnit -> $JUNIT_CANON (from $src)"
 BASH
 
+
 post-test:
 	@set -euo pipefail; \
 	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
