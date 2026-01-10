@@ -23,7 +23,7 @@ services:
       REDIS_PORT: "6379"
 
       PORT: "8080"
-
+      EXTERNAL_API_BASE_URL: "http://mock-payments:8081"
     depends_on:
       db:
         condition: service_healthy

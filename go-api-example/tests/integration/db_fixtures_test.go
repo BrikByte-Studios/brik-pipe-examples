@@ -7,13 +7,10 @@
 // Validates that database seed fixtures were successfully applied inside the
 // BrikByteOS integration lab environment.
 //
-// This test is intentionally written to auto-adapt to:
-//
+// Auto-adapts to:
 //   • GitHub Actions runner-host execution   → TEST_DB_* + localhost
 //   • Docker Compose network execution       → DB_* + db
 //   • Local developer runs                   → fallback defaults
-//
-// No pipeline-specific branching logic required.
 // -----------------------------------------------------------------------------
 
 package integration
@@ -21,18 +18,17 @@ package integration
 import (
 	"database/sql"
 	"fmt"
-	"os"
 	"testing"
 
 	_ "github.com/lib/pq"
 )
 
 func TestDBFixturesArePresent(t *testing.T) {
-	dbHost := firstEnvWithDefault("localhost", "TEST_DB_HOST", "DB_HOST")
-	dbPort := firstEnvWithDefault("5432", "TEST_DB_PORT", "DB_PORT")
-	dbUser := firstEnvWithDefault("testuser", "TEST_DB_USER", "DB_USER")
-	dbPassword := firstEnvWithDefault("testpass", "TEST_DB_PASSWORD", "DB_PASSWORD")
-	dbName := firstEnvWithDefault("testdb", "TEST_DB_NAME", "DB_NAME")
+	dbHost := env("localhost", "TEST_DB_HOST", "DB_HOST")
+	dbPort := env("5432", "TEST_DB_PORT", "DB_PORT")
+	dbUser := env("testuser", "TEST_DB_USER", "DB_USER")
+	dbPassword := env("testpass", "TEST_DB_PASSWORD", "DB_PASSWORD")
+	dbName := env("testdb", "TEST_DB_NAME", "DB_NAME")
 
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
@@ -59,13 +55,4 @@ func TestDBFixturesArePresent(t *testing.T) {
 	}
 
 	t.Logf("✅ DB fixtures present — %d seeded rows found", count)
-}
-
-func firstEnvWithDefault(def string, keys ...string) string {
-	for _, k := range keys {
-		if v := os.Getenv(k); v != "" {
-			return v
-		}
-	}
-	return def
 }

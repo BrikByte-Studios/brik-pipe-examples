@@ -7,9 +7,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
-	"os"
 	"testing"
+	"time"
 )
 
 type paymentRequest struct {
@@ -23,30 +22,18 @@ type paymentResponse struct {
 }
 
 func TestExternalPaymentFlowUsesMock(t *testing.T) {
-	// 1) Start mock external provider (in this test process).
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost || r.URL.Path != "/external/payment" {
-			http.NotFound(w, r)
-			return
-		}
+	// In Compose-lab, this should be something like http://app:8080
+	appBaseURL := env("http://localhost:8080", "APP_BASE_URL")
 
-		resp := paymentResponse{
-			Status:        "approved",
-			TransactionID: "mock-tx-123",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(resp)
-	}))
-	defer mockServer.Close()
+	// IMPORTANT:
+	// This must be set INSIDE the app container by docker-compose.
+	// The test process cannot change env vars for a running container.
+	externalBase := env("", "EXTERNAL_API_BASE_URL")
+	if externalBase == "" {
+		t.Skip("EXTERNAL_API_BASE_URL not set — external mock not wired in compose")
+	}
 
-	// 2) Point the service to the mock base URL.
-	// NOTE: this only works if the code under test and this
-	// test share a process, or you design the app to accept the
-	// URL via config that can be overridden under test.
-	os.Setenv("EXTERNAL_API_BASE_URL", mockServer.URL)
-
-	// 3) Call the app under test over HTTP.
-	appBaseURL := getenv("APP_BASE_URL", "http://app:8080")
+	client := &http.Client{Timeout: 5 * time.Second}
 
 	reqBody := paymentRequest{Amount: 100, Currency: "ZAR"}
 	bodyBytes, err := json.Marshal(reqBody)
@@ -54,7 +41,13 @@ func TestExternalPaymentFlowUsesMock(t *testing.T) {
 		t.Fatalf("failed to marshal request body: %v", err)
 	}
 
-	resp, err := http.Post(appBaseURL+"/payments", "application/json", bytes.NewReader(bodyBytes)) //nolint:noctx
+	req, err := http.NewRequest(http.MethodPost, appBaseURL+"/payments", bytes.NewReader(bodyBytes))
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("failed to call /payments: %v", err)
 	}
@@ -69,7 +62,10 @@ func TestExternalPaymentFlowUsesMock(t *testing.T) {
 		t.Fatalf("failed to decode /payments response: %v", err)
 	}
 
-	if got.Status != "approved" || got.TransactionID != "mock-tx-123" {
-		t.Fatalf("unexpected payment response: %+v", got)
+	if got.Status != "approved" {
+		t.Fatalf("expected status=approved, got %q", got.Status)
+	}
+	if got.TransactionID == "" {
+		t.Fatalf("expected non-empty transactionId, got empty")
 	}
 }
