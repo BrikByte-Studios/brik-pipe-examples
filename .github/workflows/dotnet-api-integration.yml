@@ -1,82 +1,50 @@
-# BrikPipe — .NET API Example Integration Tests
-# ---------------------------------------------
-# This workflow:
-#   - Builds (or pulls) the example .NET API image.
-#   - Spins up app + Postgres in a dedicated Docker network.
-#   - Uses the shared BrikPipe integration-test reusable workflow.
-#   - Runs .NET integration tests via the generic runner (TEST_LANGUAGE=dotnet).
-#
-# Service assumptions:
-#   - Project lives under: dotnet-api-example/
-#   - Dockerfile:          dotnet-api-example/Dockerfile
-#   - App port:            8080
-#   - Health endpoint:     GET /health → 200 OK.
-#
-# Image naming convention:
-#   ghcr.io/brikbyte-studios/example-dotnet-api:sha-${{ github.sha }}.
+name: "Example: dotnet integration (Compose Lab + Integration Tests)"
 
-name: "BrikPipe — .NET API Integration"
-
-on:
-  push:
-    branches: [ main ]
-
-  pull_request:
-    branches: [ main ]
+on: [push, pull_request]
 
 jobs:
   integration:
-    name: ".NET API — Containerized Integration Tests"
-    uses: BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
-    secrets: inherit
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/integration-test.yml@main
     with:
-      image: ghcr.io/brikbyte-studios/example-dotnet-api:sha-${{ github.sha }}
+      stack: "dotnet"
 
-      dockerfile: dotnet-api-example/Dockerfile
-      context: dotnet-api-example
+      # repo layout
+      working_directory: "dotnet-api-example"
 
-      db_image: postgres:16
-      cache_image: redis:7
-      enable_cache_service: false
+      # compose lab
+      compose_file: "docker-compose.integration.yml"
+      services: "api,db,redis"
+      required_services: ""            # empty => same as services
+      health_timeout_seconds: "180"
+      health_poll_seconds: "3"
+      down_volumes: "true"
+      compose_profiles: ""
 
-      test_language: "dotnet"
-      flaky_detect: "true"
+      # seeding (optional)
+      seed_commands: ""
+      seed_exec: ""
 
-      # Robust: no assumptions about where the csproj sits inside dotnet-api-example
-      test_command: >-
-        bash -lc '
-          set -euo pipefail;
+      # test runner
+      app_base_url: "http://localhost:8080"
+      dotnet_version: "8.0.x"
+      integration_command: "make test-integration"
+      junit_source_path: "out/junit-integration.xml"   # relative to working_directory
 
-          # Prefer a dedicated integration project if it ever exists later
-          proj=$(find . -type f \( -name "*Integration*.csproj" -o -name "*IntegrationTests*.csproj" \) | sort | head -n 1 || true);
+      # evidence
+      evidence_dir: "test-artifacts/integration/raw"
+      raw_results_dir: "test-artifacts/integration/test-results"
+      normalized_results_out: "test-artifacts/integration/test-results.json"
+      upload_artifacts: true
+      artifact_retention_days: 7
+      timeout_minutes: 20
 
-          # Fallback to the normal test project
-          if [ -z "${proj:-}" ]; then
-            proj=$(find . -type f \( -name "*.Tests.csproj" -o -name "*Tests.csproj" \) | sort | head -n 1 || true);
-          fi
+      # env contract
+      provision_env_mode: "github-secrets"
+      required_keys: "TEST_DB_PASSWORD TEST_DB_USER TEST_DB_NAME"
+      enforcement_mode: "enforce"
+      mask_secrets: true
 
-          if [ -z "${proj:-}" ]; then
-            echo "❌ No test csproj found under $(pwd)";
-            find . -maxdepth 5 -type f -name "*.csproj" | sort;
-            exit 2;
-          fi
-
-          echo "✅ Using test project: $proj";
-          echo "✅ INTEG_ITEM=${INTEG_ITEM:-<unset>}";
-
-          dotnet test "$proj" \
-            --configuration Release \
-            --filter "Category=Integration&IntegItem=${INTEG_ITEM}"
-        '
-
-
-      healthcheck_path: "/health"
-      healthcheck_timeout: "60"
-      app_port: "8080"
-      db_port: "5432"
-
-      services_csv: "payments,users"
-      scenarios_csv: "happy_path,declined_card,timeout"
-
-      override_shards: "4"
-
+    secrets:
+      TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
+      TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
+      TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}

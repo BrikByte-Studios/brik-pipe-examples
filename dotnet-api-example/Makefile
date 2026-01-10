@@ -30,8 +30,10 @@ OUT_DIR          ?= out
 
 UNIT_SHARD       ?= 1
 UNIT_SHARD_TOTAL ?= 1
+INTEG_SHARD       ?= 1
+INTEG_SHARD_TOTAL ?= 1
 
-.PHONY: help restore build test ci clean lint lint-fix
+.PHONY: help restore build test ci clean lint lint-fix test-integration
 
 help:
 	@echo ".NET API Example — Make targets"
@@ -179,6 +181,133 @@ test: build
 	@echo "  - test-artifacts/test-results/test-results.trx"
 	@echo "  - test-artifacts/coverage/coverage.cobertura.xml"
 	@echo "  - out/junit-shard$(UNIT_SHARD).xml"
+
+test-integration: build
+	@echo "🧪 Running .NET INTEGRATION tests (Release, Category=Integration) + coverage + canonical reports"
+	@echo "🧩 Shard: $(INTEG_SHARD)/$(INTEG_SHARD_TOTAL)"
+	@echo "📌 TEST_ITEMS_FILE: $${TEST_ITEMS_FILE:-<none>}"
+
+	# Contract roots (BrikByte Pipelines v1)
+	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"
+	RAW_DIR="$$ARTIFACT_ROOT/integration/test-results"
+	TRX_CANON="$$RAW_DIR/test-results.trx"
+	mkdir -p "$(TEST_RESULTS_DIR)" "$(OUT_DIR)" "$$RAW_DIR" "$$ARTIFACT_ROOT/integration/coverage"
+
+	projects=""
+	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then
+	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"
+	  projects="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}" | sort -u)"
+	else
+	  echo "📌 Discovering test projects under ./tests (deterministic)"
+	  projects="$$(find . -type f -name '*.csproj' -path './tests/*' | sort)"
+	fi
+
+	if [ -z "$$projects" ]; then
+	  echo "⚠️ No test projects found/selected."
+	  echo "ℹ️ Writing empty canonical TRX + empty JUnit and exiting 0."
+	  : > "$$TRX_CANON"
+	  : > "$(OUT_DIR)/junit-integration.xml"
+	  exit 0
+	fi
+
+	selected="$$projects"
+	if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then
+	  shard=$$(printf "%s" "$(INTEG_SHARD)" | tr -d '\r')
+	  total=$$(printf "%s" "$(INTEG_SHARD_TOTAL)" | tr -d '\r')
+	  if [ "$$total" -lt 1 ]; then total=1; fi
+	  if [ "$$shard" -lt 1 ]; then shard=1; fi
+	  if [ "$$shard" -gt "$$total" ]; then shard=$$total; fi
+
+	  selected="$$(printf "%s\n" $$projects | awk -v s=$$(($$shard-1)) -v t=$$total '((NR-1)%t)==s{print}')"
+
+	  if [ -z "$$selected" ]; then
+	    echo "ℹ️ No test projects selected for shard $$shard/$$total (nothing to run)."
+	    echo "ℹ️ Writing empty canonical TRX + empty JUnit and exiting 0."
+	    : > "$$TRX_CANON"
+	    : > "$(OUT_DIR)/junit-integration.xml"
+	    exit 0
+	  fi
+	fi
+
+	echo "📦 Selected integration test projects:"
+	printf "%s\n" "$$selected" | sed 's/^/  - /'
+
+	# Coverage (contract-canonical)
+	COV_CANON="$$ARTIFACT_ROOT/integration/coverage/coverage.cobertura.xml"
+	rm -f "$$COV_CANON" "$$TRX_CANON"
+
+	first_trx=""
+	rc=0
+
+	# Run integration tests (Category=Integration)
+	for proj in $$selected; do
+	  name=$$(basename "$$proj" .csproj)
+	  trx="$(TEST_RESULTS_DIR)/TestResult.$$name.integration.shard$(INTEG_SHARD).trx"
+	  echo "➡️ dotnet test $$proj (trx=$$trx)"
+
+	  set +e
+	  $(DOTNET) test "$$proj" \
+	    --configuration "$(CONFIG)" \
+	    --no-build \
+	    --filter "Category=Integration" \
+	    --logger "trx;LogFileName=$$(basename "$$trx")" \
+	    --results-directory "$(TEST_RESULTS_DIR)" \
+	    /p:CollectCoverage=true \
+	    /p:CoverletOutput="$$COV_CANON" \
+	    /p:CoverletOutputFormat=cobertura
+	  cmd_rc=$$?
+	  set -e
+
+	  if [ "$$cmd_rc" -ne 0 ]; then
+	    rc=$$cmd_rc
+	  fi
+
+	  if [ -z "$$first_trx" ] && [ -f "$$trx" ]; then
+	    first_trx="$$trx"
+	  fi
+	done
+
+	# Canonical TRX (copy first TRX if available)
+	if [ -n "$$first_trx" ] && [ -f "$$first_trx" ]; then
+	  cp "$$first_trx" "$$TRX_CANON"
+	  echo "✅ Canonical TRX: $$first_trx -> $$TRX_CANON"
+	else
+	  echo "ℹ️ No TRX produced for integration shard $(INTEG_SHARD). Writing empty canonical TRX."
+	  : > "$$TRX_CANON"
+	fi
+
+	@echo "📄 Converting TRX → JUnit XML (integration)..."
+	rm -f "$(OUT_DIR)/junit-integration.xml"
+
+	# Ensure trx2junit is available
+	if ! command -v trx2junit >/dev/null 2>&1; then
+	  echo "📦 Installing trx2junit dotnet tool..."
+	  $(DOTNET) tool install -g trx2junit
+	fi
+
+	PATH="$$PATH:$$HOME/.dotnet/tools"
+	if [ -s "$$TRX_CANON" ]; then
+	  trx2junit "$$TRX_CANON" --output "$(OUT_DIR)"
+	  junit=$$(find "$(OUT_DIR)" -maxdepth 1 -name '*.xml' | head -n 1 || true)
+	  if [ -z "$$junit" ]; then
+	    echo "❌ No JUnit XML produced by trx2junit in $(OUT_DIR)"
+	    ls -R "$(OUT_DIR)" || true
+	    exit 1
+	  fi
+	  mv "$$junit" "$(OUT_DIR)/junit-integration.xml"
+	  echo "✅ JUnit report written to $(OUT_DIR)/junit-integration.xml"
+	else
+	  echo "ℹ️ Canonical TRX is empty; writing empty JUnit."
+	  : > "$(OUT_DIR)/junit-integration.xml"
+	fi
+
+	@echo "✅ Done. Integration contract artifacts:"
+	@echo "  - $$TRX_CANON"
+	@echo "  - $$COV_CANON"
+	@echo "  - out/junit-integration.xml"
+
+	# Propagate the real test failure (so CI fails when integration tests fail)
+	exit $$rc
 
 ci: test
 	@echo "✅ CI pipeline (.NET) completed successfully."
