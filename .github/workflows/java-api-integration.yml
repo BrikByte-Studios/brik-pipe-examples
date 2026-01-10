@@ -1,102 +1,50 @@
-# BrikPipe — Java API Integration Tests (Example Service)
-# -------------------------------------------------------
-# Purpose:
-#   Run containerized integration tests for the Java example service by
-#   delegating to the reusable integration-test workflow in:
-#
-#     BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
-#
-#   This job:
-#     - Builds or pulls the *real* Java service image.
-#     - Spins up Postgres as a DB dependency.
-#     - Starts the app container.
-#     - Runs Java integration tests from the shared runner image
-#       (Maven/Gradle/Testcontainers-friendly).
-#     - Tears everything down deterministically.
-#
-# Assumptions:
-#   - Java service lives in: java-api-example/
-#   - Its Dockerfile is:    java-api-example/Dockerfile
-#   - App listens on port:  8080
-#   - Health endpoint:      /actuator/health   (Spring Boot-style)
-#   - Integration tests can be driven via:
-#       ./mvnw -B verify -Pintegration-tests
-#     or equivalent, as implemented in run-integration-tests.sh.
+name: "Example: java integration (Compose Lab + Integration Tests)"
 
-name: "Java API — Containerized Integration Tests"
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+on: [push, pull_request]
 
 jobs:
   integration:
-    name: "Java API — Integration"
-    # Re-use the central BrikPipe integration-test workflow
-    uses: BrikByte-Studios/.github/.github/workflows/integration-test.yml@main
-    secrets: inherit
-
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/integration-test.yml@main
     with:
-      # ----------------------------------------------------------
-      # Service image under test
-      # ----------------------------------------------------------
-      # Convention:
-      #   ghcr.io/<org>/<image-name>:sha-<GITHUB_SHA>
-      #
-      # This should match the image tag produced by your Kaniko
-      # or build pipeline for the java-api-example service
-      image: ghcr.io/brikbyte-studios/example-java-api:sha-${{ github.sha }}
+      stack: "java"
 
-      # Path to the Java service Dockerfile (relative to repo root)
-      dockerfile: java-api-example/Dockerfile
+      # repo layout
+      working_directory: "java-api-example"
 
-      # Build context for the service Docker image
-      context: java-api-example
+      # compose lab
+      compose_file: "docker-compose.integration.yml"
+      services: "api,db,redis"
+      required_services: ""            # empty => same as services
+      health_timeout_seconds: "180"
+      health_poll_seconds: "3"
+      down_volumes: "true"
+      compose_profiles: ""
 
-      # ----------------------------------------------------------
-      # Dependency containers
-      # ----------------------------------------------------------
-      # Database image (Postgres 16 by default)
-      db_image: postgres:16
+      # seeding (optional)
+      seed_commands: ""
+      seed_exec: ""
 
-      # Optional cache / message broker (e.g. Redis, RabbitMQ).
-      # Set enable_cache_service: true if your Java service needs it.
-      cache_image: redis:7
-      enable_cache_service: true
+      # test runner
+      app_base_url: "http://localhost:8080"
+      java_version: "17"
+      integration_command: "make test-integration"
+      junit_source_path: "out/junit-integration.xml"   # relative to working_directory
 
-      # ----------------------------------------------------------
-      # Test runner configuration
-      # ----------------------------------------------------------
-      # Let the shared runner know this is a Java stack so it will
-      # use Maven/Gradle defaults unless test_command is provided.
-      test_language: "java"
+      # evidence
+      evidence_dir: "test-artifacts/integration/raw"
+      raw_results_dir: "test-artifacts/integration/test-results"
+      normalized_results_out: "test-artifacts/integration/test-results.json"
+      upload_artifacts: true
+      artifact_retention_days: 7
+      timeout_minutes: 20
 
-      # Optional explicit command:
-      #   e.g. "./mvnw -B verify -Pintegration-tests"
-      # Leave empty to use the defaults in run-integration-tests.sh
-      test_command: "./mvn -B verify -Pintegration-tests"
+      # env contract
+      provision_env_mode: "github-secrets"
+      required_keys: "TEST_DB_PASSWORD TEST_DB_USER TEST_DB_NAME"
+      enforcement_mode: "enforce"
+      mask_secrets: true
 
-      # ----------------------------------------------------------
-      # Health checks & ports
-      # ----------------------------------------------------------
-      # Java / Spring Boot services often expose actuator health here.
-      healthcheck_path: "/health"
-
-      # Max seconds to wait for DB + app readiness before failing
-      healthcheck_timeout: "60"
-
-      # Port exposed by the Java API container
-      app_port: "8080"
-
-      # DB port used both for container publish and readiness checks
-      db_port: "5432"
-
-      # matrix inputs (service × scenario)
-      services_csv: "payments,users"
-      scenarios_csv: "happy_path,declined_card,timeout"
-
-      # governed parallelism (clamped to integration.cap=4)
-      override_shards: "4"
-      flaky_detect: "true"
+    secrets:
+      TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
+      TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
+      TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
