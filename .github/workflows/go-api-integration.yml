@@ -13,7 +13,7 @@ jobs:
 
       # compose lab
       compose_file: "docker-compose.integration.yml"
-      services: "api,db,redis"
+      services: "api,db,redis,mock-payments" 
       required_services: ""            # empty => same as services
       health_timeout_seconds: "180"
       health_poll_seconds: "3"
@@ -25,9 +25,9 @@ jobs:
       seed_exec: ""
 
       # test runner
-      app_base_url: "http://localhost:8080"
+      app_base_url: "http://api:8080"
       go_version: "1.22.x"
-      integration_command: "make test-integration"
+      integration_command: "docker compose -f docker-compose.integration.yml exec -T tester make test-integration"
       junit_source_path: "out/junit-integration.xml"   # relative to working_directory
 
       # evidence

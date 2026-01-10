@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/external/payment"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "status": "approved",
+      "transactionId": "mock-tx-123"
+    }
+  }
+}
