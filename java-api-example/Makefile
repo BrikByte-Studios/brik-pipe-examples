@@ -112,8 +112,12 @@ test-integration: deps
 	INTEG_DIR="$ARTIFACT_ROOT/integration/test-results"
 	mkdir -p "$INTEG_DIR/failsafe" "$INTEG_DIR/raw"
 
-	# Run integration tests (Failsafe)
-	$(MVN) $(MVN_FLAGS) \
+	mvn -B \
+	  -Dmaven.wagon.http.retryHandler.count=3 \
+	  -Dmaven.wagon.http.retryHandler.requestSentEnabled=true \
+	  -Dmaven.wagon.httpconnectionManager.ttlSeconds=25 \
+	  -Dhttp.keepAlive=false \
+	  -Dmaven.repo.local="$(pwd)/.m2/repository" \
 	  -DskipTests=true \
 	  -DfailIfNoTests=false \
 	  -DtrimStackTrace=false \
@@ -122,7 +126,6 @@ test-integration: deps
 	  -Dfailsafe.reportsDirectory="$INTEG_DIR/failsafe" \
 	  verify
 
-	# Canonicalize to: test-artifacts/integration/test-results/junit.xml
 	JUNIT_CANON="$INTEG_DIR/junit.xml"
 	tmp_list="$INTEG_DIR/raw/junit-files.txt"
 
@@ -134,28 +137,14 @@ test-integration: deps
 
 	count="$(wc -l < "$tmp_list" | tr -d ' ')"
 	if [ "$count" = "0" ]; then
-	  echo "::error::No Failsafe XML reports found. Checked $INTEG_DIR/failsafe and */target/failsafe-reports/"
-	  ls -la target/failsafe-reports 2>/dev/null || true
+	  echo "::error::No Failsafe XML reports found."
 	  exit 2
 	fi
 
-	MERGER=""
-	if [ -f "/home/runner/work/_actions/BrikByte-Studios/brik-pipe-actions/main/.github/actions/collect-raw-reports/merge_junit_xml.py" ]; then
-	  MERGER="/home/runner/work/_actions/BrikByte-Studios/brik-pipe-actions/main/.github/actions/collect-raw-reports/merge_junit_xml.py"
-	elif [ -f "./scripts/merge_junit_xml.py" ]; then
-	  MERGER="./scripts/merge_junit_xml.py"
-	fi
-
-	if [ "$count" = "1" ] || [ -z "$MERGER" ]; then
-	  src="$(head -n 1 "$tmp_list")"
-	  cp "$src" "$JUNIT_CANON"
-	  echo "✅ JUnit -> $JUNIT_CANON (from $src)"
-	else
-	  echo "✅ Merging $count XML files -> $JUNIT_CANON"
-	  python3 "$MERGER" --input-list "$tmp_list" --output "$JUNIT_CANON"
-	fi
+	src="$(head -n 1 "$tmp_list")"
+	cp "$src" "$JUNIT_CANON"
+	echo "✅ JUnit -> $JUNIT_CANON (from $src)"
 BASH
-
 
 post-test:
 	@set -euo pipefail; \
