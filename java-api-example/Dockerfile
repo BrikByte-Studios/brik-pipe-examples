@@ -28,6 +28,11 @@ RUN mvn -q -e -DskipTests package
 FROM eclipse-temurin:21-jre-jammy AS runtime
 WORKDIR /app
 
+# Install curl for container healthchecks (minimal)
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 # Non-root user
 RUN useradd -m -u 10001 javaapp
 

@@ -32,7 +32,7 @@ services:
 
     # If your app exposes /health, keep this (recommended)
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health | grep -q 'OK'"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health | grep -q 'OK'"]
       interval: 3s
       timeout: 3s
       retries: 40
