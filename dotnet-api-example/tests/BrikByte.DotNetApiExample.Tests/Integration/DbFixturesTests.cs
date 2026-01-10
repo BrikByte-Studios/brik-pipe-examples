@@ -10,15 +10,16 @@ namespace DotNetApiExample.IntegrationTests
     {
         private static string BuildConnectionString()
         {
-            // Match the ENV defaults used by the BrikPipe integ runner
-            var host = GetEnvOrDefault("DB_HOST", "db");
-            var port = GetEnvOrDefault("DB_PORT", "5432");
-            var user = GetEnvOrDefault("DB_USER", "testuser");
-            var password = GetEnvOrDefault("DB_PASSWORD", "testpass");
-            var dbName = GetEnvOrDefault("DB_NAME", "testdb");
+            // BrikByteOS / BrikPipe contract vars (runner-side)
+            var host = GetEnvOrDefault("TEST_DB_HOST", GetEnvOrDefault("DB_HOST", "127.0.0.1"));
+            var port = GetEnvOrDefault("TEST_DB_PORT", GetEnvOrDefault("DB_PORT", "5432"));
+            var user = GetEnvOrDefault("TEST_DB_USER", GetEnvOrDefault("DB_USER", "app"));
+            var password = GetEnvOrDefault("TEST_DB_PASSWORD", GetEnvOrDefault("DB_PASSWORD", "app"));
+            var dbName = GetEnvOrDefault("TEST_DB_NAME", GetEnvOrDefault("DB_NAME", "app_test"));
 
             return $"Host={host};Port={port};Username={user};Password={password};Database={dbName};";
         }
+
 
         private static string GetEnvOrDefault(string key, string fallback)
             => Environment.GetEnvironmentVariable(key) ?? fallback;
