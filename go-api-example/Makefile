@@ -136,14 +136,23 @@ test-unit: ensure-go-junit-report
 # Optional: integration tests (only when explicitly run, and typically
 # driven by the BrikPipe integration-test runner with -tags=integration).
 test-integration: ensure-go-junit-report
-	@echo "🧪 Running Go INTEGRATION tests..."
-	mkdir -p out
-	$(GO) test ./... \
-		-tags=integration \
-		-json > out/test-integration-report.json
-	@echo "📄 Converting INTEGRATION test JSON → JUnit XML..."
-	"$(GO_JUNIT_REPORT)" < out/test-integration-report.json > out/junit-integration.xml
-	@echo "✅ INTEGRATION JUnit report written to out/junit-integration.xml"
+	@set -euo pipefail; \
+	echo "🧪 Running Go INTEGRATION tests..."; \
+	mkdir -p out; \
+	\
+	# Run tests, keep JSON, AND show it in logs. Preserve go test exit code.
+	set +e; \
+	$(GO) test ./... -tags=integration -json 2>&1 | tee out/test-integration-report.json; \
+	test_rc=$${PIPESTATUS[0]}; \
+	set -e; \
+	\
+	echo "📄 Converting INTEGRATION test JSON → JUnit XML..."; \
+	"$(GO_JUNIT_REPORT)" < out/test-integration-report.json > out/junit-integration.xml || true; \
+	echo "✅ INTEGRATION JUnit report written to out/junit-integration.xml"; \
+	\
+	# Fail the target if tests failed (but after reports were produced)
+	exit $$test_rc
+
 
 # Default "test" is just unit tests for standard CI.
 test: test-unit
