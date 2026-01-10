@@ -109,14 +109,12 @@ test-integration: deps
 	@set -euo pipefail; \
 	echo "🧪 Running Java integration tests (Failsafe)..."; \
 	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
-	INTEG_ROOT="$$ARTIFACT_ROOT/integration"; \
-	RAW_DIR="$$INTEG_ROOT/test-results"; \
+	RAW_DIR="$$ARTIFACT_ROOT/integration/test-results"; \
 	FS_DIR="$$RAW_DIR/failsafe"; \
 	LIST_DIR="$$RAW_DIR/raw"; \
 	JUNIT_CANON="$$RAW_DIR/junit.xml"; \
 	mkdir -p "$$FS_DIR" "$$LIST_DIR"; \
 	\
-	# IMPORTANT: do NOT pass -DskipTests=true (it makes Failsafe skip too)
 	$(MVN) $(MVN_FLAGS) \
 	  -DskipTests=false \
 	  -DskipITs=false \
@@ -131,12 +129,17 @@ test-integration: deps
 	  ls -1 target/failsafe-reports/TEST-*.xml 2>/dev/null || true; \
 	  find . -path "*/target/failsafe-reports/TEST-*.xml" -type f 2>/dev/null | sort || true; \
 	) | awk 'NF' | sort -u > "$$tmp_list"; \
+	\
 	count="$$(wc -l < "$$tmp_list" | tr -d " ")"; \
 	if [ "$$count" = "0" ]; then \
 	  echo "::error::No Failsafe XML reports found (Failsafe ran but produced nothing)."; \
 	  echo "Hint: ensure tests are under src/test/java and named *IT.java"; \
+	  echo "Debug: listing $$FS_DIR and target/failsafe-reports"; \
+	  ls -la "$$FS_DIR" 2>/dev/null || true; \
+	  ls -la target/failsafe-reports 2>/dev/null || true; \
 	  exit 2; \
 	fi; \
+	\
 	src="$$(head -n 1 "$$tmp_list")"; \
 	cp "$$src" "$$JUNIT_CANON"; \
 	echo "✅ JUnit -> $$JUNIT_CANON (from $$src)"
