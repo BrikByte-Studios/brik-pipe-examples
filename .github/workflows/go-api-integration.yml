@@ -1,50 +1,52 @@
-# name: "Example: go integration (Compose Lab + Integration Tests)"
+name: "Example: go integration (Compose Lab + Integration Tests)"
 
-# on: [push, pull_request]
+on: [push, pull_request]
 
-# jobs:
-#   integration:
-#     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/integration-test.yml@main
-#     with:
-#       stack: "go"
+jobs:
+  integration:
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/integration-test.yml@main
+    with:
+      stack: "go"
 
-#       # repo layout
-#       working_directory: "go-api-example"
+      # repo layout
+      working_directory: "go-api-example"
 
-#       # compose lab
-#       compose_file: "docker-compose.integration.yml"
-#       services: "api,db,redis" 
-#       required_services: ""            # empty => same as services
-#       health_timeout_seconds: "180"
-#       health_poll_seconds: "3"
-#       down_volumes: "true"
-#       compose_profiles: ""
+      # compose lab
+      compose_file: "docker-compose.integration.yml"
+      services: "api,db,redis" 
+      required_services: ""            # empty => same as services
+      health_timeout_seconds: "180"
+      health_poll_seconds: "3"
+      down_volumes: "true"
+      compose_profiles: ""
 
-#       # seeding (optional)
-#       seed_commands: ""
-#       seed_exec: ""
+      # seeding (optional)
+      seed_commands: ""
+      seed_exec: ""
 
-#       # test runner
-#       app_base_url: "http://api:8080"
-#       go_version: "1.22.x"
-#       integration_command: "make test-integration"
-#       junit_source_path: "out/junit-integration.xml"   # relative to working_directory
+      # test runner
+      app_base_url: "http://localhost:8080"
+      go_version: "1.22.x"
+      integration_command: "make test-integration"
+      junit_source_path: "out/junit-integration.xml"   # relative to working_directory
 
-#       # evidence
-#       evidence_dir: "test-artifacts/integration/raw"
-#       raw_results_dir: "test-artifacts/integration/test-results"
-#       normalized_results_out: "test-artifacts/integration/test-results.json"
-#       upload_artifacts: true
-#       artifact_retention_days: 7
-#       timeout_minutes: 20
+      # evidence
+      evidence_dir: "test-artifacts/integration/raw"
+      raw_results_dir: "test-artifacts/integration/test-results"
+      normalized_results_out: "test-artifacts/integration/test-results.json"
+      upload_artifacts: true
+      artifact_retention_days: 7
+      timeout_minutes: 20
 
-#       # env contract
-#       provision_env_mode: "github-secrets"
-#       required_keys: "TEST_DB_PASSWORD TEST_DB_USER TEST_DB_NAME"
-#       enforcement_mode: "enforce"
-#       mask_secrets: true
+      # env contract
+      provision_env_mode: "github-secrets"
+      required_keys: "TEST_DB_PASSWORD TEST_DB_USER TEST_DB_NAME"
+      enforcement_mode: "enforce"
+      mask_secrets: true
 
-#     secrets:
-#       TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
-#       TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
-#       TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+    secrets:
+      TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
+      TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
+      TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+
+
