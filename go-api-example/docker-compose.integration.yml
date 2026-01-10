@@ -68,27 +68,27 @@ services:
     volumes:
       - ./integration/mocks/wiremock:/home/wiremock:ro
 
-  # ✅ Run integration tests INSIDE the compose network (so "db" and "api" resolve)
-  tester:
-    image: golang:1.22-bookworm
-    working_dir: /src
-    volumes:
-      - ./:/src
-    environment:
-      APP_BASE_URL: http://api:8080
-      TEST_DB_VENDOR: postgres
-      TEST_DB_HOST: db
-      TEST_DB_PORT: "5432"
-      TEST_DB_NAME: ${TEST_DB_NAME:-app_test}
-      TEST_DB_USER: ${TEST_DB_USER:-app}
-      TEST_DB_PASSWORD: ${TEST_DB_PASSWORD:-app}
-      EXTERNAL_API_BASE_URL: http://mock-payments:8081
-    depends_on:
-      api:
-        condition: service_started
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      mock-payments:
-        condition: service_started
+  # # ✅ Run integration tests INSIDE the compose network (so "db" and "api" resolve)
+  # tester:
+  #   image: golang:1.22-bookworm
+  #   working_dir: /src
+  #   volumes:
+  #     - ./:/src
+  #   environment:
+  #     APP_BASE_URL: http://api:8080
+  #     TEST_DB_VENDOR: postgres
+  #     TEST_DB_HOST: db
+  #     TEST_DB_PORT: "5432"
+  #     TEST_DB_NAME: ${TEST_DB_NAME:-app_test}
+  #     TEST_DB_USER: ${TEST_DB_USER:-app}
+  #     TEST_DB_PASSWORD: ${TEST_DB_PASSWORD:-app}
+  #     EXTERNAL_API_BASE_URL: http://mock-payments:8081
+  #   depends_on:
+  #     api:
+  #       condition: service_started
+  #     db:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     mock-payments:
+  #       condition: service_started

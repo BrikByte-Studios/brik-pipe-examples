@@ -27,7 +27,7 @@ jobs:
       # test runner
       app_base_url: "http://api:8080"
       go_version: "1.22.x"
-      integration_command: "docker compose -f docker-compose.integration.yml exec -T tester make test-integration"
+      integration_command: "make test-integration"
       junit_source_path: "out/junit-integration.xml"   # relative to working_directory
 
       # evidence
