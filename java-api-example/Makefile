@@ -109,32 +109,37 @@ test-integration: deps
 	@set -euo pipefail; \
 	echo "🧪 Running Java integration tests (Failsafe)..."; \
 	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
-	INTEG_DIR="$$ARTIFACT_ROOT/integration/test-results"; \
-	mkdir -p "$$INTEG_DIR/failsafe" "$$INTEG_DIR/raw"; \
+	INTEG_ROOT="$$ARTIFACT_ROOT/integration"; \
+	RAW_DIR="$$INTEG_ROOT/test-results"; \
+	FS_DIR="$$RAW_DIR/failsafe"; \
+	LIST_DIR="$$RAW_DIR/raw"; \
+	JUNIT_CANON="$$RAW_DIR/junit.xml"; \
+	mkdir -p "$$FS_DIR" "$$LIST_DIR"; \
 	\
+	# IMPORTANT: do NOT pass -DskipTests=true (it makes Failsafe skip too)
 	$(MVN) $(MVN_FLAGS) \
-	  -DskipTests=true \
+	  -DskipTests=false \
+	  -DskipITs=false \
 	  -DfailIfNoTests=false \
-	  -Dmaven.test.failure.ignore=false \
 	  -Dit.test="*IT,*ITCase,*IntegrationTest" \
-	  -Dfailsafe.reportsDirectory="$$INTEG_DIR/failsafe" \
+	  -Dfailsafe.reportsDirectory="$$FS_DIR" \
 	  verify; \
 	\
-	JUNIT_CANON="$$INTEG_DIR/junit.xml"; \
-	tmp_list="$$INTEG_DIR/raw/junit-files.txt"; \
+	tmp_list="$$LIST_DIR/junit-files.txt"; \
 	( \
-	  ls -1 "$$INTEG_DIR"/failsafe/TEST-*.xml 2>/dev/null || true; \
+	  ls -1 "$$FS_DIR"/TEST-*.xml 2>/dev/null || true; \
 	  ls -1 target/failsafe-reports/TEST-*.xml 2>/dev/null || true; \
 	  find . -path "*/target/failsafe-reports/TEST-*.xml" -type f 2>/dev/null | sort || true; \
 	) | awk 'NF' | sort -u > "$$tmp_list"; \
-	count="$$(wc -l < "$$tmp_list" | tr -d ' ')"; \
+	count="$$(wc -l < "$$tmp_list" | tr -d " ")"; \
 	if [ "$$count" = "0" ]; then \
-	  echo "::error::No Failsafe XML reports found. Add maven-failsafe-plugin + IT tests."; \
+	  echo "::error::No Failsafe XML reports found (Failsafe ran but produced nothing)."; \
+	  echo "Hint: ensure tests are under src/test/java and named *IT.java"; \
 	  exit 2; \
 	fi; \
-	cp "$$(head -n 1 "$$tmp_list")" "$$JUNIT_CANON"; \
-	echo "✅ JUnit -> $$JUNIT_CANON"
-
+	src="$$(head -n 1 "$$tmp_list")"; \
+	cp "$$src" "$$JUNIT_CANON"; \
+	echo "✅ JUnit -> $$JUNIT_CANON (from $$src)"
 
 post-test:
 	@set -euo pipefail; \
