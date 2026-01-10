@@ -13,7 +13,7 @@ jobs:
 
       # compose lab
       compose_file: "docker-compose.integration.yml"
-      services: "api,db,redis,mock-payments" 
+      services: "api,db,redis" 
       required_services: ""            # empty => same as services
       health_timeout_seconds: "180"
       health_poll_seconds: "3"

@@ -22,14 +22,14 @@ services:
       REDIS_PORT: "6379"
 
       PORT: "8080"
-      EXTERNAL_API_BASE_URL: "http://mock-payments:8081"
+      # EXTERNAL_API_BASE_URL: "http://mock-payments:8081"
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-      mock-payments:
-        condition: service_started
+      # mock-payments:
+      #   condition: service_started
 
   db:
     image: postgres:16-alpine
@@ -59,14 +59,14 @@ services:
       timeout: 3s
       retries: 30
 
-  # ✅ External provider mock that api calls at http://mock-payments:8081/external/payment
-  mock-payments:
-    image: wiremock/wiremock:3.6.0
-    ports:
-      - "8081:8080" # optional for debugging; api uses service DNS anyway
-    command: ["--port", "8081", "--global-response-templating"]
-    volumes:
-      - ./integration/mocks/wiremock:/home/wiremock:ro
+  # # ✅ External provider mock that api calls at http://mock-payments:8081/external/payment
+  # mock-payments:
+  #   image: wiremock/wiremock:3.6.0
+  #   ports:
+  #     - "8081:8080" # optional for debugging; api uses service DNS anyway
+  #   command: ["--port", "8081", "--global-response-templating"]
+  #   volumes:
+  #     - ./integration/mocks/wiremock:/home/wiremock:ro
 
   # # ✅ Run integration tests INSIDE the compose network (so "db" and "api" resolve)
   # tester:
