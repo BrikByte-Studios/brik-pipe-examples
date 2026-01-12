@@ -1,61 +1,47 @@
 /**
- * cypress.config.cjs  — BrikByteOS E2E v1 Contract
+ * Cypress config for node-ui-example.
  *
- * Guarantees:
- *  • Always emits JUnit XML at: out/junit-e2e.xml
- *  • Always records screenshots & videos
- *  • baseUrl is controlled by CI via CYPRESS_baseUrl
- *  • Retries are controlled via CYPRESS_retries
- *  • Produces deterministic artifacts for .audit export
+ * Location:
+ *   tests/e2e/cypress/cypress.config.cjs
  *
- * This file is REQUIRED for Cypress normalization to go green.
+ * CI contract:
+ * - JUnit output written to: out/junit-e2e.xml
+ * - screenshots: tests/e2e/cypress/cypress/screenshots (default)
+ * - videos:      tests/e2e/cypress/cypress/videos (default)
  */
 
 const { defineConfig } = require("cypress");
 
-function envNumber(name, fallback) {
-  const v = process.env[name];
-  const n = v ? Number(v) : NaN;
-  return Number.isFinite(n) ? n : fallback;
-}
-
 module.exports = defineConfig({
-  // --- Evidence ---
-  video: true,
-  screenshotOnRunFailure: true,
-  chromeWebSecurity: false,
-
   e2e: {
-    // Controlled by CI
-    baseUrl:
-      process.env.CYPRESS_baseUrl ||
-      process.env.BASE_URL ||
-      "http://localhost:3000",
+    // IMPORTANT: Workflow should set CYPRESS_baseUrl=http://localhost:3000
+    baseUrl: process.env.CYPRESS_baseUrl || process.env.BASE_URL || "http://localhost:3000",
 
+    // Specs live here (under your tests/e2e structure)
     specPattern: "tests/e2e/cypress/e2e/**/*.cy.{js,jsx,ts,tsx}",
+
     supportFile: "tests/e2e/cypress/support/e2e.js",
 
-    retries: {
-      runMode: envNumber("CYPRESS_retries", 1),
-      openMode: 0,
-    },
+    // Evidence
+    screenshotOnRunFailure: true,
+    video: true,
 
-    // 🔐 REQUIRED FOR BRIKBYTEOS NORMALIZATION
-    reporter: "junit",
-    reporterOptions: {
-      mochaFile: "out/junit-e2e.xml",
-      toConsole: false,
-      attachments: false,
-    },
-
+    // Reduce random flake in CI (your app is simple, but this helps future growth)
     defaultCommandTimeout: 8000,
-    pageLoadTimeout: 60000,
-    requestTimeout: 8000,
-    responseTimeout: 8000,
+    pageLoadTimeout: 20000,
 
-    setupNodeEvents(on, config) {
-      console.log(`[cypress] baseUrl=${config.baseUrl}`);
-      return config;
-    },
+    // If you later set retries from workflow, Cypress will override this via env/config
+    retries: {
+      runMode: Number(process.env.CYPRESS_retries || 1),
+      openMode: 0
+    }
   },
+
+  // Reporter contract (v1): always emit JUnit for the normalizer.
+  reporter: "junit",
+  reporterOptions: {
+    mochaFile: "out/junit-e2e.xml",
+    toConsole: false,
+    attachments: true
+  }
 });

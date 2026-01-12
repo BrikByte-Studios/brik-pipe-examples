@@ -1,0 +1,11 @@
+{
+  "default": {
+    "email": "test.user@brikbyteos.local",
+    "password": "password123!",
+    "displayName": "Test User"
+  },
+  "bad": {
+    "email": "wrong@brikbyteos.local",
+    "password": "wrong-password"
+  }
+}
