@@ -1,4 +1,4 @@
-name: "examples: e2e-cypress."
+name: "examples: e2e-cypress"
 
 on:
   pull_request:
@@ -12,23 +12,19 @@ jobs:
     with:
       working_directory: node-ui-example
 
-      # App under test
       base_url: http://localhost:3000
 
-      # App boot pattern (server is inside node-ui-example)
       enable_app_boot: true
       app_install_command: npm ci
       app_start_command: npm start
       app_ready_url: http://localhost:3000/login
       app_ready_timeout_seconds: 120
 
-      # Cypress execution (golden path)
       node_version: "20.x"
       command: npx cypress run
       browser: chrome
       retries: 1
 
-      # Evidence dirs (stable contract)
       screenshots_dir: cypress/screenshots
       videos_dir: cypress/videos
       report_dir: cypress/results
@@ -36,7 +32,6 @@ jobs:
       evidence_dir: test-artifacts/e2e/raw
       raw_reports_dir: test-artifacts/e2e/test-results
 
-      # JUnit contract: config writes here
       junit_source_path: out/junit-e2e.xml
       junit_dest_name: junit.xml
 
