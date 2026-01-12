@@ -14,6 +14,7 @@ const { defineConfig } = require("cypress");
 
 module.exports = defineConfig({
   e2e: {
+    fixturesFolder: "tests/e2e/cypress/fixtures",
     // IMPORTANT: Workflow should set CYPRESS_baseUrl=http://localhost:3000
     baseUrl: process.env.CYPRESS_baseUrl || process.env.BASE_URL || "http://localhost:3000",
 
@@ -25,6 +26,8 @@ module.exports = defineConfig({
     // Evidence
     screenshotOnRunFailure: true,
     video: true,
+    screenshotsFolder: "cypress/screenshots",
+    videosFolder: "cypress/videos",
 
     // Reduce random flake in CI (your app is simple, but this helps future growth)
     defaultCommandTimeout: 8000,
