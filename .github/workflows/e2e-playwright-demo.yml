@@ -1,15 +1,40 @@
 name: "Example: Playwright E2E (BrikByteOS)"
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
 
 jobs:
   e2e:
     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/e2e-playwright.yml@main
     with:
+      # Project layout
       working_directory: "node-ui-example"
+
+      # App under test
       base_url: "http://localhost:3000"
-      node_version: "20.x"
+
+      # App boot (local dev server)
+      enable_app_boot: true
+      app_install_command: "npm ci"
+      app_start_command: "npm start"
+      app_ready_url: "http://localhost:3000/login"
+
+      # Playwright execution
       command: "npx playwright test"
-      artifact_mode: "on-failure"
+
+      # Evidence + diagnostics
       diagnostics: "full"
+      artifact_mode: "on-failure"
+
+      # Canonical evidence contract
+      report_dir: "playwright-report"
+      results_dir: "test-results"
+      evidence_dir: "test-artifacts/e2e/raw"
+      raw_reports_dir: "test-artifacts/e2e/test-results"
+      normalized_results_out: "test-artifacts/e2e/test-results.json"
+
+      # Upload policy
+      upload_artifacts: true
       artifact_retention_days: 7
+      timeout_minutes: 20
