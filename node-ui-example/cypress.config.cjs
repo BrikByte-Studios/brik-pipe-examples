@@ -33,7 +33,7 @@ module.exports = defineConfig({
       "http://localhost:3000",
 
     specPattern: "cypress/e2e/**/*.cy.{js,jsx,ts,tsx}",
-    supportFile: "cypress/support/e2e.js",
+    supportFile: "tests/e2e/cypress/support/e2e.js",
 
     retries: {
       runMode: envNumber("CYPRESS_retries", 1),
