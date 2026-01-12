@@ -1,19 +1,34 @@
 /**
- * Happy path:
- * login → dashboard → logout
+ * Cypress E2E - Authentication happy-path
+ *
+ * Covers:
+ * - /login form submit
+ * - redirect to /dashboard
+ * - logout returns to /login
+ *
+ * Assumptions:
+ * - Express server is running at Cypress baseUrl (CYPRESS_baseUrl).
+ * - Page contains the exact data-testid attributes from server.mjs.
  */
 
 describe("Authentication flow", () => {
   it("login → dashboard → logout", () => {
-    cy.fixture("testUsers").then((users) => {
-      const u = users.default;
+    cy.visit("/login");
 
-      cy.loginAs(u.email, u.password);
-      cy.assertOnDashboard();
+    cy.get('[data-testid="login-email"]').should("be.visible").type("test.user@brikbyteos.local");
+    cy.get('[data-testid="login-password"]').should("be.visible").type("password123!");
+    cy.get('[data-testid="login-submit"]').click();
 
-      cy.getByTestId("user-menu-toggle").should("contain.text", u.displayName);
+    cy.url().should("include", "/dashboard");
 
-      cy.logout();
-    });
+    cy.get('[data-testid="dashboard-welcome"]')
+      .should("be.visible")
+      .and("contain", "Welcome to the BrikByteOS Demo Dashboard");
+
+    cy.get('[data-testid="user-menu-toggle"]').click();
+    cy.get('[data-testid="user-menu-logout"]').click();
+
+    cy.url().should("include", "/login");
+    cy.get('[data-testid="login-email"]').should("be.visible");
   });
 });
