@@ -20,7 +20,6 @@ namespace DotNetApiExample.IntegrationTests
             return $"Host={host};Port={port};Username={user};Password={password};Database={dbName};";
         }
 
-
         private static string GetEnvOrDefault(string key, string fallback)
             => Environment.GetEnvironmentVariable(key) ?? fallback;
 
