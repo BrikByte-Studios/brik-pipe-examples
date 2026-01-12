@@ -1,88 +1,51 @@
 name: "E2E UI (Java • Selenium Grid)"
 
-# -----------------------------------------------------------------------------
-# Caller workflow (brik-pipe-examples)
-#
-# Calls the org reusable workflow:
-#   BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml
-#
-# This repo provides:
-#   - docker-compose.selenium.yml             (Grid)
-#   - java-selenium-runner-example/           (tests)
-#   - node-ui-example/docker-compose.e2e.yml  (app under test)
-#
-# The reusable workflow provides:
-#   - governed matrix-plan (browser × shard)
-#   - start app (optional)
-#   - start grid
-#   - wait for app + grid readiness
-#   - run tests per matrix item
-#   - collect logs + export/upload artifacts
-# -----------------------------------------------------------------------------
-
 on:
   push:
-    branches: [main]
   pull_request:
 
 jobs:
-  e2e-ui-java:
-    uses: BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml@main
+  selenium-grid-e2e:
+    name: "E2E (Selenium Grid)"
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/e2e-selenium-grid.yml@main
+
     with:
-      # -----------------------------------------------------------------------
+      # ---------------------------------------------------------------------
+      # Repo layout
+      # ---------------------------------------------------------------------
+      working_directory: java-selenium-runner-example
+
+      # ---------------------------------------------------------------------
       # App under test
-      # IMPORTANT:
-      # - Browser nodes run in containers; "localhost" from the browser ≠ runner host.
-      # - Use host.docker.internal (with host-gateway mapping in docker-compose.selenium.yml)
-      # -----------------------------------------------------------------------
-      target_url: "http://host.docker.internal:3000"
-      health_url: "http://localhost:3000/health"
+      # ---------------------------------------------------------------------
+      base_url: http://localhost:3000
 
-      start_app: true
-      app_service_workdir: "node-ui-example"
-      app_compose_file: "docker-compose.e2e.yml"
-      app_wait_seconds: 120
+      # ---------------------------------------------------------------------
+      # How to run the Selenium suite
+      # (Option A chosen: repo provides command)
+      # ---------------------------------------------------------------------
+      command: mvn -q test -Pe2e
 
-      # -----------------------------------------------------------------------
-      # Grid config (caller repo)
-      # -----------------------------------------------------------------------
-      service_workdir: "."
-      compose_file: "docker-compose.selenium.yml"
-      grid_wait_seconds: 120
+      # ---------------------------------------------------------------------
+      # Browser matrix (baseline)
+      # ---------------------------------------------------------------------
+      browser_matrix: "chrome,firefox"
 
-      # -----------------------------------------------------------------------
-      # Governed matrix wiring (NEW)
-      # - Default browsers in reusable workflow are chrome,firefox (+edge if enabled).
-      # - You can hard-pin browsers deterministically if you want.
-      # -----------------------------------------------------------------------
-      enable_edge: false
+      # ---------------------------------------------------------------------
+      # Evidence + diagnostics
+      # ---------------------------------------------------------------------
+      evidence_dir: test-artifacts/e2e/raw
+      raw_results_dir: test-artifacts/e2e/test-results
+      normalized_results_out: test-artifacts/e2e/test-results.json
 
-      # Optional explicit deterministic override (uncomment if you want)
-      # browsers: "chrome,firefox"
+      # What user artifacts & reports to collect
+      report_globs: "**/surefire-reports/*.xml"
+      artifact_globs: "target/screenshots/**,target/site/**,target/logs/**"
 
-      # Selenium sharding OFF by default. Keep "1" unless your Maven test runner
-      # implements deterministic splitting using E2E_SHARD/E2E_SHARD_TOTAL.
-      override_shards: "1"
+      # ---------------------------------------------------------------------
+      # Artifact upload policy
+      # ---------------------------------------------------------------------
+      artifact_mode: on-failure
+      artifact_retention_days: 7
 
-      # -----------------------------------------------------------------------
-      # Runner
-      # -----------------------------------------------------------------------
-      runner_language: "java"
-      test_command: |
-        set -euo pipefail
-        cd java-selenium-runner-example
-        mvn -q -DskipTests=false test
-
-      # -----------------------------------------------------------------------
-      # Artifacts / audit
-      # -----------------------------------------------------------------------
-      artifact_name: "java-selenium-e2e"
-      e2e_video: false
-      e2e_trace: true
-      e2e_artifacts_always: false
-
-      # -----------------------------------------------------------------------
-      # Safety
-      # -----------------------------------------------------------------------
-      job_timeout_minutes: 35
-      enforce_teardown: true
+      timeout_minutes: 30
