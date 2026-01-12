@@ -21,6 +21,8 @@ export default defineConfig({
 
   reporter: [
     ["html", { outputFolder: "playwright-report", open: "never" }],
+    ['json', { outputFile: 'test-results/report.json' }],
+    ['junit', { outputFile: 'test-results/junit.xml' }]
   ],
 
   retries: process.env.CI ? 1 : 0,
