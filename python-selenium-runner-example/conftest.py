@@ -159,24 +159,20 @@ def e2e_base_url() -> str:
     """
     Base URL of the app under test.
 
-    Required:
+    Standard BrikByteOS contract (preferred):
+      BASE_URL or APP_BASE_URL
+
+    Back-compat (legacy):
       E2E_TARGET_URL
-
-    Important:
-      If the browser nodes run in Docker, localhost != host runner.
-      Your workflow should provide a URL reachable from the Grid nodes.
     """
-    base = _normalize_base_url(_env("E2E_TARGET_URL"))
+    base = (
+        _env("BASE_URL")
+        or _env("APP_BASE_URL")
+        or _env("E2E_TARGET_URL")
+    )
     if not base:
-        raise RuntimeError("E2E_TARGET_URL is required")
-
-    # Best-effort sanity check (do not print URL).
-    try:
-        _wait_for_http_ok(base, timeout_seconds=20)
-    except Exception:
-        pass
-
-    return base
+        raise RuntimeError("BASE_URL (preferred) or APP_BASE_URL or E2E_TARGET_URL is required")
+    return _normalize_base_url(base)
 
 
 @pytest.fixture(scope="session")
