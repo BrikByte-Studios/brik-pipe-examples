@@ -1,92 +1,31 @@
 name: "E2E UI (Python • Selenium Grid)"
 
-# -----------------------------------------------------------------------------
-# Caller workflow (brik-pipe-examples)
-#
-# Calls the org reusable workflow:
-#   BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml
-#
-# This repo provides:
-#   - docker-compose.selenium.yml             (Grid)
-#   - python-selenium-runner-example/         (tests)
-#   - node-ui-example/docker-compose.e2e.yml  (app under test)
-#
-# The reusable workflow provides:
-#   - governed matrix-plan (browser × shard)
-#   - start app (optional)
-#   - start grid
-#   - wait for app + grid readiness
-#   - run tests per matrix item
-#   - collect logs + export/upload artifacts.
-# -----------------------------------------------------------------------------
-
 on:
-  push:
-    branches: [main]
   pull_request:
+  push:
 
 jobs:
-  e2e-ui-python:
-    uses: BrikByte-Studios/.github/.github/workflows/e2e-selenium.yml@main
+  selenium-grid-e2e:
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/e2e-selenium-grid.yml@main
     with:
-      # -----------------------------------------------------------------------
-      # App under test
-      # IMPORTANT:
-      # - Browser nodes run in containers; "localhost" from the browser ≠ runner host.
-      # - Use host.docker.internal (with host-gateway mapping in docker-compose.selenium.yml).
-      # -----------------------------------------------------------------------
-      target_url: "http://host.docker.internal:3000"
-      health_url: "http://localhost:3000/health"
+      # app under test
+      app_working_directory: node-ui-example
+      app_install_command: npm ci
+      app_start_command: npm start
+      app_health_url: http://localhost:3000/health
+      base_url: http://localhost:3000
 
-      start_app: true
-      app_service_workdir: "node-ui-example"
-      app_compose_file: "docker-compose.e2e.yml"
-      app_wait_seconds: 120
+      # python runner
+      runner_language: python
+      python_version: "3.12"
+      working_directory: python-selenium-runner-example
+      command: pytest -q
 
-      # -----------------------------------------------------------------------
-      # Grid config (caller repo)
-      # -----------------------------------------------------------------------
-      service_workdir: "."
-      compose_file: "docker-compose.selenium.yml"
-      grid_wait_seconds: 120
+      browser_matrix: '["chrome","firefox"]'
 
-      # -----------------------------------------------------------------------
-      # Governed matrix wiring (NEW)
-      # - Default browsers in reusable workflow are chrome,firefox (+edge if enabled).
-      # - You can still hard-pin browsers deterministically if you want.
-      # -----------------------------------------------------------------------
-      enable_edge: false
+      report_globs: "target/junit-e2e.xml"
+      artifact_globs: "target/**"
 
-      # Optional explicit deterministic override (uncomment if you want to force it)
-      # browsers: "chrome,firefox"
-
-      # Selenium sharding OFF by default. Keep "1" unless your pytest suite
-      # implements deterministic splitting using E2E_SHARD/E2E_SHARD_TOTAL.
-      override_shards: "1"
-
-      # -----------------------------------------------------------------------
-      # Runner
-      # -----------------------------------------------------------------------
-      runner_language: "python"
-      test_command: >-
-        bash -lc '
-          set -euo pipefail
-          cd python-selenium-runner-example
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pytest -q
-        '
-
-      # -----------------------------------------------------------------------
-      # Artifacts / audit
-      # -----------------------------------------------------------------------
-      artifact_name: "python-selenium-e2e"
-      e2e_video: false
-      e2e_trace: false
-      e2e_artifacts_always: false
-
-      # -----------------------------------------------------------------------
-      # Safety
-      # -----------------------------------------------------------------------
-      job_timeout_minutes: 35
-      enforce_teardown: true
+      artifact_mode: on-failure
+      artifact_retention_days: 7
+      timeout_minutes: 30
