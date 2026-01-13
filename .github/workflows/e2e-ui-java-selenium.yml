@@ -32,6 +32,7 @@ jobs:
       browser_matrix: '["chrome","firefox"]'
 
       app_working_directory: node-ui-example
+      app_install_command: npm ci
       app_start_command: npm start
       app_health_url: http://localhost:3000/health
 
