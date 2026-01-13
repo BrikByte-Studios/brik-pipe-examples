@@ -1,4 +1,4 @@
-name: "E2E UI (Java • Selenium Grid)"
+name: "E2E UI (Java • Selenium Grid)."
 
 on:
   push:
