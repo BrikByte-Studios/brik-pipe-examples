@@ -13,7 +13,7 @@ jobs:
       app_install_command: npm ci
       app_start_command: npm start
       app_health_url: http://localhost:3000/health
-      base_url: http://localhost:3000
+      base_url: http://host.docker.internal:3000
 
       # python runner
       runner_language: python
