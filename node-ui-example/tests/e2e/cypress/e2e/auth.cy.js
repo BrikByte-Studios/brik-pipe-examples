@@ -11,7 +11,7 @@ describe("Authentication flow", () => {
       cy.loginAs(u.email, u.password);
       cy.assertOnDashboard();
 
-      cy.getByTestId("user-menu-toggle").should("contain.text", u.displayName);
+      cy.getByTestId("user-menu-toggle1").should("contain.text", u.displayName);
 
       cy.logout();
     });
