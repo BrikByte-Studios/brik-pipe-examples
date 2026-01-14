@@ -80,14 +80,16 @@ jobs:
         python - <<'PY'
         import pathlib
         p = pathlib.Path("tests")
-        files = sorted(
-            str(x) for x in p.rglob("test_*.py")
-            if "tests/integration" not in str(x)
-        )
+        files = []
+        for x in p.rglob("test_*.py"):
+            s = str(x)
+            if "tests/integration" in s:
+                continue
+            files.append(s)
+        files.sort()
         print("\n".join(files))
         PY
       test_command: "make test-unit"
-
       python_version: "3.11"
 
       timeout_minutes: 20
