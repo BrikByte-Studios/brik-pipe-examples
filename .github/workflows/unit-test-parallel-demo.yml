@@ -1,0 +1,142 @@
+# -----------------------------------------------------------------------------
+# brik-pipe-examples — Caller workflow
+#
+# Repo: brik-pipe-examples
+# Path: brik-pipe-examples/.github/workflows/unit-test-parallel-demo.yml
+#
+# Calls:
+#   BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-parallel.yml@main
+#
+# Notes:
+# - Each example app can have its own job (node / python / go / dotnet)
+# - Each app should have: .brik/parallel.yml (recommended)
+# -----------------------------------------------------------------------------
+
+name: "Examples: unit-test-parallel (v1)"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "examples-unit-parallel-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+#   # ---------------------------------------------------------------------------
+#   # Node example: node-ui-example
+#   # ---------------------------------------------------------------------------
+#   unit_node_ui:
+#     name: "Unit (node) — node-ui-example"
+#     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-parallel.yml@main
+#     with:
+#       stack: "node"
+#       working_directory: "node-ui-example"
+
+#       # Prefer contract-driven shards (requires .brik/parallel.yml in the example)
+#       parallel_enabled: true
+#       parallel_contract_path: "node-ui-example/.brik/parallel.yml"
+#       use_contract_shards: true
+#       shards: 4 # fallback if contract missing/unreadable
+
+#       # Typical node unit command
+#       test_command: "npm test"
+
+#       # Runtime
+#       node_version: "20.x"
+
+#       # Controls
+#       timeout_minutes: 20
+#       artifact_retention_days: 7
+#       upload_artifacts: true
+
+#       # Optional fan-in merge
+#       enable_merge_job: true
+#       merged_results_out: "test-artifacts/unit/test-results.json"
+
+  # ---------------------------------------------------------------------------
+  # Python example: python-api-example
+  # ---------------------------------------------------------------------------
+  unit_python_api:
+    name: "Unit (python) — python-api-example"
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-parallel.yml@main
+    with:
+      stack: "python"
+      working_directory: "python-api-example"
+
+      parallel_enabled: true
+      parallel_contract_path: "python-api-example/.brik/parallel.yml"
+      use_contract_shards: true
+      shards: 4
+
+      # If your runner supports native sharding, keep shard_mode=native.
+      # If not, switch to list mode and provide discover_command.
+      shard_mode: "native"
+      test_command: "pytest -q"
+
+      python_version: "3.11"
+
+      timeout_minutes: 20
+      artifact_retention_days: 7
+      upload_artifacts: true
+
+      enable_merge_job: true
+      merged_results_out: "test-artifacts/unit/test-results.json"
+
+#   # ---------------------------------------------------------------------------
+#   # Go example: go-api-example
+#   # ---------------------------------------------------------------------------
+#   unit_go_api:
+#     name: "Unit (go) — go-api-example"
+#     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-parallel.yml@main
+#     with:
+#       stack: "go"
+#       working_directory: "go-api-example"
+
+#       parallel_enabled: true
+#       parallel_contract_path: "go-api-example/.brik/parallel.yml"
+#       use_contract_shards: true
+#       shards: 4
+
+#       shard_mode: "native"
+#       test_command: "go test ./... -count=1"
+
+#       go_version: "1.22.x"
+
+#       timeout_minutes: 20
+#       artifact_retention_days: 7
+#       upload_artifacts: true
+
+#       enable_merge_job: true
+#       merged_results_out: "test-artifacts/unit/test-results.json"
+
+#   # ---------------------------------------------------------------------------
+#   # .NET example: dotnet-api-example
+#   # ---------------------------------------------------------------------------
+#   unit_dotnet_api:
+#     name: "Unit (dotnet) — dotnet-api-example"
+#     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-parallel.yml@main
+#     with:
+#       stack: "dotnet"
+#       working_directory: "dotnet-api-example"
+
+#       parallel_enabled: true
+#       parallel_contract_path: "dotnet-api-example/.brik/parallel.yml"
+#       use_contract_shards: true
+#       shards: 4
+
+#       shard_mode: "native"
+#       test_command: "dotnet test --configuration Release"
+
+#       dotnet_version: "8.0.x"
+
+#       timeout_minutes: 25
+#       artifact_retention_days: 7
+#       upload_artifacts: true
+
+#       enable_merge_job: true
+#       merged_results_out: "test-artifacts/unit/test-results.json"
