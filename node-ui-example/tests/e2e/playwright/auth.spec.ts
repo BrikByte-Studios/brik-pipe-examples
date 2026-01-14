@@ -37,7 +37,7 @@ test.describe("Authentication flow", () => {
 
     // ---------------------------------------------------------------------
     // 2) Fill in credentials using centralized test user fixture.
-    // This avoids leaking hard-coded credentials inside the test body.
+    // This avoids leaking hard-coded credentials inside the test body
     // ---------------------------------------------------------------------
     await page.getByTestId("login-email1").fill(defaultStagingUser.email);
     await page.getByTestId("login-password").fill(defaultStagingUser.password);
