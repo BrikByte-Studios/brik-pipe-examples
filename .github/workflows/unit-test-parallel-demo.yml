@@ -75,8 +75,9 @@ jobs:
 
       # If your runner supports native sharding, keep shard_mode=native.
       # If not, switch to list mode and provide discover_command.
-      shard_mode: "native"
-      test_command: "pytest -q"
+      shard_mode: "list"
+      discover_command: "python -c \"import pathlib; p=pathlib.Path('tests'); files=sorted([str(x) for x in p.rglob('test_*.py') if 'tests/integration' not in str(x)]); print('\\n'.join(files))\""
+      test_command: "make test-unit"
 
       python_version: "3.11"
 
