@@ -31,6 +31,11 @@ UNIT_SHARD ?= 1
 UNIT_SHARD_TOTAL ?= 1
 OUT_DIR ?= out
 
+# IMPORTANT:
+# Keep artifacts INSIDE the app working directory by default, so
+# the shard runner can copy them with raw_reports_dir="test-artifacts".
+ARTIFACT_ROOT ?= test-artifacts
+
 .PHONY: help deps build test test-unit test-integration ci clean lint lint-fix
 
 help:
@@ -42,8 +47,8 @@ help:
 	@echo "  make test            - Alias for test-unit"
 	@echo "  make ci              - CI-safe: deps + build + test-unit"
 	@echo "  make clean           - Remove build artifacts"
-	@echo "  make lint    		   - Run linter (python -m ruff check .)"
-	@echo "  make lint-fix- Auto-fix lint issues (python -m ruff check . --fix)"
+	@echo "  make lint            - Run linter (python -m ruff check .)"
+	@echo "  make lint-fix        - Auto-fix lint issues (python -m ruff check . --fix)"
 
 deps:
 	@echo "📦 Installing Python dependencies..."
@@ -98,6 +103,8 @@ test-unit: deps
 	  exit 0; \
 	fi; \
 	\
+	# If runner provided TEST_ITEMS_FILE, we already have the final selection list per shard.
+	# Otherwise, do local deterministic sharding (1-based UNIT_SHARD contract).
 	if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then \
 	  shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
 	  if [ "$$total" -gt "1" ]; then \
@@ -120,19 +127,20 @@ test-unit: deps
 	echo "📄 Selected test files ($$(echo "$$selected" | wc -l | tr -d ' ')):"; \
 	echo "$$selected" | sed 's/^/  - /'; \
 	\
-	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
-	mkdir -p "$$ARTIFACT_ROOT/test-results" "$$ARTIFACT_ROOT/coverage" out; \
+	# ✅ Put reports under working directory by default
+	AR="$(ARTIFACT_ROOT)"; \
+	mkdir -p "$$AR/test-results" "$$AR/coverage" out; \
 	\
 	PYTHONPATH="$$(pwd):$${PYTHONPATH:-}" pytest -q \
 	  $$selected \
 	  -m "not integration" \
 	  --maxfail=1 \
 	  --disable-warnings \
-	  --junitxml="$$ARTIFACT_ROOT/test-results/junit.xml" \
+	  --junitxml="$$AR/test-results/junit.xml" \
 	  --cov=main \
 	  --cov-report=term-missing \
-	  --cov-report=xml:"$$ARTIFACT_ROOT/coverage/coverage.xml" \
-	  --cov-report=json:"$$ARTIFACT_ROOT/coverage/coverage.json"
+	  --cov-report=xml:"$$AR/coverage/coverage.xml" \
+	  --cov-report=json:"$$AR/coverage/coverage.json"
 
 # Backwards-compatible alias
 test: test-unit
@@ -140,22 +148,21 @@ test: test-unit
 test-integration: deps
 	@echo "🌐 Running Python INTEGRATION tests (marked 'integration')..."
 	@if ls $(TEST_DIR)/integration >/dev/null 2>&1; then \
-	  mkdir -p "$(OUT_DIR)"; \
+	  mkdir -p "$(OUT_DIR)" "$(ARTIFACT_ROOT)/test-results"; \
 	  PYTHONPATH="$$(pwd):$${PYTHONPATH:-}" pytest \
 	    $(TEST_DIR)/integration \
 	    -m "integration" \
 	    --maxfail=1 \
 	    --disable-warnings \
-	    --junitxml=out/junit-integration.xml; \
+	    --junitxml="$(ARTIFACT_ROOT)/test-results/junit-integration.xml"; \
 	else \
 	  echo "ℹ️ No integration tests directory found; skipping integration pytest."; \
 	fi
-
-
 
 ci: deps build test-unit
 	@echo "✅ CI pipeline (Python) completed successfully."
 
 clean:
 	@echo "🧹 Cleaning build artifacts..."
-	rm -rf $(BUILD_DIR) build *.egg-info out coverage.xml coverage-unit.xml out/coverage-unit.json
+	rm -rf $(BUILD_DIR) build *.egg-info out coverage.xml coverage-unit.xml out/coverage-unit.json $(ARTIFACT_ROOT)
+
