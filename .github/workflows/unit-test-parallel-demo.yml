@@ -12,7 +12,7 @@
 # - Each app should have: .brik/parallel.yml (recommended)
 # -----------------------------------------------------------------------------
 
-name: "Examples: unit-test-parallel (v1)"
+name: "Examples: unit-test-parallel (v1)."
 
 on:
   push:
