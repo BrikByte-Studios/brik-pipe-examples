@@ -75,7 +75,7 @@ jobs:
 
       # If your runner supports native sharding, keep shard_mode=native.
       # If not, switch to list mode and provide discover_command.
-      shard_mode: "list"
+      shard_mode: "native"
       discover_command: |
         python - <<'PY'
         import pathlib
