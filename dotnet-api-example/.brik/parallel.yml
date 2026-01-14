@@ -1,0 +1,14 @@
+# Docstring:
+# Unit tests split into 4 shards. Dotnet runner will shard test assemblies/tests deterministically later.
+version: "parallel.v1"
+
+parallel:
+  enabled: true
+  mode: "static"
+  shards: 4
+
+  matrix:
+    include:
+      - kind: "unit"
+        name: "dotnet-unit-sharded"
+        shards: 4

@@ -1,0 +1,30 @@
+# Docstring:
+# Unit suite split into 4 shards. No matrix fan-out beyond unit shard config (runner handles fan-out).
+version: "parallel.v1"
+
+parallel:
+  enabled: true
+  mode: "static"
+
+  shards: 4
+  shard_env:
+    index: "BRIK_SHARD_INDEX"
+    total: "BRIK_SHARD_TOTAL"
+
+  limits:
+    max_shards: 16
+    max_matrix_jobs: 32
+
+  matrix:
+    include:
+      - kind: "unit"
+        name: "unit-sharded"
+        shards: 4
+      
+      - kind: "integration"
+        name: "db+api"
+        services: ["db", "api"]
+
+      - kind: "integration"
+        name: "redis+api"
+        services: ["redis", "api"]

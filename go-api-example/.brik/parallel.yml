@@ -1,0 +1,14 @@
+# Docstring:
+# Unit tests split into 4 shards. Go runner will shard packages/tests deterministically later.
+version: "parallel.v1"
+
+parallel:
+  enabled: true
+  mode: "static"
+  shards: 4
+
+  matrix:
+    include:
+      - kind: "unit"
+        name: "go-unit-sharded"
+        shards: 4

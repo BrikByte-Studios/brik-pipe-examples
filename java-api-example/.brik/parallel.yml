@@ -1,0 +1,14 @@
+# Docstring:
+# Unit tests split into 4 shards. Java runner will later read shard env vars (PIPE-CORE-2.4.2).
+version: "parallel.v1"
+
+parallel:
+  enabled: true
+  mode: "static"
+  shards: 4
+
+  matrix:
+    include:
+      - kind: "unit"
+        name: "junit-sharded"
+        shards: 4
