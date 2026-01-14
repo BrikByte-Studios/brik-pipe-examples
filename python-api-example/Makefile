@@ -83,19 +83,20 @@ build:
 # -----------------------------
 test-unit: deps
 	@set -euo pipefail; \
+	files=""; selected=""; \
 	echo "🧪 Running Python UNIT tests (excluding 'integration' mark)..."; \
 	echo "📁 CWD: $$(pwd)"; \
 	echo "🧩 Shard: $${UNIT_SHARD:-1}/$${UNIT_SHARD_TOTAL:-1}"; \
 	mkdir -p out; \
 	\
-	files=""; selected=""; \
-	\
 	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
 	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
-	  files="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}" | grep -vE '(^|/)(tests/integration|test/integration|integration/)' || true)"; \
+	  files="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}" \
+	    | grep -vE '(^|/)(tests/integration|test/integration|integration/)' || true)"; \
 	else \
 	  echo "📌 Discovering UNIT tests under $(TEST_DIR)/ (recursive), excluding $(TEST_DIR)/integration"; \
-	  files="$$(find "$(TEST_DIR)" -type f \( -name "test_*.py" -o -name "*_test.py" \) ! -path "$(TEST_DIR)/integration/*" | sort || true)"; \
+	  files="$$(find "$(TEST_DIR)" -type f \( -name "test_*.py" -o -name "*_test.py" \) \
+	    ! -path "$(TEST_DIR)/integration/*" | sort || true)"; \
 	fi; \
 	\
 	if [ -z "$${files:-}" ]; then \
@@ -103,19 +104,17 @@ test-unit: deps
 	  exit 0; \
 	fi; \
 	\
-	# If runner provided TEST_ITEMS_FILE, we already have the final selection list per shard.
-	# Otherwise, do local deterministic sharding (1-based UNIT_SHARD contract).
 	if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then \
 	  shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
 	  if [ "$$total" -gt "1" ]; then \
-	    selected="$$(FILES="$$files" UNIT_SHARD="$$shard" UNIT_SHARD_TOTAL="$$total" \
-	      python -c 'import os; files=os.environ["FILES"].splitlines(); s=int(os.environ["UNIT_SHARD"]); t=int(os.environ["UNIT_SHARD_TOTAL"]); out=[f for i,f in enumerate(files) if (i%t)==(s-1)]; print("\n".join(out))' \
+	    selected="$$(FILES="$${files:-}" UNIT_SHARD="$$shard" UNIT_SHARD_TOTAL="$$total" \
+	      $(PYTHON) -c 'import os; files=(os.environ.get("FILES","").splitlines()); s=int(os.environ["UNIT_SHARD"]); t=int(os.environ["UNIT_SHARD_TOTAL"]); out=[f for i,f in enumerate(files) if (i%t)==(s-1)]; print("\n".join(out))' \
 	    )"; \
 	  else \
-	    selected="$$files"; \
+	    selected="$${files:-}"; \
 	  fi; \
 	else \
-	  selected="$$files"; \
+	  selected="$${files:-}"; \
 	fi; \
 	\
 	selected="$$(printf "%s\n" "$${selected:-}" | grep -vE '(^|/)(tests/integration|test/integration|integration/)' || true)"; \
@@ -127,7 +126,6 @@ test-unit: deps
 	echo "📄 Selected test files ($$(echo "$$selected" | wc -l | tr -d ' ')):"; \
 	echo "$$selected" | sed 's/^/  - /'; \
 	\
-	# ✅ Put reports under working directory by default
 	AR="$(ARTIFACT_ROOT)"; \
 	mkdir -p "$$AR/test-results" "$$AR/coverage" out; \
 	\
