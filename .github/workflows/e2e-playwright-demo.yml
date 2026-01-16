@@ -33,6 +33,7 @@ jobs:
       evidence_dir: "test-artifacts/e2e/raw"
       raw_reports_dir: "test-artifacts/e2e/test-results"
       normalized_results_out: "test-artifacts/e2e/test-results.json"
+      junit_source_path: "test-artifacts/e2e/test-results/junit.xml"
 
       # Upload policy
       upload_artifacts: true

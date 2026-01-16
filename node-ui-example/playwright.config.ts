@@ -20,7 +20,8 @@ export default defineConfig({
 
   reporter: [
       ["html", { open: "never" }],
-      ["json", { outputFile: "test-results/report.json" }]
+      ["json", { outputFile: "test-results/report.json" }],
+      ["junit", { outputFile: "out/junit-e2e.xml" }],
   ],
 
   retries: process.env.CI ? 1 : 0,
