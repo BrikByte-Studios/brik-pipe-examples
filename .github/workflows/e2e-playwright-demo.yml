@@ -25,7 +25,7 @@ jobs:
 
       # Evidence + diagnostics
       diagnostics: "full"
-      artifact_mode: "on-failure"
+      artifact_mode: "always"
 
       # Canonical evidence contract
       report_dir: "playwright-report"

@@ -38,7 +38,7 @@ jobs:
       normalized_results_out: test-artifacts/e2e/test-results.json
 
       diagnostics: full
-      artifact_mode: on-failure
+      artifact_mode: always
       upload_artifacts: true
       artifact_retention_days: 7
       timeout_minutes: 20
