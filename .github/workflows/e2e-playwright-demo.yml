@@ -21,7 +21,7 @@ jobs:
       app_ready_url: "http://localhost:3000/login"
 
       # Playwright execution
-      command: "npx playwright test"
+      command: "npm test:e2e"
 
       # Evidence + diagnostics
       diagnostics: "full"
