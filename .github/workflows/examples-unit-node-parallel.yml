@@ -1,0 +1,62 @@
+name: "Examples: unit-test-parallel (node)"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "examples-unit-node-parallel-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  unit_node_api:
+    name: "Unit (node) — node-api-example"
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-parallel.yml@main
+
+    with:
+      # ---------------------------------------------------------------
+      # Core stack config
+      # ---------------------------------------------------------------
+      stack: "node"
+      working_directory: "node-api-example"
+
+      # ---------------------------------------------------------------
+      # Parallelization
+      # ---------------------------------------------------------------
+      parallel_enabled: true
+      parallel_contract_path: "node-api-example/.brik/parallel.yml"
+      use_contract_shards: true
+      shards: 4          # fallback if contract not present
+
+      # For Node, native sharding usually works best
+      shard_mode: "native"
+
+      # Command executed inside each shard
+      test_command: "make test"
+
+      # ---------------------------------------------------------------
+      # Runtime versions
+      # ---------------------------------------------------------------
+      node_version: "20.x"
+
+      # ---------------------------------------------------------------
+      # Optional: capture extra artifacts
+      # ---------------------------------------------------------------
+      raw_reports_dir: "test-artifacts"
+
+      # ---------------------------------------------------------------
+      # Controls
+      # ---------------------------------------------------------------
+      timeout_minutes: 20
+      artifact_retention_days: 7
+      upload_artifacts: true
+
+      # ---------------------------------------------------------------
+      # Optional merge job to combine shard results
+      # ---------------------------------------------------------------
+      enable_merge_job: true
+      merged_results_out: "test-artifacts/unit/test-results.json"
