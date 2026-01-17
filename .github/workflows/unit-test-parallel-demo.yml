@@ -89,8 +89,38 @@ jobs:
         files.sort()
         print("\n".join(files))
         PY
-      test_command: "make test-unit"
+      test_command: "make test"
       python_version: "3.11"
+
+      timeout_minutes: 20
+      artifact_retention_days: 7
+      upload_artifacts: true
+
+      enable_merge_job: true
+      merged_results_out: "test-artifacts/unit/test-results.json"
+
+  # ---------------------------------------------------------------------------
+  # Node example: node-api-example
+  # ---------------------------------------------------------------------------
+  unit_node_api:
+    name: "Unit (node) — node-api-example"
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-parallel.yml@main
+    with:
+      stack: "node"
+      working_directory: "node-api-example"
+
+      parallel_enabled: true
+      parallel_contract_path: "node-api-example/.brik/parallel.yml"
+      use_contract_shards: true
+      shards: 4
+
+      # For Node, native is usually best (Jest/Vitest can run fine under a shard runner)
+      shard_mode: "native"
+
+      # Unit test command
+      test_command: "make test"
+
+      node_version: "20.x"
 
       timeout_minutes: 20
       artifact_retention_days: 7
