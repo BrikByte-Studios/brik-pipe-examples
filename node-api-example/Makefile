@@ -19,7 +19,6 @@ SHELL := /usr/bin/bash
 SRC_DIR   := src
 TEST_DIR  := tests
 BUILD_DIR := dist
-ARTIFACT_ROOT ?= test-artifacts
 
 # Default NPM commands (aligned with runtime-matrix)
 NPM       := npm
@@ -81,7 +80,7 @@ test: install
 	fi; \
 	echo "📄 Selected test files ($$(echo "$$LIST" | wc -l | tr -d ' ')):"; \
 	echo "$$LIST" | sed 's/^/  - /'; \
-	ARTIFACT_ROOT="$(ARTIFACT_ROOT)"; \
+	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
 	mkdir -p "$$ARTIFACT_ROOT/test-results" "$$ARTIFACT_ROOT/coverage"; \
 	FILES_OR_GLOB="$$(printf "%s\n" "$$LIST" | tr '\n' ' ')"; \
 	TEST_FILES="$$FILES_OR_GLOB" ARTIFACT_ROOT="$$ARTIFACT_ROOT" $(NPM) run test:shard
