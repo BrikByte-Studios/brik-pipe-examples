@@ -277,34 +277,36 @@ test-integration: build
 	fi
 
 	@echo "📄 Converting TRX → JUnit XML (integration)..."
-	rm -f "$(OUT_DIR)/junit-integration.xml"
+	JUNIT_CANON="$$RAW_DIR/junit.xml"
+	rm -f "$$JUNIT_CANON"
 
 	# Ensure trx2junit is available
 	if ! command -v trx2junit >/dev/null 2>&1; then
-	  echo "📦 Installing trx2junit dotnet tool..."
-	  $(DOTNET) tool install -g trx2junit
+		echo "📦 Installing trx2junit dotnet tool..."
+		$(DOTNET) tool install -g trx2junit
 	fi
 
 	PATH="$$PATH:$$HOME/.dotnet/tools"
 	if [ -s "$$TRX_CANON" ]; then
-	  trx2junit "$$TRX_CANON" --output "$(OUT_DIR)"
-	  junit=$$(find "$(OUT_DIR)" -maxdepth 1 -name '*.xml' | head -n 1 || true)
-	  if [ -z "$$junit" ]; then
-	    echo "❌ No JUnit XML produced by trx2junit in $(OUT_DIR)"
-	    ls -R "$(OUT_DIR)" || true
-	    exit 1
-	  fi
-	  mv "$$junit" "$(OUT_DIR)/junit-integration.xml"
-	  echo "✅ JUnit report written to $(OUT_DIR)/junit-integration.xml"
+		# Write JUnit next to the TRX (contract-canonical)
+		trx2junit "$$TRX_CANON" --output "$$RAW_DIR"
+		junit=$$(find "$$RAW_DIR" -maxdepth 1 -name '*.xml' ! -name 'test-results.trx' | head -n 1 || true)
+		if [ -z "$$junit" ]; then
+			echo "❌ No JUnit XML produced by trx2junit in $$RAW_DIR"
+			ls -R "$$RAW_DIR" || true
+			exit 1
+		fi
+		mv "$$junit" "$$JUNIT_CANON"
+		echo "✅ JUnit report written to $$JUNIT_CANON"
 	else
-	  echo "ℹ️ Canonical TRX is empty; writing empty JUnit."
-	  : > "$(OUT_DIR)/junit-integration.xml"
+		echo "ℹ️ Canonical TRX is empty; writing empty JUnit."
+		: > "$$JUNIT_CANON"
 	fi
 
 	@echo "✅ Done. Integration contract artifacts:"
 	@echo "  - $$TRX_CANON"
 	@echo "  - $$COV_CANON"
-	@echo "  - out/junit-integration.xml"
+	@echo "  - $$JUNIT_CANON"
 
 	# Propagate the real test failure (so CI fails when integration tests fail)
 	exit $$rc
