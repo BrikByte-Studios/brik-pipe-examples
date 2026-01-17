@@ -1,0 +1,61 @@
+name: "Examples: unit-test-parallel (python)"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "examples-unit-python-parallel-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  unit_python_api:
+    name: "Unit (python) — python-api-example"
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-parallel.yml@main
+    with:
+      stack: "python"
+      working_directory: "python-api-example"
+
+      # Parallel config
+      parallel_enabled: true
+      parallel_contract_path: "python-api-example/.brik/parallel.yml"
+      use_contract_shards: true
+      shards: 4 # fallback if contract missing
+
+      # Use list mode when your repo/Makefile does selection via TEST_ITEMS_FILE
+      shard_mode: "list"
+      discover_command: |
+        python - <<'PY'
+        import pathlib
+        p = pathlib.Path("tests")
+        files = []
+        for x in p.rglob("test_*.py"):
+          s = str(x)
+          if "tests/integration" in s:
+            continue
+          files.append(s)
+        files.sort()
+        print("\n".join(files))
+        PY
+
+      # Command the shard runner executes (it provides TEST_ITEMS_FILE, UNIT_SHARD*, etc.)
+      test_command: "make test-unit"
+
+      # Runtime
+      python_version: "3.11"
+
+      # Optional: let runner copy raw outputs into shard/raw/**
+      raw_reports_dir: "test-artifacts"
+
+      # Controls
+      timeout_minutes: 20
+      artifact_retention_days: 7
+      upload_artifacts: true
+
+      # Optional fan-in merge job
+      enable_merge_job: true
+      merged_results_out: "test-artifacts/unit/test-results.json"
