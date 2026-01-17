@@ -152,7 +152,7 @@ test-integration: deps
 	    -m "integration" \
 	    --maxfail=1 \
 	    --disable-warnings \
-	    --junitxml="$(ARTIFACT_ROOT)/test-results/junit-integration.xml"; \
+	    --junitxml="$(ARTIFACT_ROOT)/integration/test-results/junit.xml"; \
 	else \
 	  echo "ℹ️ No integration tests directory found; skipping integration pytest."; \
 	fi
