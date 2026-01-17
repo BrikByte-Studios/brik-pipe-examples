@@ -9,9 +9,9 @@
     "build": "mkdir -p dist && cp -r src dist/",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test:shard": "ARTIFACT_ROOT=\"${ARTIFACT_ROOT:-test-artifacts}\"; mkdir -p \"$ARTIFACT_ROOT/test-results\" \"$ARTIFACT_ROOT/coverage\" && NODE_OPTIONS='--experimental-vm-modules' c8 --reporter=json --reporter=json-summary --reporter=lcov --reporter=cobertura --report-dir=\"$ARTIFACT_ROOT/coverage\" node --test --test-reporter node-test-junit-reporter --test-reporter-destination \"$ARTIFACT_ROOT/test-results/junit.xml\" $TEST_FILES",
-    "test:integration": "ARTIFACT_ROOT=\"${ARTIFACT_ROOT:-test-artifacts}\"; mkdir -p \"$ARTIFACT_ROOT/integration/test-results\" && NODE_OPTIONS='--experimental-vm-modules' node --test --test-reporter node-test-junit-reporter --test-reporter-destination \"$ARTIFACT_ROOT/integration/test-results/junit.xml\" tests/integration",
-    "test:integration:smoke": "ARTIFACT_ROOT=\"${ARTIFACT_ROOT:-test-artifacts}\"; mkdir -p \"$ARTIFACT_ROOT/integration/test-results\" && NODE_OPTIONS='--experimental-vm-modules' node --test --test-reporter node-test-junit-reporter --test-reporter-destination \"$ARTIFACT_ROOT/integration/test-results/junit.xml\" tests/integration/smoke"
+    "test:shard": "ARTIFACT_ROOT=\"${GITHUB_WORKSPACE:-$(pwd)}/test-artifacts\"; mkdir -p \"$ARTIFACT_ROOT/test-results\" \"$ARTIFACT_ROOT/coverage\" && NODE_OPTIONS='--experimental-vm-modules' c8 --reporter=json --reporter=json-summary --reporter=lcov --reporter=cobertura --report-dir=\"$ARTIFACT_ROOT/coverage\" node --test --test-reporter node-test-junit-reporter --test-reporter-destination \"$ARTIFACT_ROOT/test-results/junit.xml\" $TEST_FILES",
+    "test:integration": "ARTIFACT_ROOT=\"${GITHUB_WORKSPACE:-$(pwd)}/test-artifacts\"; mkdir -p \"$ARTIFACT_ROOT/integration/test-results\" && NODE_OPTIONS='--experimental-vm-modules' node --test --test-reporter node-test-junit-reporter --test-reporter-destination \"$ARTIFACT_ROOT/integration/test-results/junit.xml\" tests/integration",
+    "test:integration:smoke": "ARTIFACT_ROOT=\"${GITHUB_WORKSPACE:-$(pwd)}/test-artifacts\"; mkdir -p \"$ARTIFACT_ROOT/integration/test-results\" && NODE_OPTIONS='--experimental-vm-modules' node --test --test-reporter node-test-junit-reporter --test-reporter-destination \"$ARTIFACT_ROOT/integration/test-results/junit.xml\" tests/integration/smoke"
   },
   "keywords": [
     "example",
