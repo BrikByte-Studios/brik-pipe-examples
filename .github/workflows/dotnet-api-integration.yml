@@ -1,4 +1,4 @@
-name: "Example: dotnet integration (Compose Lab + Integration Tests)."
+name: "Example: dotnet integration (Compose Lab + Integration Tests)"
 
 on: [push, pull_request]
 
