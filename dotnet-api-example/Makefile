@@ -69,7 +69,7 @@ test: build
 	@echo "📌 TEST_ITEMS_FILE: $${TEST_ITEMS_FILE:-<none>}"
 
 	# Contract roots (BrikByte Pipelines v1)
-	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"
+	ARTIFACT_ROOT="$$(pwd)/test-artifacts"
 	TRX_CANON="$$ARTIFACT_ROOT/test-results/test-results.trx"
 	mkdir -p "$(TEST_RESULTS_DIR)" "$(OUT_DIR)" "$$ARTIFACT_ROOT/test-results" "$$ARTIFACT_ROOT/coverage"
 

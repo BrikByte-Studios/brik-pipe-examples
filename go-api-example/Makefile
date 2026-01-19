@@ -94,7 +94,7 @@ build:
 test-unit: ensure-go-junit-report
 	@set -euo pipefail; \
 	echo "🧪 Running Go UNIT tests..."; \
-	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
+	ARTIFACT_ROOT="$$(pwd)/test-artifacts"; \
 	mkdir -p "$$ARTIFACT_ROOT/test-results" "$$ARTIFACT_ROOT/coverage" "$$ARTIFACT_ROOT/test-results/raw"; \
 	\
 	shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
