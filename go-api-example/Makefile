@@ -103,56 +103,59 @@ test-unit: ensure-go-junit-report
 	  pkgs="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}" | sort -u)"; \
 	else \
 	  echo "📌 Discovering packages via 'go list ./...'"; \
-	  pkgs="$$( $(GO) list ./... | sort )"; \
+	  pkgs="$$( $(GO) list ./... | grep -v '/vendor/' | sort || true )"; \
 	fi; \
 	\
+	# If no TEST_ITEMS_FILE was provided, optionally shard the discovered packages.
 	if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then \
 	  if [ "$$total" -gt 1 ]; then \
 	    pkgs="$$(printf "%s\n" "$$pkgs" | awk -v t="$$total" -v s="$$shard" '((NR-1) % t) == (s-1)')"; \
 	  fi; \
 	fi; \
 	\
+	# No packages for this shard → emit valid minimal artifacts and exit success.
 	if [ -z "$$pkgs" ]; then \
-		echo "ℹ️ No packages selected for shard $$shard/$$total (nothing to run)."; \
-		\
-		# Write valid minimal JSON + JUnit so downstream parsers never crash
-		cat > "$$ARTIFACT_ROOT/test-results/go-test.json" <<'JSON'; \
-	{"schema_version":"go-test.json/v1","note":"no packages selected","shard":{"index":0,"total":0}} \
-	JSON \
-		\
-		cat > "$$ARTIFACT_ROOT/test-results/junit.xml" <<'XML'; \
-	<?xml version="1.0" encoding="UTF-8"?> \
-	<testsuite name="go-unit" tests="0" failures="0" errors="0" skipped="0" time="0"></testsuite> \
-	XML \
-		\
-		echo "mode: atomic" > "$$ARTIFACT_ROOT/coverage/coverage.out"; \
-		exit 0; \
+	  echo "ℹ️ No packages selected for shard $$shard/$$total (nothing to run)."; \
+	  \
+	  printf '%s\n' "{\"schema_version\":\"go-test.json/v1\",\"note\":\"no packages selected\",\"shard\":{\"index\":$$shard,\"total\":$$total}}" \
+	    > "$$ARTIFACT_ROOT/test-results/go-test.json"; \
+	  \
+	  printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' \
+	    '<testsuite name="go-unit" tests="0" failures="0" errors="0" skipped="0" time="0"></testsuite>' \
+	    > "$$ARTIFACT_ROOT/test-results/junit.xml"; \
+	  \
+	  echo "mode: atomic" > "$$ARTIFACT_ROOT/coverage/coverage.out"; \
+	  exit 0; \
 	fi; \
-
 	\
 	echo "🧩 Shard: $$shard/$$total"; \
 	echo "📦 Selected packages ($$(printf "%s\n" "$$pkgs" | wc -l | tr -d ' ')):"; \
 	printf "%s\n" "$$pkgs" | sed 's/^/  - /'; \
 	\
+	# Run tests (JSON output) + coverage.
 	$(GO) test $$(printf "%s\n" "$$pkgs") \
 	  -covermode=atomic \
 	  -coverpkg=./... \
 	  -coverprofile="$$ARTIFACT_ROOT/coverage/coverage.out" \
 	  -json > "$$ARTIFACT_ROOT/test-results/go-test.json"; \
 	\
-	"$(GO_JUNIT_REPORT)" < "$$ARTIFACT_ROOT/test-results/go-test.json" > "$$ARTIFACT_ROOT/test-results/junit.xml"; \
+	# Convert JSON → JUnit XML.
+	"$(GO_JUNIT_REPORT)" < "$$ARTIFACT_ROOT/test-results/go-test.json" > "$$ARTIFACT_ROOT/test-results/junit.xml" || true; \
+	\
+	# Guard: if junit.xml is empty, write a fallback valid JUnit so downstream parsers never crash.
 	if [ ! -s "$$ARTIFACT_ROOT/test-results/junit.xml" ]; then \
-		echo "⚠️ junit.xml empty; writing fallback minimal JUnit."; \
-		cat > "$$ARTIFACT_ROOT/test-results/junit.xml" <<'XML'; \
-	<?xml version="1.0" encoding="UTF-8"?> \
-	<testsuite name="go-unit" tests="0" failures="0" errors="1" skipped="0" time="0"> \
-		<testcase classname="go-unit" name="junit-generation"> \
-			<error message="junit.xml was empty; check go-test.json generation"></error> \
-		</testcase> \
-	</testsuite> \
-	XML \
+	  echo "⚠️ junit.xml empty; writing fallback minimal JUnit."; \
+	  printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' \
+	    '<testsuite name="go-unit" tests="0" failures="0" errors="1" skipped="0" time="0">' \
+	    '  <testcase classname="go-unit" name="junit-generation">' \
+	    '    <error message="junit.xml was empty; check go-test.json generation"></error>' \
+	    '  </testcase>' \
+	    '</testsuite>' \
+	    > "$$ARTIFACT_ROOT/test-results/junit.xml"; \
 	fi; \
+	\
 	echo "✅ Wrote $$ARTIFACT_ROOT/test-results/go-test.json, junit.xml, coverage/coverage.out"
+
 
 # Optional: integration tests (only when explicitly run, and typically
 # driven by the BrikPipe integration-test runner with -tags=integration).
@@ -167,8 +170,6 @@ test-integration: ensure-go-junit-report
 	"$(GO_JUNIT_REPORT)" < out/test-integration-report.json > out/junit-integration.xml || true; \
 	echo "✅ INTEGRATION JUnit report written to out/junit-integration.xml"; \
 	exit $$test_rc
-
-
 
 # Default "test" is just unit tests for standard CI.
 test: test-unit
