@@ -1,0 +1,70 @@
+name: "Examples: unit-test-parallel (dotnet)"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "examples-unit-dotnet-parallel-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  unit_dotnet_api:
+    name: "Unit (.NET) — dotnet-api-example"
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-parallel.yml@main
+
+    with:
+      # ---------------------------------------------------------------
+      # Core stack config
+      # ---------------------------------------------------------------
+      stack: "dotnet"
+      working_directory: "dotnet-api-example"
+
+      # ---------------------------------------------------------------
+      # Parallelization
+      # ---------------------------------------------------------------
+      parallel_enabled: true
+      parallel_contract_path: "dotnet-api-example/.brik/parallel.yml"
+      use_contract_shards: true
+      shards: 4 # fallback if contract not present
+
+      # .NET: list mode works well when sharding by test projects
+      shard_mode: "list"
+      discover_command: |
+        bash -lc '
+          set -euo pipefail
+          # Shard by test project files (adjust patterns if needed)
+          find . -maxdepth 6 -type f \
+            \( -name "*Tests.csproj" -o -name "*Test.csproj" \) \
+            | sort
+        '
+
+      # Command executed inside each shard (Makefile should read TEST_ITEMS_FILE)
+      test_command: "make test"
+
+      # ---------------------------------------------------------------
+      # Runtime versions
+      # ---------------------------------------------------------------
+      dotnet_version: "8.0.x"
+
+      # ---------------------------------------------------------------
+      # Optional: capture extra artifacts
+      # ---------------------------------------------------------------
+      raw_reports_dir: "test-artifacts"
+
+      # ---------------------------------------------------------------
+      # Controls
+      # ---------------------------------------------------------------
+      timeout_minutes: 20
+      artifact_retention_days: 7
+      upload_artifacts: true
+
+      # ---------------------------------------------------------------
+      # Optional merge job to combine shard results
+      # ---------------------------------------------------------------
+      enable_merge_job: true
+      merged_results_out: "test-artifacts/unit/test-results.json"

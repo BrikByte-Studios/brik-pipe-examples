@@ -1,0 +1,68 @@
+name: "Examples: unit-test-parallel (go)"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "examples-unit-go-parallel-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  unit_go_api:
+    name: "Unit (go) — go-api-example"
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-parallel.yml@main
+
+    with:
+      # ---------------------------------------------------------------
+      # Core stack config
+      # ---------------------------------------------------------------
+      stack: "go"
+      working_directory: "go-api-example"
+
+      # ---------------------------------------------------------------
+      # Parallelization
+      # ---------------------------------------------------------------
+      parallel_enabled: true
+      parallel_contract_path: "go-api-example/.brik/parallel.yml"
+      use_contract_shards: true
+      shards: 4 # fallback if contract not present
+
+      # Go usually prefers list mode (so we can pass selected packages to `go test`)
+      shard_mode: "list"
+      discover_command: |
+        bash -lc '
+          set -euo pipefail
+          # List all testable packages (exclude vendor)
+          go list ./... | grep -v "/vendor/" || true
+        '
+
+      # Command executed inside each shard (Makefile should read TEST_ITEMS_FILE)
+      test_command: "make test"
+
+      # ---------------------------------------------------------------
+      # Runtime versions
+      # ---------------------------------------------------------------
+      go_version: "1.22.x"
+
+      # ---------------------------------------------------------------
+      # Optional: capture extra artifacts
+      # ---------------------------------------------------------------
+      raw_reports_dir: "test-artifacts"
+
+      # ---------------------------------------------------------------
+      # Controls
+      # ---------------------------------------------------------------
+      timeout_minutes: 20
+      artifact_retention_days: 7
+      upload_artifacts: true
+
+      # ---------------------------------------------------------------
+      # Optional merge job to combine shard results
+      # ---------------------------------------------------------------
+      enable_merge_job: true
+      merged_results_out: "test-artifacts/unit/test-results.json"
