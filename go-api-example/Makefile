@@ -113,12 +113,22 @@ test-unit: ensure-go-junit-report
 	fi; \
 	\
 	if [ -z "$$pkgs" ]; then \
-	  echo "ℹ️ No packages selected for shard $$shard/$$total (nothing to run)."; \
-	  : > "$$ARTIFACT_ROOT/test-results/go-test.json"; \
-	  : > "$$ARTIFACT_ROOT/test-results/junit.xml"; \
-	  echo "mode: atomic" > "$$ARTIFACT_ROOT/coverage/coverage.out"; \
-	  exit 0; \
+		echo "ℹ️ No packages selected for shard $$shard/$$total (nothing to run)."; \
+		\
+		# Write valid minimal JSON + JUnit so downstream parsers never crash
+		cat > "$$ARTIFACT_ROOT/test-results/go-test.json" <<'JSON'; \
+	{"schema_version":"go-test.json/v1","note":"no packages selected","shard":{"index":0,"total":0}} \
+	JSON \
+		\
+		cat > "$$ARTIFACT_ROOT/test-results/junit.xml" <<'XML'; \
+	<?xml version="1.0" encoding="UTF-8"?> \
+	<testsuite name="go-unit" tests="0" failures="0" errors="0" skipped="0" time="0"></testsuite> \
+	XML \
+		\
+		echo "mode: atomic" > "$$ARTIFACT_ROOT/coverage/coverage.out"; \
+		exit 0; \
 	fi; \
+
 	\
 	echo "🧩 Shard: $$shard/$$total"; \
 	echo "📦 Selected packages ($$(printf "%s\n" "$$pkgs" | wc -l | tr -d ' ')):"; \
@@ -131,6 +141,17 @@ test-unit: ensure-go-junit-report
 	  -json > "$$ARTIFACT_ROOT/test-results/go-test.json"; \
 	\
 	"$(GO_JUNIT_REPORT)" < "$$ARTIFACT_ROOT/test-results/go-test.json" > "$$ARTIFACT_ROOT/test-results/junit.xml"; \
+	if [ ! -s "$$ARTIFACT_ROOT/test-results/junit.xml" ]; then \
+		echo "⚠️ junit.xml empty; writing fallback minimal JUnit."; \
+		cat > "$$ARTIFACT_ROOT/test-results/junit.xml" <<'XML'; \
+	<?xml version="1.0" encoding="UTF-8"?> \
+	<testsuite name="go-unit" tests="0" failures="0" errors="1" skipped="0" time="0"> \
+		<testcase classname="go-unit" name="junit-generation"> \
+			<error message="junit.xml was empty; check go-test.json generation"></error> \
+		</testcase> \
+	</testsuite> \
+	XML \
+	fi; \
 	echo "✅ Wrote $$ARTIFACT_ROOT/test-results/go-test.json, junit.xml, coverage/coverage.out"
 
 # Optional: integration tests (only when explicitly run, and typically
