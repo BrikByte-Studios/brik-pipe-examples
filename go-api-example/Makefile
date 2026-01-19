@@ -84,56 +84,75 @@ lint: fmt
 	$(GO) vet ./...; \
 	echo "✅ Go lint OK"
 
+
+
 build:
 	@echo "🏗️ Building Go binary..."
 	mkdir -p $(BIN_DIR)
 	$(GO) build -o $(BUILD_OUT) ./...
 
 test-unit: ensure-go-junit-report
-	@bash -lc 'set -euo pipefail; \
-		echo "🧪 Running Go UNIT tests..."; \
-		ARTIFACT_ROOT="$$(pwd)/test-artifacts"; \
-		mkdir -p "$$ARTIFACT_ROOT/test-results" "$$ARTIFACT_ROOT/coverage" "$$ARTIFACT_ROOT/test-results/raw"; \
-		shard="$${UNIT_SHARD:-1}"; \
-		total="$${UNIT_SHARD_TOTAL:-1}"; \
-		pkgs=""; \
-		if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
-			echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
-			pkgs="$$(sed "/^[[:space:]]*$$/d" "$${TEST_ITEMS_FILE}" | sort -u || true)"; \
-		else \
-			echo "📌 Discovering packages via '\''go list ./...'\''"; \
-			pkgs="$$(go list ./... | grep -v "/vendor/" | sort || true)"; \
-		fi; \
-		if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then \
-			if [ "$$total" -gt 1 ]; then \
-				pkgs="$$(printf "%s\n" "$$pkgs" | awk -v t="$$total" -v s="$$shard" "((NR-1) % t) == (s-1)" || true)"; \
-			fi; \
-		fi; \
-		if [ -z "$$pkgs" ]; then \
-			echo "ℹ️ No packages selected for shard $$shard/$$total (nothing to run)."; \
-			printf "%s\n" "{\"schema_version\":\"go-test.json/v1\",\"note\":\"no packages selected\",\"shard\":{\"index\":$$shard,\"total\":$$total}}" > "$$ARTIFACT_ROOT/test-results/go-test.json"; \
-			printf "%s\n" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" "<testsuite name=\"go-unit\" tests=\"0\" failures=\"0\" errors=\"0\" skipped=\"0\" time=\"0\"></testsuite>" > "$$ARTIFACT_ROOT/test-results/junit.xml"; \
-			echo "mode: atomic" > "$$ARTIFACT_ROOT/coverage/coverage.out"; \
-			exit 0; \
-		fi; \
-		echo "🧩 Shard: $$shard/$$total"; \
-		echo "📦 Selected packages ($$(printf "%s\n" "$$pkgs" | wc -l | tr -d " ")):"; \
-		printf "%s\n" "$$pkgs" | sed "s/^/  - /"; \
-		go test $$(printf "%s\n" "$$pkgs") -covermode=atomic -coverpkg=./... -coverprofile="$$ARTIFACT_ROOT/coverage/coverage.out" -json > "$$ARTIFACT_ROOT/test-results/go-test.json"; \
-		"$$GO_JUNIT_REPORT" < "$$ARTIFACT_ROOT/test-results/go-test.json" > "$$ARTIFACT_ROOT/test-results/junit.xml" || true; \
-		if [ ! -s "$$ARTIFACT_ROOT/test-results/junit.xml" ]; then \
-			echo "⚠️ junit.xml empty; writing fallback minimal JUnit."; \
-			printf "%s\n" \
-				"<?xml version=\"1.0\" encoding=\"UTF-8\"?>" \
-				"<testsuite name=\"go-unit\" tests=\"0\" failures=\"0\" errors=\"1\" skipped=\"0\" time=\"0\">" \
-				"  <testcase classname=\"go-unit\" name=\"junit-generation\">" \
-				"    <error message=\"junit.xml was empty; check go-test.json generation\"></error>" \
-				"  </testcase>" \
-				"</testsuite>" \
-				> "$$ARTIFACT_ROOT/test-results/junit.xml"; \
-		fi; \
-		echo "✅ Wrote $$ARTIFACT_ROOT/test-results/go-test.json, junit.xml, coverage/coverage.out"; \
-	'
+	@set -euo pipefail; \
+	echo "🧪 Running Go UNIT tests..."; \
+	ARTIFACT_ROOT="$$(pwd)/test-artifacts"; \
+	mkdir -p "$$ARTIFACT_ROOT/test-results" "$$ARTIFACT_ROOT/coverage" "$$ARTIFACT_ROOT/test-results/raw"; \
+	\
+	shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
+	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
+	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
+	  pkgs="$$(sed '/^[[:space:]]*$$/d' "$${TEST_ITEMS_FILE}" | sort -u)"; \
+	else \
+	  echo "📌 Discovering packages via 'go list ./...'"; \
+	  pkgs="$$( $(GO) list ./... | sort )"; \
+	fi; \
+	\
+	if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then \
+	  if [ "$$total" -gt 1 ]; then \
+	    pkgs="$$(printf "%s\n" "$$pkgs" | awk -v t="$$total" -v s="$$shard" '((NR-1) % t) == (s-1)')"; \
+	  fi; \
+	fi; \
+	\
+	# No packages for this shard → emit valid minimal artifacts and exit success.
+	if [ -z "$$pkgs" ]; then \
+	  echo "ℹ️ No packages selected for shard $$shard/$$total (nothing to run)."; \
+	  \
+	  printf '%s\n' "{\"schema_version\":\"go-test.json/v1\",\"note\":\"no packages selected\",\"shard\":{\"index\":$$shard,\"total\":$$total}}" \
+	    > "$$ARTIFACT_ROOT/test-results/go-test.json"; \
+	  \
+	  printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' \
+	    '<testsuite name="go-unit" tests="0" failures="0" errors="0" skipped="0" time="0"></testsuite>' \
+	    > "$$ARTIFACT_ROOT/test-results/junit.xml"; \
+	  \
+	  echo "mode: atomic" > "$$ARTIFACT_ROOT/coverage/coverage.out"; \
+	  exit 0; \
+	fi; \
+	\
+	echo "🧩 Shard: $$shard/$$total"; \
+	echo "📦 Selected packages ($$(printf "%s\n" "$$pkgs" | wc -l | tr -d ' ')):"; \
+	printf "%s\n" "$$pkgs" | sed 's/^/  - /'; \
+	\
+	$(GO) test $$(printf "%s\n" "$$pkgs") \
+	  -covermode=atomic \
+	  -coverpkg=./... \
+	  -coverprofile="$$ARTIFACT_ROOT/coverage/coverage.out" \
+	  -json > "$$ARTIFACT_ROOT/test-results/go-test.json"; \
+	\
+	# Convert JSON → JUnit XML.
+	"$(GO_JUNIT_REPORT)" < "$$ARTIFACT_ROOT/test-results/go-test.json" > "$$ARTIFACT_ROOT/test-results/junit.xml" || true; \
+	\
+	# Guard: if junit.xml is empty, write a fallback valid JUnit so downstream parsers never crash.
+	if [ ! -s "$$ARTIFACT_ROOT/test-results/junit.xml" ]; then \
+	  echo "⚠️ junit.xml empty; writing fallback minimal JUnit."; \
+	  printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' \
+	    '<testsuite name="go-unit" tests="0" failures="0" errors="1" skipped="0" time="0">' \
+	    '  <testcase classname="go-unit" name="junit-generation">' \
+	    '    <error message="junit.xml was empty; check go-test.json generation"></error>' \
+	    '  </testcase>' \
+	    '</testsuite>' \
+	    > "$$ARTIFACT_ROOT/test-results/junit.xml"; \
+	fi; \
+	\
+	echo "✅ Wrote $$ARTIFACT_ROOT/test-results/go-test.json, junit.xml, coverage/coverage.out"
 
 # Optional: integration tests (only when explicitly run, and typically
 # driven by the BrikPipe integration-test runner with -tags=integration).
