@@ -189,7 +189,7 @@ post-test:
 	fi
 
 # --------------------------------------------------------------------
-# CI pipeline (PIPE-CORE-1.1.3 contract order)
+# CI pipeline (PIPE-CORE-1.1.3 contract order).
 # --------------------------------------------------------------------
 ci: deps lint build test
 	@echo "🚦 Running CI pipeline (deps → lint → build → test)..."
