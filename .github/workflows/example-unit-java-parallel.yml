@@ -1,0 +1,97 @@
+name: "Examples: unit-test-parallel (java)"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "examples-unit-java-parallel-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  unit_java_api:
+    name: "Unit (java) — java-api-example"
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/unit-test-parallel.yml@main
+    with:
+      stack: "java"
+      working_directory: "java-api-example"
+
+      # Parallel config
+      parallel_enabled: true
+      parallel_contract_path: "java-api-example/.brik/parallel.yml"
+      use_contract_shards: true
+      shards: 4 # fallback if contract missing
+
+      # ----------------------------
+      # Sharding mode
+      # ----------------------------
+      # If your Java repo supports "run only these tests" via a file/list,
+      # use shard_mode=list and output class/package patterns (see below).
+      #
+      # If you rely on your build tool’s native sharding (rare), set shard_mode=native.
+      shard_mode: "list"
+
+      # discover_command prints ONE test identifier per line.
+      # For Java we output fully-qualified test class names (FQCNs),
+      # which the Makefile can translate to a Maven/Gradle filter.
+      discover_command: |
+        python - <<'PY'
+        from pathlib import Path
+
+        roots = [Path("src/test/java"), Path("src/test/kotlin")]
+        out = []
+
+        def to_fqcn(p: Path) -> str:
+          # src/test/java/com/acme/FooTest.java -> com.acme.FooTest
+          parts = p.parts
+          # find "java" or "kotlin" segment index
+          try:
+            i = parts.index("java")
+          except ValueError:
+            i = parts.index("kotlin")
+          rel = Path(*parts[i+1:])  # com/acme/FooTest.java
+          return str(rel).replace("/", ".").replace("\\", ".").rsplit(".", 1)[0]
+
+        for root in roots:
+          if not root.exists():
+            continue
+
+          # JUnit naming conventions (adjust if you use different)
+          for p in root.rglob("*Test.java"):
+            out.append(to_fqcn(p))
+          for p in root.rglob("*Tests.java"):
+            out.append(to_fqcn(p))
+          for p in root.rglob("*Test.kt"):
+            out.append(to_fqcn(p))
+          for p in root.rglob("*Tests.kt"):
+            out.append(to_fqcn(p))
+
+        out = sorted(set(out))
+        print("\n".join(out))
+        PY
+
+      # Command executed per shard.
+      # Your Makefile should read TEST_ITEMS_FILE and apply it to Maven/Gradle.
+      # Example expectations:
+      # - Maven Surefire: -Dtest=$(paste -sd, < "$TEST_ITEMS_FILE")
+      # - Gradle: --tests per line or build a filter list
+      test_command: "make test"
+
+      # Runtime
+      java_version: "17"
+
+      # Optional: let runner copy raw outputs into shard/raw/**
+      raw_reports_dir: "test-artifacts"
+
+      # Controls
+      timeout_minutes: 20
+      artifact_retention_days: 7
+      upload_artifacts: true
+
+      # Optional fan-in merge job
+      enable_merge_job: true
+      merged_results_out: "test-artifacts/unit/test-results.json"

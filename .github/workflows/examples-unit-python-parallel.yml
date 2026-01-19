@@ -43,7 +43,7 @@ jobs:
         PY
 
       # Command the shard runner executes (it provides TEST_ITEMS_FILE, UNIT_SHARD*, etc.)
-      test_command: "make test-unit"
+      test_command: "make test"
 
       # Runtime
       python_version: "3.11"
