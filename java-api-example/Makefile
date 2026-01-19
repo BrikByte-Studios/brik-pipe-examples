@@ -146,7 +146,7 @@ test-integration: deps
 
 post-test:
 	@set -euo pipefail; \
-	ARTIFACT_ROOT="$$(pwd)/test-artifacts";; \
+	ARTIFACT_ROOT="$$(pwd)/test-artifacts"; \
 	SUREFIRE_DIR="$$ARTIFACT_ROOT/test-results/surefire"; \
 	JUNIT_CANON="$$ARTIFACT_ROOT/test-results/junit.xml"; \
 	LIST_DIR="$$ARTIFACT_ROOT/test-results/raw"; \
