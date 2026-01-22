@@ -36,7 +36,7 @@ jobs:
       # ----------------------------------------------------
       # App URL (exported as APP_BASE_URL)
       # ----------------------------------------------------
-      app_base_url: http://localhost:8000
+      app_base_url: http://localhost:8080
 
       # ----------------------------------------------------
       # Compose lab (optional)
