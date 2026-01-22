@@ -1,0 +1,68 @@
+name: "Node UI — Playwright E2E (Parallel)"
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  playwright_e2e:
+    name: "Playwright E2E"
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/e2e-test-parallel.yml@main
+
+    with:
+      # ------------------------------------------------
+      # Stack
+      # ------------------------------------------------
+      stack: node
+
+      working_directory: node-ui-example
+
+      # ------------------------------------------------
+      # Command (Makefile target)
+      # ------------------------------------------------
+      e2e_command: make e2e-playwright
+
+      # ------------------------------------------------
+      # Parallel config
+      # ------------------------------------------------
+      parallel_enabled: true
+      shards: 4
+      shard_mode: native
+
+      # ------------------------------------------------
+      # Browsers (Playwright)
+      # ------------------------------------------------
+      browsers: '["chromium","firefox","webkit"]'
+
+      # Optional: per-browser shards
+      shards_per_browser: |
+        {
+          "chromium": 4,
+          "firefox": 2,
+          "webkit": 2
+        }
+
+      browser_env_name: E2E_BROWSER
+
+      # ------------------------------------------------
+      # Runtime
+      # ------------------------------------------------
+      node_version: "20.x"
+
+      # ------------------------------------------------
+      # App URL
+      # ------------------------------------------------
+      app_base_url: http://localhost:3000
+
+      # ------------------------------------------------
+      # Artifacts
+      # ------------------------------------------------
+      upload_artifacts: true
+      artifact_retention_days: 7
+
+      enable_merge_job: true
+      fail_on_missing_shards: true
+
+      merged_results_out: test-artifacts/e2e/playwright-results.json
+
+      timeout_minutes: 45
