@@ -21,40 +21,7 @@ jobs:
       # The shard runner sets BRIK_SHARD_INDEX / BRIK_SHARD_TOTAL for each job.
       # Makefile converts to Playwright --shard=a/b (1-based internally).
       e2e_command: |
-        set -euo pipefail
-
-        cd node-ui-example
-
-        make deps
-        make playwright-install
-
-        # Start app (background) + always stop it
-        npm start > ../e2e-app.log 2>&1 &
-        APP_PID="$!"
-        trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
-
-        echo "APP_PID=$APP_PID"
-
-        # Wait for readiness (fail hard if not ready)
-        ready=0
-        for i in {1..60}; do
-          if curl -fsS "http://localhost:3000" >/dev/null 2>&1; then
-            echo "✅ app ready"
-            ready=1
-            break
-          fi
-          sleep 2
-        done
-
-        if [ "$ready" -ne 1 ]; then
-          echo "❌ app not ready after 120s"
-          echo "---- e2e-app.log (tail) ----"
-          tail -n 200 ../e2e-app.log || true
-          exit 1
-        fi
-
-        # Run E2E (shard-aware)
-        make e2e-playwright E2E_TARGET_URL=http://localhost:3000
+        bash node-ui-example/scripts/e2e-playwright.sh
 
       # Evidence + parsing contract
       raw_reports_dir: "test-artifacts/e2e/test-results"
