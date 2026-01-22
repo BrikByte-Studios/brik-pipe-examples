@@ -1,4 +1,4 @@
-name: "Example: Python integration-test-parallel"
+name: "Example: Python integration-test-parallel."
 
 on: [push, pull_request]
 
