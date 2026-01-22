@@ -1,0 +1,82 @@
+name: "Example: Java integration-test-parallel."
+
+on: [push, pull_request]
+
+jobs:
+  python_integration_parallel:
+    name: "Java integration (parallel)"
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/integration-test-parallel.yml@main
+
+    with:
+      # ----------------------------------------------------
+      # Stack
+      # ----------------------------------------------------
+      stack: java
+      working_directory: java-api-example
+
+      # ----------------------------------------------------
+      # Integration command
+      # Must respect shard env vars:
+      #   BRIK_SHARD_INDEX / BRIK_SHARD_TOTAL
+      # ----------------------------------------------------
+      integration_command: make test-integration
+
+      # ----------------------------------------------------
+      # Parallel controls
+      # ----------------------------------------------------
+      parallel_enabled: true
+      shards: 4
+      shard_mode: native
+
+      # ----------------------------------------------------
+      # Reports contract (workspace root)
+      # ----------------------------------------------------
+      raw_reports_dir: test-artifacts/integration/test-results
+
+      # ----------------------------------------------------
+      # App URL (exported as APP_BASE_URL)
+      # ----------------------------------------------------
+      app_base_url: http://localhost:8080
+
+      # ----------------------------------------------------
+      # Compose lab (optional)
+      # ----------------------------------------------------
+      compose_file: docker-compose.integration.yml
+      services: ""                 # empty = all
+      required_services: ""        # empty = same
+      health_timeout_seconds: "180"
+      health_poll_seconds: "3"
+      down_volumes: "true"
+      compose_profiles: ""
+
+      # ----------------------------------------------------
+      # Integration env contract
+      # ----------------------------------------------------
+      provision_env_mode: github-secrets
+      enforcement_mode: warn
+      required_keys: "TEST_DB_PASSWORD TEST_DB_USER TEST_DB_NAME"
+      mask_secrets: true
+
+      # ----------------------------------------------------
+      # Runtime
+      # ----------------------------------------------------
+      python_version: "3.12"
+    #   dependency_manager: pip
+
+      # ----------------------------------------------------
+      # Controls
+      # ----------------------------------------------------
+      timeout_minutes: 30
+      upload_artifacts: true
+      artifact_retention_days: 7
+
+      # ----------------------------------------------------
+      # Merge fan-in
+      # ----------------------------------------------------
+      enable_merge_job: true
+      fail_on_missing_shards: true
+
+    secrets:
+      TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
+      TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
+      TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
