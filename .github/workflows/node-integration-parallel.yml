@@ -1,0 +1,64 @@
+name: "Example: Node integration-test-parallel"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "node-api-example/**"
+      - ".github/workflows/node-integration-parallel.yml"
+
+jobs:
+  node_integration_parallel:
+    name: "Node integration (parallel)"
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/integration-test-parallel.yml@main
+    with:
+      stack: node
+      working_directory: node-api-example
+
+      # IMPORTANT:
+      # Your Makefile target should use shard env to scope tests.
+      # The runner sets: BRIK_SHARD_INDEX / BRIK_SHARD_TOTAL (and UNIT_SHARD / UNIT_SHARD_TOTAL).
+      integration_command: make test-integration
+
+      # Parallel knobs
+      parallel_enabled: true
+      shards: 4
+      shard_mode: native
+
+      # Where raw reports end up at WORKSPACE ROOT (staged by the workflow)
+      raw_reports_dir: test-artifacts/integration/test-results
+
+      # App URL passed into tests (env APP_BASE_URL)
+      app_base_url: http://localhost:3000
+
+      # Compose lab (if your node example has one)
+      compose_file: docker-compose.integration.yml
+      services: ""                 # empty = all
+      required_services: ""        # empty = same as services
+      health_timeout_seconds: "180"
+      health_poll_seconds: "3"
+      down_volumes: "true"
+      compose_profiles: ""
+
+      # Env contract (optional: enable if your lab needs secrets)
+      provision_env_mode: github-secrets
+      enforcement_mode: warn
+      required_keys: "TEST_DB_PASSWORD TEST_DB_USER TEST_DB_NAME"
+      mask_secrets: true
+
+      # Runtime
+      node_version: "20.x"
+
+      # Controls
+      timeout_minutes: 30
+      upload_artifacts: true
+      artifact_retention_days: 7
+
+      # Merge fan-in (optional)
+      enable_merge_job: true
+      fail_on_missing_shards: true
+
+    secrets:
+      TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
+      TEST_DB_USER: ${{ secrets.TEST_DB_USER }}
+      TEST_DB_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
