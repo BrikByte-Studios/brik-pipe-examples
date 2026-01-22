@@ -1,4 +1,4 @@
-name: "Example: Node integration-test-parallel."
+name: "Example: Node integration-test-parallel"
 
 on: [push, pull_request]
 
