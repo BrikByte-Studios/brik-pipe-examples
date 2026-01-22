@@ -1,4 +1,4 @@
-name: "Example: Dotnet integration-test-parallel."
+name: "Example: Dotnet integration-test-parallel"
 
 on: [push, pull_request]
 
