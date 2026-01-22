@@ -61,7 +61,7 @@ jobs:
       # Runtime
       # ----------------------------------------------------
       python_version: "3.12"
-      dependency_manager: pip
+    #   dependency_manager: pip
 
       # ----------------------------------------------------
       # Controls
