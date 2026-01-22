@@ -1,4 +1,4 @@
-name: "Node UI — Playwright E2E (Parallel)"
+name: "Node UI — Playwright E2E (Parallel)."
 
 on:
   push:
