@@ -138,16 +138,71 @@ test-unit: ensure-go-junit-report
 # Optional: integration tests (only when explicitly run, and typically
 # driven by the BrikPipe integration-test runner with -tags=integration)
 test-integration: ensure-go-junit-report
-	@echo "🧪 Running Go INTEGRATION tests..."
-	@mkdir -p out
-	@set +e; \
-	$(GO) test ./... -tags=integration -json 2>&1 | tee out/test-integration-report.json; \
-	test_rc=$${PIPESTATUS[0]}; \
+	@set -euo pipefail; \
+	echo "🧪 Running Go INTEGRATION tests..."; \
+	ARTIFACT_ROOT="$${GITHUB_WORKSPACE:-$$(pwd)}/test-artifacts"; \
+	mkdir -p "$$ARTIFACT_ROOT/integration/test-results"; \
+	\
+	# Shard contract (UNIT_SHARD is 1-based) \
+	shard="$${UNIT_SHARD:-1}"; total="$${UNIT_SHARD_TOTAL:-1}"; \
+	\
+	# Package selection (supports list-mode via TEST_ITEMS_FILE, else discover + shard) \
+	pkgs=""; \
+	if [ -n "$${TEST_ITEMS_FILE:-}" ] && [ -f "$${TEST_ITEMS_FILE}" ]; then \
+	  echo "📌 Using runner-provided selection file: $${TEST_ITEMS_FILE}"; \
+	  pkgs="$$(sed "/^[[:space:]]*$$/d" "$${TEST_ITEMS_FILE}" | sort -u || true)"; \
+	else \
+	  echo "📌 Discovering packages via 'go list ./...'"; \
+	  pkgs="$$( $(GO) list ./... | grep -v "/vendor/" | sort || true)"; \
+	fi; \
+	\
+	# If not list-mode, shard packages deterministically \
+	if [ -z "$${TEST_ITEMS_FILE:-}" ] || [ ! -f "$${TEST_ITEMS_FILE}" ]; then \
+	  if [ "$$total" -gt 1 ]; then \
+	    pkgs="$$(printf "%s\n" "$$pkgs" | awk -v t="$$total" -v s="$$shard" '((NR-1) % t) == (s-1)' || true)"; \
+	  fi; \
+	fi; \
+	\
+	if [ -z "$$pkgs" ]; then \
+	  echo "ℹ️ No packages selected for shard $$shard/$$total (nothing to run)."; \
+	  printf "%s\n" "{\"schema_version\":\"go-test.json/v1\",\"note\":\"no packages selected\",\"shard\":{\"index\":$$shard,\"total\":$$total}}" \
+	    > "$$ARTIFACT_ROOT/integration/test-results/go-test.json"; \
+	  printf "%s\n" \
+	    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" \
+	    "<testsuite name=\"go-integration\" tests=\"0\" failures=\"0\" errors=\"0\" skipped=\"0\" time=\"0\"></testsuite>" \
+	    > "$$ARTIFACT_ROOT/integration/test-results/junit.xml"; \
+	  exit 0; \
+	fi; \
+	\
+	echo "🧩 Shard: $$shard/$$total"; \
+	echo "📦 Selected packages ($$(printf "%s\n" "$$pkgs" | wc -l | tr -d " ")):"; \
+	printf "%s\n" "$$pkgs" | sed "s/^/  - /"; \
+	\
+	# Run tests + capture JSON (preserve go test exit code) \
+	set +e; \
+	$(GO) test $$(printf "%s\n" "$$pkgs") -tags=integration -json > "$$ARTIFACT_ROOT/integration/test-results/go-test.json" 2>&1; \
+	test_rc="$$?"; \
 	set -e; \
+	\
 	echo "📄 Converting INTEGRATION test JSON → JUnit XML..."; \
-	"$(GO_JUNIT_REPORT)" < out/test-integration-report.json > out/junit-integration.xml || true; \
-	echo "✅ INTEGRATION JUnit report written to out/junit-integration.xml"; \
-	exit $$test_rc
+	"$(GO_JUNIT_REPORT)" < "$$ARTIFACT_ROOT/integration/test-results/go-test.json" > "$$ARTIFACT_ROOT/integration/test-results/junit.xml" || true; \
+	\
+	# Fallback if junit.xml wasn't created/empty \
+	if [ ! -s "$$ARTIFACT_ROOT/integration/test-results/junit.xml" ]; then \
+	  echo "⚠️ junit.xml empty; writing fallback minimal JUnit."; \
+	  printf "%s\n" \
+	    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" \
+	    "<testsuite name=\"go-integration\" tests=\"0\" failures=\"0\" errors=\"1\" skipped=\"0\" time=\"0\">" \
+	    "  <testcase classname=\"go-integration\" name=\"junit-generation\">" \
+	    "    <error message=\"junit.xml was empty; check go-test.json generation\"></error>" \
+	    "  </testcase>" \
+	    "</testsuite>" \
+	    > "$$ARTIFACT_ROOT/integration/test-results/junit.xml"; \
+	fi; \
+	\
+	echo "✅ Wrote $$ARTIFACT_ROOT/integration/test-results/go-test.json, junit.xml"; \
+	exit "$$test_rc"
+
 
 # Default "test" is just unit tests for standard CI.
 test: test-unit
