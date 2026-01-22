@@ -1,68 +1,55 @@
-name: "Node UI — Playwright E2E (Parallel)."
+name: "node-ui-example: e2e (playwright parallel)"
 
 on:
   push:
+    branches: [ "main" ]
   pull_request:
 
 jobs:
-  playwright_e2e:
-    name: "Playwright E2E"
+  e2e:
     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/e2e-test-parallel.yml@main
-
     with:
-      # ------------------------------------------------
-      # Stack
-      # ------------------------------------------------
       stack: node
+      working_directory: "node-ui-example"
 
-      working_directory: node-ui-example
-
-      # ------------------------------------------------
-      # Command (Makefile target)
-      # ------------------------------------------------
-      e2e_command: make e2e-playwright
-
-      # ------------------------------------------------
-      # Parallel config
-      # ------------------------------------------------
-      parallel_enabled: true
-      shards: 4
-      shard_mode: native
-
-      # ------------------------------------------------
-      # Browsers (Playwright)
-      # ------------------------------------------------
+      # Browser matrix
       browsers: '["chromium","firefox","webkit"]'
+      shards: 4
+      shards_per_browser: '{"chromium":4,"firefox":2,"webkit":2}'
+      browser_env_name: "E2E_BROWSER"
 
-      # Optional: per-browser shards
-      shards_per_browser: |
-        {
-          "chromium": 4,
-          "firefox": 2,
-          "webkit": 2
-        }
+      # The shard runner will set BRIK_SHARD_INDEX / BRIK_SHARD_TOTAL for each job.
+      # Your Makefile converts these into Playwright --shard=...
+      e2e_command: |
+        set -euo pipefail
+        make deps
+        make playwright-install
 
-      browser_env_name: E2E_BROWSER
+        # Start app
+        npm start > e2e-app.log 2>&1 &
+        APP_PID=$!
+        echo "APP_PID=$APP_PID"
 
-      # ------------------------------------------------
-      # Runtime
-      # ------------------------------------------------
-      node_version: "20.x"
+        # Wait for readiness
+        for i in {1..60}; do
+          if curl -fsS "http://localhost:3000" >/dev/null 2>&1; then
+            echo "✅ app ready"
+            break
+          fi
+          sleep 2
+        done
 
-      # ------------------------------------------------
-      # App URL
-      # ------------------------------------------------
-      app_base_url: http://localhost:3000
+        # Run E2E
+        make e2e-playwright E2E_TARGET_URL=http://localhost:3000
 
-      # ------------------------------------------------
-      # Artifacts
-      # ------------------------------------------------
+        # Stop app
+        kill "$APP_PID" || true
+
+      # Evidence + parsing contract
+      raw_reports_dir: "test-artifacts/e2e/test-results"
+      out_root: "test-artifacts"
+
       upload_artifacts: true
-      artifact_retention_days: 7
-
       enable_merge_job: true
-      fail_on_missing_shards: true
-
-      merged_results_out: test-artifacts/e2e/playwright-results.json
-
+      merged_results_out: "test-artifacts/e2e/test-results.json"
       timeout_minutes: 45
