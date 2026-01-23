@@ -1,4 +1,4 @@
-name: "Example: Playwright E2E (BrikByteOS)."
+name: "Example: Playwright E2E (BrikByteOS)"
 
 on:
   push:
