@@ -21,7 +21,7 @@ jobs:
       # The shard runner sets BRIK_SHARD_INDEX / BRIK_SHARD_TOTAL for each job.
       # Makefile converts to Playwright --shard=a/b (1-based internally).
       e2e_command: |
-        bash node-ui-example/scripts/e2e-playwright.sh
+        bash "${GITHUB_WORKSPACE}/node-ui-example/scripts/e2e-playwright.sh"
 
       # Evidence + parsing contract
       raw_reports_dir: "test-artifacts/e2e/test-results"
