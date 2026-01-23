@@ -116,59 +116,14 @@ e2e-playwright-ui:
 # -----------------------------------------------------------------------------
 e2e-cypress:
 	@mkdir -p "$(E2E_RESULTS_DIR)"
-	@echo "🧪 Cypress E2E (shard-aware)"
-	@echo "  BRIK_SHARD_INDEX=$(BRIK_SHARD_INDEX)"
-	@echo "  BRIK_SHARD_TOTAL=$(BRIK_SHARD_TOTAL)"
-	@echo "  E2E_BROWSER=$(E2E_BROWSER)"
-	@echo "  E2E_TARGET_URL=$(E2E_TARGET_URL)"
-	@specs="$$(node - <<'NODE'
-import fs from "fs";
-import path from "path";
-
-const glob = process.env.CYPRESS_SPECS_GLOB || "cypress/e2e/**/*.cy.{js,jsx,ts,tsx}";
-const shardIndex = parseInt(process.env.BRIK_SHARD_INDEX || "0", 10);
-const shardTotal = parseInt(process.env.BRIK_SHARD_TOTAL || "1", 10);
-
-function walk(dir, acc) {
-  if (!fs.existsSync(dir)) return acc;
-  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, ent.name);
-    if (ent.isDirectory()) walk(p, acc);
-    else acc.push(p);
-  }
-  return acc;
-}
-
-let files = [];
-if (glob.startsWith("cypress/e2e/")) {
-  files = walk("cypress/e2e", []).filter(f => /\.cy\.(js|jsx|ts|tsx)$/.test(f));
-} else {
-  files = walk(".", []).filter(f => /\.cy\.(js|jsx|ts|tsx)$/.test(f) && !f.includes("node_modules"));
-}
-
-files.sort();
-const selected = files.filter((_, i) => (i % shardTotal) === shardIndex);
-process.stdout.write(selected.join(","));
-NODE
-)"; \
+	@specs="$$(node scripts/cypress-select-specs.mjs)"; \
 	if [ -z "$$specs" ]; then \
-	  echo "ℹ️ No Cypress specs selected for shard $(BRIK_SHARD_INDEX)/$(BRIK_SHARD_TOTAL). Writing empty JUnit..."; \
-	  printf "%s\n" \
-	    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" \
-	    "<testsuite name=\"cypress-e2e\" tests=\"0\" failures=\"0\" errors=\"0\" skipped=\"0\" time=\"0\"></testsuite>" \
-	    > "$(E2E_RESULTS_DIR)/junit.xml"; \
+	  printf "%s\n" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" "<testsuite name=\"cypress-e2e\" tests=\"0\" failures=\"0\" errors=\"0\" skipped=\"0\" time=\"0\"></testsuite>" > "$(E2E_RESULTS_DIR)/junit.xml"; \
 	  exit 0; \
 	fi; \
-	echo "📦 Selected specs:"; \
-	printf "%s\n" "$$specs" | tr ',' '\n' | sed 's/^/  - /'; \
 	JUNIT_PATH="$(E2E_RESULTS_DIR)/junit.xml"; \
-	MOCHA_FILE="$$JUNIT_PATH" \
-	CYPRESS_baseUrl="$(E2E_TARGET_URL)" \
-	npx cypress run \
-	  --browser "$(E2E_BROWSER)" \
-	  --spec "$$specs" \
-	  --reporter junit \
-	  --reporter-options "mochaFile=$$JUNIT_PATH,toConsole=true"
+	MOCHA_FILE="$$JUNIT_PATH" CYPRESS_baseUrl="$(E2E_TARGET_URL)" npx cypress run --browser "$(E2E_BROWSER)" --spec "$$specs" --reporter junit --reporter-options "mochaFile=$$JUNIT_PATH,toConsole=true"
+
 
 
 e2e-cypress-chrome:
