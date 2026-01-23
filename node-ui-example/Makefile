@@ -118,11 +118,15 @@ e2e-cypress:
 	@mkdir -p "$(E2E_RESULTS_DIR)"
 	@specs="$$(node scripts/cypress-select-specs.mjs)"; \
 	if [ -z "$$specs" ]; then \
-	  printf "%s\n" "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" "<testsuite name=\"cypress-e2e\" tests=\"0\" failures=\"0\" errors=\"0\" skipped=\"0\" time=\"0\"></testsuite>" > "$(E2E_RESULTS_DIR)/junit.xml"; \
-	  exit 0; \
+	  echo "❌ No Cypress specs selected for shard $(BRIK_SHARD_INDEX)/$(BRIK_SHARD_TOTAL)"; \
+	  exit 2; \
 	fi; \
 	JUNIT_PATH="$(E2E_RESULTS_DIR)/junit.xml"; \
-	MOCHA_FILE="$$JUNIT_PATH" CYPRESS_baseUrl="$(E2E_TARGET_URL)" npx cypress run --browser "$(E2E_BROWSER)" --spec "$$specs" --reporter junit --reporter-options "mochaFile=$$JUNIT_PATH,toConsole=true"
+	MOCHA_FILE="$$JUNIT_PATH" CYPRESS_baseUrl="$(E2E_TARGET_URL)" \
+	npx cypress run --browser "$(E2E_BROWSER)" --spec "$$specs" \
+	  --reporter junit \
+	  --reporter-options "mochaFile=$$JUNIT_PATH,toConsole=true"
+
 
 
 
