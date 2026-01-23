@@ -90,7 +90,6 @@ e2e-playwright:
 	@shard_one_based="$$(($(BRIK_SHARD_INDEX) + 1))"; \
 	total="$(BRIK_SHARD_TOTAL)"; \
 	echo "  Playwright shard: $${shard_one_based}/$${total}"; \
-	# JUnit output path (Playwright reads PLAYWRIGHT_JUNIT_OUTPUT_NAME)
 	PLAYWRIGHT_JUNIT_OUTPUT_NAME="$(E2E_RESULTS_DIR)/junit.xml" \
 	E2E_TARGET_URL="$(E2E_TARGET_URL)" \
 	APP_BASE_URL="$(APP_BASE_URL)" \
@@ -98,7 +97,6 @@ e2e-playwright:
 	  --shard="$${shard_one_based}/$${total}" \
 	  --reporter=line,junit
 
-# Optional variant that mirrors your package.json script style
 e2e-playwright-ui:
 	@mkdir -p "$(E2E_RESULTS_DIR)"
 	@echo "🧪 Playwright E2E UI (shard-aware)"
