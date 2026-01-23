@@ -29,7 +29,7 @@ ARTIFACT_ROOT   ?= test-artifacts
 E2E_RESULTS_DIR := $(ARTIFACT_ROOT)/e2e/test-results
 
 # For Cypress sharding
-CYPRESS_SPECS_GLOB ?= cypress/e2e/**/*.cy.{js,jsx,ts,tsx}
+CYPRESS_SPECS_GLOB ?= tests/e2e/cypress/e2e/**/*.{cy,spec}.{js,jsx,ts,tsx}
 
 .PHONY: help deps clean \
         playwright-install e2e-playwright e2e-playwright-ui \
