@@ -121,7 +121,6 @@ e2e-cypress:
 	@echo "  BRIK_SHARD_TOTAL=$(BRIK_SHARD_TOTAL)"
 	@echo "  E2E_BROWSER=$(E2E_BROWSER)"
 	@echo "  E2E_TARGET_URL=$(E2E_TARGET_URL)"
-	@# Build a deterministic spec list and shard it by modulo
 	@specs="$$(node - <<'NODE'
 import fs from "fs";
 import path from "path";
@@ -140,21 +139,15 @@ function walk(dir, acc) {
   return acc;
 }
 
-// Very small "glob" support: if default pattern, just walk cypress/e2e and filter ".cy."
 let files = [];
 if (glob.startsWith("cypress/e2e/")) {
   files = walk("cypress/e2e", []).filter(f => /\.cy\.(js|jsx|ts|tsx)$/.test(f));
 } else {
-  // fallback: walk repo and filter .cy.* (keeps it simple and deterministic)
   files = walk(".", []).filter(f => /\.cy\.(js|jsx|ts|tsx)$/.test(f) && !f.includes("node_modules"));
 }
 
 files.sort();
-
-// modulo split
 const selected = files.filter((_, i) => (i % shardTotal) === shardIndex);
-
-// Output comma-separated list for --spec
 process.stdout.write(selected.join(","));
 NODE
 )"; \
@@ -168,9 +161,7 @@ NODE
 	fi; \
 	echo "📦 Selected specs:"; \
 	printf "%s\n" "$$specs" | tr ',' '\n' | sed 's/^/  - /'; \
-	# Cypress JUnit reporter
 	JUNIT_PATH="$(E2E_RESULTS_DIR)/junit.xml"; \
-	# Cypress JUnit reporter uses MOCHA_FILE (path can include [hash] placeholders; keep simple)
 	MOCHA_FILE="$$JUNIT_PATH" \
 	CYPRESS_baseUrl="$(E2E_TARGET_URL)" \
 	npx cypress run \
@@ -178,6 +169,7 @@ NODE
 	  --spec "$$specs" \
 	  --reporter junit \
 	  --reporter-options "mochaFile=$$JUNIT_PATH,toConsole=true"
+
 
 e2e-cypress-chrome:
 	@$(MAKE) e2e-cypress E2E_BROWSER=chrome
