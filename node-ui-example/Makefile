@@ -118,7 +118,11 @@ e2e-cypress:
 	@mkdir -p "$(E2E_RESULTS_DIR)"
 	@specs="$$(node scripts/cypress-select-specs.mjs)"; \
 	if [ -z "$$specs" ]; then \
-	  echo "❌ No Cypress specs selected for shard $(BRIK_SHARD_INDEX)/$(BRIK_SHARD_TOTAL)"; \
+	  echo "ℹ️ No Cypress specs selected for shard $(BRIK_SHARD_INDEX)/$(BRIK_SHARD_TOTAL). Writing empty JUnit..."; \
+	  printf "%s\n" \
+	    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" \
+	    "<testsuite name=\"cypress-e2e\" tests=\"0\" failures=\"0\" errors=\"0\" skipped=\"0\" time=\"0\"></testsuite>" \
+	    > "$(E2E_RESULTS_DIR)/junit.xml"; \
 	  exit 0; \
 	fi; \
 	JUNIT_PATH="$(E2E_RESULTS_DIR)/junit.xml"; \
