@@ -24,7 +24,7 @@ jobs:
         bash "${GITHUB_WORKSPACE}/node-ui-example/scripts/e2e-playwright.sh"
 
       # Evidence + parsing contract
-      raw_reports_dir: "test-artifacts/e2e/test-results"
+      raw_reports_dir: "node-ui-example/test-artifacts/e2e/test-results"
       out_root: "test-artifacts"
 
       upload_artifacts: true
