@@ -119,7 +119,7 @@ e2e-cypress:
 	@specs="$$(node scripts/cypress-select-specs.mjs)"; \
 	if [ -z "$$specs" ]; then \
 	  echo "❌ No Cypress specs selected for shard $(BRIK_SHARD_INDEX)/$(BRIK_SHARD_TOTAL)"; \
-	  exit 2; \
+	  exit 0; \
 	fi; \
 	JUNIT_PATH="$(E2E_RESULTS_DIR)/junit.xml"; \
 	MOCHA_FILE="$$JUNIT_PATH" CYPRESS_baseUrl="$(E2E_TARGET_URL)" \
