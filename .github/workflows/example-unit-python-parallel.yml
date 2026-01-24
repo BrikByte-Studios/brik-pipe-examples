@@ -60,3 +60,6 @@ jobs:
       # Optional fan-in merge job
       enable_merge_job: true
       merged_results_out: "test-artifacts/unit/test-results.json"
+      benchmark_mode: "compare-last"
+      baseline_workflow_file: "example-unit-python-parallel.yml"  # EXACT file name in the caller repo
+      baseline_artifact_name: "unit-benchmark-baseline"           # keep default if you want
