@@ -1,4 +1,4 @@
-name: "Examples: unit-test-parallel (node)."
+name: "Examples: unit-test-parallel (node)"
 
 on:
   push:
