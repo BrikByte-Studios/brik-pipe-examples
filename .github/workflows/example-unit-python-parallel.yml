@@ -1,4 +1,4 @@
-name: "Examples: unit-test-parallel (python)."
+name: "Examples: unit-test-parallel (python)"
 
 on:
   push:
