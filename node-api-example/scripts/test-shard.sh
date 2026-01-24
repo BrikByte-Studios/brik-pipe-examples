@@ -6,7 +6,8 @@ set -euo pipefail
 # Ensures junit.xml is always produced.
 # -----------------------------------------------------------------------------
 
-ARTIFACT_ROOT="${ARTIFACT_ROOT:-$(pwd)/test-artifacts}"
+ROOT_DIR="$(pwd)"
+ARTIFACT_ROOT="${ROOT_DIR}/test-artifacts"
 mkdir -p "${ARTIFACT_ROOT}/test-results" "${ARTIFACT_ROOT}/coverage"
 
 # Resolve reporter path deterministically (works on GH runners)
