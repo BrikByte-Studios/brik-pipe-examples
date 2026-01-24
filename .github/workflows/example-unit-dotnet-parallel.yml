@@ -54,7 +54,7 @@ jobs:
       # ---------------------------------------------------------------
       # Optional: capture extra artifacts
       # ---------------------------------------------------------------
-      raw_reports_dir: "test-artifacts"
+      raw_reports_dir: test-artifacts/test-results
 
       # ---------------------------------------------------------------
       # Controls

@@ -151,8 +151,13 @@ test: build
 	  : > "$$TRX_CANON"
 	fi
 
-	@echo "📄 Converting TRX → JUnit XML for audit-export (per shard)..."
-	rm -f "$(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"
+	@echo "📄 Converting TRX → JUnit XML (per shard + canonical)..."
+
+	# Contract-canonical JUnit path expected by runner normalizers
+	JUNIT_CANON="$$ARTIFACT_ROOT/test-results/junit.xml"
+	JUNIT_SHARD="$(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"
+
+	rm -f "$$JUNIT_SHARD" "$$JUNIT_CANON"
 
 	# Ensure trx2junit is available
 	if ! command -v trx2junit >/dev/null 2>&1; then
@@ -160,27 +165,50 @@ test: build
 	  $(DOTNET) tool install -g trx2junit
 	fi
 
-	PATH="$$PATH:$$HOME/.dotnet/tools"
+	# Make sure the global tool path is present for this shell
+	export PATH="$$PATH:$$HOME/.dotnet/tools"
+
 	if [ -s "$$TRX_CANON" ]; then
 	  echo "ℹ️ Converting canonical TRX: $$TRX_CANON"
+
+	  # trx2junit writes into the output directory with a generated name,
+	  # so we snapshot which XML existed before, then pick the new one.
+	  before="$$(ls -1 "$(OUT_DIR)"/*.xml 2>/dev/null || true)"
+
 	  trx2junit "$$TRX_CANON" --output "$(OUT_DIR)"
-	  junit=$$(find "$(OUT_DIR)" -maxdepth 1 -name '*.xml' | head -n 1 || true)
-	  if [ -z "$$junit" ]; then
+
+	  after="$$(ls -1 "$(OUT_DIR)"/*.xml 2>/dev/null || true)"
+	  junit_new="$$(comm -13 <(printf "%s\n" $$before | sort) <(printf "%s\n" $$after | sort) | head -n 1 || true)"
+
+	  # Fallback: if comm isn't available (rare), just pick first XML
+	  if [ -z "$$junit_new" ]; then
+	    junit_new="$$(find "$(OUT_DIR)" -maxdepth 1 -name '*.xml' | head -n 1 || true)"
+	  fi
+
+	  if [ -z "$$junit_new" ] || [ ! -f "$$junit_new" ]; then
 	    echo "❌ No JUnit XML produced by trx2junit in $(OUT_DIR)"
 	    ls -R "$(OUT_DIR)" || true
 	    exit 1
 	  fi
-	  mv "$$junit" "$(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"
-	  echo "✅ JUnit report written to $(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"
+
+	  mv "$$junit_new" "$$JUNIT_SHARD"
+	  echo "✅ JUnit report written to $$JUNIT_SHARD"
+
+	  # ✅ Canonicalize to the path the BrikByte runner normalizer expects
+	  cp "$$JUNIT_SHARD" "$$JUNIT_CANON"
+	  echo "✅ Canonical JUnit: $$JUNIT_CANON"
 	else
 	  echo "ℹ️ Canonical TRX is empty; writing empty JUnit for shard $(UNIT_SHARD)."
-	  : > "$(OUT_DIR)/junit-shard$(UNIT_SHARD).xml"
+	  : > "$$JUNIT_SHARD"
+	  : > "$$JUNIT_CANON"
 	fi
 
 	@echo "✅ Done. Contract artifacts:"
 	@echo "  - test-artifacts/test-results/test-results.trx"
 	@echo "  - test-artifacts/coverage/coverage.cobertura.xml"
+	@echo "  - test-artifacts/test-results/junit.xml"
 	@echo "  - out/junit-shard$(UNIT_SHARD).xml"
+
 
 test-integration: build
 	@echo "🧪 Running .NET INTEGRATION tests (Release, Category=Integration) + coverage + canonical reports"
