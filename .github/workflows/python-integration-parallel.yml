@@ -80,7 +80,7 @@ jobs:
       enable_merge_job: true
       fail_on_missing_shards: true
       benchmark_mode: "compare-last"
-      baseline_workflow_file: "example-integration-python.yml"  # exact filename in examples repo
+      baseline_workflow_file: "python-integration-parallel.yml"  # EXACT file name in the caller repo
       baseline_artifact_name: "integration-benchmark-baseline"
 
     secrets:
