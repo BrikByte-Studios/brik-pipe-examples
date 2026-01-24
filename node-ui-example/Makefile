@@ -131,9 +131,6 @@ e2e-cypress:
 	  --reporter junit \
 	  --reporter-options "mochaFile=$$JUNIT_PATH,toConsole=true"
 
-
-
-
 e2e-cypress-chrome:
 	@$(MAKE) e2e-cypress E2E_BROWSER=chrome
 

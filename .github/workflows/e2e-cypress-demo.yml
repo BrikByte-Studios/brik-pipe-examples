@@ -1,4 +1,4 @@
-name: "examples: e2e-cypress."
+name: "examples: e2e-cypress"
 
 on:
   pull_request:
