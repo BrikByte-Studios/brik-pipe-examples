@@ -2,6 +2,10 @@ name: "Example: Python integration-test-parallel."
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   python_integration_parallel:
     name: "Python integration (parallel)"
@@ -75,6 +79,9 @@ jobs:
       # ----------------------------------------------------
       enable_merge_job: true
       fail_on_missing_shards: true
+      benchmark_mode: "compare-last"
+      baseline_workflow_file: "python-integration-parallel.yml"
+      baseline_artifact_name: "integration-benchmark-baseline"
 
     secrets:
       TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
