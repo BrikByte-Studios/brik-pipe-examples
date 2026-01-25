@@ -15,8 +15,7 @@ jobs:
       - name: Run unit tests (serial)
         run: |
           cd node-api-example
-          npm ci --include=dev
-          npm test
+          make test
 
       - name: Benchmark (serial)
         uses: BrikByte-Studios/brik-pipe-actions/.github/actions/benchmark-parallelization@main
