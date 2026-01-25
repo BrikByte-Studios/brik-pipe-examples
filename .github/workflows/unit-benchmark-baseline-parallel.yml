@@ -1,0 +1,36 @@
+name: "brik: unit-benchmark-baseline (nightly)"
+
+on:
+  schedule:
+    - cron: "0 1 * * *"  # 01:00 UTC daily
+  workflow_dispatch:
+
+jobs:
+  baseline_serial:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # run serial tests here (one job, no matrix)
+      - name: Run unit tests (serial)
+        run: |
+          cd node-api-example
+          npm ci --include=dev
+          npm test
+
+      - name: Benchmark (serial)
+        uses: BrikByte-Studios/brik-pipe-actions/.github/actions/benchmark-parallelization@main
+        with:
+          test_type: unit
+          stack: node
+          mode: serial
+          shards: 1
+          normalized_results: test-artifacts/unit/test-results.json
+          out: test-artifacts/unit/parallel/benchmarks/parallel-benchmark.json
+
+      - name: Upload baseline artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-benchmark-baseline
+          path: test-artifacts/unit/parallel/benchmarks/parallel-benchmark.json
+          retention-days: 14
