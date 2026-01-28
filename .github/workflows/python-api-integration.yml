@@ -28,7 +28,9 @@ jobs:
       app_base_url: "http://localhost:8080"
       python_version: "3.12"
       integration_command: "make test-integration"
-      junit_source_path: "test-artifacts/test-results/junit-integration.xml"   # relative to working_directory
+
+      # IMPORTANT: where your repo writes junit (relative to working_directory)
+      junit_source_path: "test-artifacts/test-results/junit-integration.xml"
 
       # evidence
       evidence_dir: "test-artifacts/integration/raw"
@@ -43,6 +45,24 @@ jobs:
       required_keys: "TEST_DB_PASSWORD TEST_DB_USER TEST_DB_NAME"
       enforcement_mode: "enforce"
       mask_secrets: true
+
+      # ------------------------------------------------------------
+      # Flaky detection (PIPE-CORE-2.5.1) — opt-in repeat-run
+      # ------------------------------------------------------------
+      flaky_detection_enabled: true
+
+      # conservative defaults for integration
+      repeat_runs: 3
+      repeat_suite_name: "integration"
+      repeat_max_runs: 5
+      repeat_max_wall_clock_minutes: 45
+
+      # where the integration test runner writes reports (relative to working_directory)
+      # NOTE: this should match what 'make test-integration' produces.
+      repeat_results_glob: "test-artifacts/test-results/**/*.xml"
+
+      # where repeat-run evidence is stored (relative to working_directory)
+      repeat_out_dir: "test-results/flaky/integration"
 
     secrets:
       TEST_DB_NAME: ${{ secrets.TEST_DB_NAME }}
