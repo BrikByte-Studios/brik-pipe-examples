@@ -58,7 +58,6 @@ jobs:
       # -----------------------------
       # Flaky evaluator (PIPE-CORE-2.5.2)
       # -----------------------------
-      flaky_evaluator_enabled: true
 
       # Where evaluator writes its artifacts (workspace-relative)
       flaky_eval_out_dir: "python-api-example/test-results/flaky/eval"
