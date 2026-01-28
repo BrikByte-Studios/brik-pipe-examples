@@ -38,3 +38,11 @@ jobs:
       upload_artifacts: true
       artifact_retention_days: 7
       timeout_minutes: 20
+
+      # Flaky detection — opt-in repeat-run
+      flaky_detection_enabled: true
+      repeat_runs: 5
+      repeat_out_dir: "test-results/flaky/e2e"
+      repeat_results_glob: "test-artifacts/e2e/test-results/**/*.xml"
+      repeat_max_runs: 10
+      repeat_max_wall_clock_minutes: 45
