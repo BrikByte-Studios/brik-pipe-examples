@@ -42,12 +42,10 @@ jobs:
       flaky_detection_enabled: true
       repeat_runs: 5
 
-      # IMPORTANT: point to where your junit XML(s) are produced.
-      # If your pytest config writes to test-artifacts/test-results/junit.xml,
-      # keep this. Otherwise change it to your real path.
+      # IMPORTANT: match where your JUnit is produced (per run).
       repeat_results_glob: "python-api-example/test-artifacts/test-results/**/*.xml"
 
-      # Where repeat-run evidence is written (relative to workspace)
+      # Repeat-run evidence output (workspace-relative)
       repeat_out_dir: "python-api-example/test-results/flaky"
 
       # Guardrails
@@ -56,3 +54,22 @@ jobs:
 
       # Optional label
       repeat_suite_name: "unit"
+
+      # -----------------------------
+      # Flaky evaluator (PIPE-CORE-2.5.2)
+      # -----------------------------
+      flaky_evaluator_enabled: true
+
+      # Where evaluator writes its artifacts (workspace-relative)
+      flaky_eval_out_dir: "python-api-example/test-results/flaky/eval"
+
+      # If empty, unit-test.yml should default to:
+      #   ${repeat_out_dir}/repeat-manifest.json
+      flaky_manifest_path: "python-api-example/test-results/flaky/repeat-manifest.json"
+
+      # Threshold overrides (optional; policy.yml can define these too)
+      flaky_stable_max_fail_rate: "0.05"
+      flaky_flaky_max_fail_rate: "0.40"
+
+      # Repo policy path (optional override; default should be .github/policy.yml)
+      repo_policy_path: ".github/policy.yml"
