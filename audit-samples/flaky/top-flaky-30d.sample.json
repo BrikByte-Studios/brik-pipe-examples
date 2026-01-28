@@ -1,0 +1,13 @@
+{
+  "schema_version": "TopFlakyV1",
+  "window_days": 30,
+  "top_n": 10,
+  "tests": [
+    {
+      "test_id": "sha256:abc123",
+      "display_name": "Checkout.payments.cardVisa",
+      "avg_fail_rate": 0.33,
+      "runs_observed": 20
+    }
+  ]
+}

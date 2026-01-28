@@ -1,0 +1,28 @@
+{
+  "schema_version": "FlakySummaryV1",
+  "suite_name": "e2e-playwright",
+  "runs_total": 5,
+  "generated_at_utc": "2026-01-28T06:12:00Z",
+  "thresholds": {
+    "stable_max_fail_rate": 0.05,
+    "flaky_max_fail_rate": 0.4
+  },
+  "tests": [
+    {
+      "test_id": "sha256:abc123",
+      "display_name": "Checkout.payments.cardVisa",
+      "fail_rate": 0.2,
+      "runs_observed": 5,
+      "classification": "flaky",
+      "last_failure_run": 4
+    },
+    {
+      "test_id": "sha256:def456",
+      "display_name": "Auth.Login.invalidPassword",
+      "fail_rate": 1.0,
+      "runs_observed": 5,
+      "classification": "consistently_failing",
+      "last_failure_run": 5
+    }
+  ]
+}

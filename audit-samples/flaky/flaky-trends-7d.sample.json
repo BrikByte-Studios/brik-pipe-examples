@@ -1,0 +1,22 @@
+{
+  "schema_version": "FlakyTrendsV1",
+  "window_days": 7,
+  "generated_at_utc": "2026-01-28T06:30:00Z",
+  "repo": "BrikByte-Studios/brik-pipe-examples",
+  "branch": "main",
+  "tests": [
+    {
+      "test_id": "sha256:abc123",
+      "display_name": "Checkout.payments.cardVisa",
+      "avg_fail_rate": 0.18,
+      "runs_observed": 12,
+      "last_seen_utc": "2026-01-27T10:00:00Z",
+      "rollup": "flaky"
+    }
+  ],
+  "summary": {
+    "tests_seen": 800,
+    "flaky_tests": 12,
+    "failing_tests": 2
+  }
+}

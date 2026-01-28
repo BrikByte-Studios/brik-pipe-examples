@@ -1,0 +1,10 @@
+{
+  "schema_version": "PolicyDecisionV1",
+  "suite_name": "e2e-playwright",
+  "enforcement_mode": "warn",
+  "decision": "warn",
+  "reasons": [
+    "1 consistently failing test detected",
+    "1 flaky test above stable threshold"
+  ]
+}
