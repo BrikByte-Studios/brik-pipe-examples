@@ -35,3 +35,24 @@ jobs:
       test_command: "make test"
       coverage_mode: "optional"
       enforcement_mode: "warn"
+
+      # -----------------------------
+      # Flaky repeat-run (PIPE-CORE-2.5.1) — Opt-in, guardrailed
+      # -----------------------------
+      flaky_detection_enabled: true
+      repeat_runs: 5
+
+      # IMPORTANT: point to where your junit XML(s) are produced.
+      # If your pytest config writes to test-artifacts/test-results/junit.xml,
+      # keep this. Otherwise change it to your real path.
+      repeat_results_glob: "python-api-example/test-artifacts/test-results/**/*.xml"
+
+      # Where repeat-run evidence is written (relative to workspace)
+      repeat_out_dir: "python-api-example/test-results/flaky"
+
+      # Guardrails
+      repeat_max_runs: 10
+      repeat_max_wall_clock_minutes: 30
+
+      # Optional label
+      repeat_suite_name: "unit"

@@ -20,7 +20,7 @@ jobs:
           cd node-api-example
           make test
 
-      # ✅ NEW: normalize junit.xml -> test-results.json at workspace root
+      # NEW: normalize junit.xml -> test-results.json at workspace root
       - name: Normalize JUnit -> test-results.json (serial)
         shell: bash
         run: |
