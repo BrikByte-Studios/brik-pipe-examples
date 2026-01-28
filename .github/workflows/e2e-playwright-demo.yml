@@ -78,4 +78,3 @@ jobs:
           path: test-results/flaky/trends/**
           if-no-files-found: warn
           retention-days: 30
-
