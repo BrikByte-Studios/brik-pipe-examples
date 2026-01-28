@@ -46,3 +46,36 @@ jobs:
       repeat_results_glob: "test-artifacts/e2e/test-results/**/*.xml"
       repeat_max_runs: 10
       repeat_max_wall_clock_minutes: 45
+
+  flaky-trends:
+    name: "Flaky trends (main only)"
+    if: ${{ github.ref_name == 'main' && github.event_name == 'push' }}
+    needs: [e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Flaky trends
+        uses: BrikByte-Studios/brik-pipe-actions/.github/actions/flaky-trend-aggregator@main
+        with:
+          enabled: "true"
+          windows: "7,30"
+          top_n: "10"
+          branch: "main"
+          event_filter: "push"
+          artifact_name_prefix: "flaky-summary-run-"
+          max_runs_scan: "60"
+          out_dir: "test-results/flaky/trends"
+          stable_max_fail_rate: "0.05"
+          flaky_max_fail_rate: "0.40"
+          write_markdown: "true"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload flaky trends outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "flaky-trends-${{ github.run_id }}"
+          path: test-results/flaky/trends/**
+          if-no-files-found: warn
+          retention-days: 30
+
