@@ -59,7 +59,7 @@ jobs:
 
       # where the integration test runner writes reports (relative to working_directory)
       # NOTE: this should match what 'make test-integration' produces.
-      repeat_results_glob: "test-artifacts/test-results/**/*.xml"
+      repeat_results_glob: "test-artifacts/integration/test-results/**/*.xml"
 
       # where repeat-run evidence is stored (relative to working_directory)
       repeat_out_dir: "test-results/flaky/integration"
