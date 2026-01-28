@@ -1,4 +1,4 @@
-name: "Example: python integration (Compose Lab + Integration Tests)."
+name: "Example: python integration (Compose Lab + Integration Tests)"
 
 on: [push, pull_request]
 
