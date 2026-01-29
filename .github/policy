@@ -1,0 +1,56 @@
+# BrikByteOS Global Policy (Org Default)
+# NOTE: Repo-level overrides may layer via `.github/policy.local.yml` (see docs).
+
+version: 1
+
+release:
+  semver:
+    # Enables SemVer policy + automated tagging workflows.
+    enabled: true
+
+    # v1 constraint: Git tags are the only source of truth.
+    # This avoids drift between version files and tags.
+    source_of_truth: "git-tags" # enum(v1): ["git-tags"]
+
+    # Tag naming rules (v1 strict)
+    tag_prefix: "v"
+    tag_pattern: "^v\\d+\\.\\d+\\.\\d+$" # STRICT: vX.Y.Z only in v1
+
+    # Release eligibility: tagging allowed only on these branches/patterns.
+    # Wildcards: "release/*" matches e.g. "release/v1", "release/2026-01"
+    allowed_branches:
+      - "main"
+      - "master"
+      - "release/*"
+
+    # Enforcement behavior
+    # warn  = logs warnings but continues (useful during rollout)
+    # block = fails the workflow/job (default for mainline governance)
+    enforcement_mode: "block" # enum: ["warn", "block"]
+
+    # Idempotency behavior when tag exists:
+    # fail = fail immediately (default)
+    # noop = succeed only if tag exists AND points to the same commit SHA (conflicts still fail)
+    idempotency: "fail" # enum: ["fail", "noop"]
+
+    # Tag type:
+    # annotated = required for auditability (default)
+    # lightweight = allowed but discouraged
+    tag_type: "annotated" # enum: ["annotated", "lightweight"]
+
+    # Bootstrap behavior when no valid SemVer tags exist.
+    # The resolver (3.1.2) will treat this as the baseline before bumping.
+    initial_version: "v0.1.0" # must match vX.Y.Z
+
+    # Reserved for v2/v3. Present now to keep forward-compatible shape.
+    prerelease:
+      enabled: false
+      allowed_channels:
+        - "rc"
+        - "beta"
+
+    # Guardrails (primarily enforced by the tag workflow in 3.1.4)
+    guardrails:
+      require_full_history: true
+      require_checks_passed: false
+      prevent_tag_move: true
