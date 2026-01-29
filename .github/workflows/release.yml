@@ -59,3 +59,4 @@ jobs:
       dry_run: ${{ inputs.dry_run }}
       audit_enabled: true
       create_github_release: false
+      policy_file: .github/policy.yml
