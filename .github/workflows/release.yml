@@ -52,6 +52,15 @@ permissions:
   contents: write
 
 jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Debug policy presence
+        run: |
+          echo "SHA: $(git rev-parse HEAD)"
+          ls -la .github || true
+          test -f .github/policy.yml && echo "FOUND .github/policy.yml" || echo "MISSING .github/policy.yml"
   release:
     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/semver-tag.yml@main
     with:
