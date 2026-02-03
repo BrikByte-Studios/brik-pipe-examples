@@ -81,6 +81,8 @@ jobs:
       # For now, if you don't have that output wired yet, you can require manual input
       # or keep preview mode until 3.1 outputs are finalized.
       version: ${{ needs.release.outputs.new_version }}
+      from_ref: ${{ needs.release.outputs.previous_version }}
+      to_ref: ${{ needs.release.outputs.sha }}
       output_file: CHANGELOG.md
       enforcement_mode: warn
       include_merges: false
