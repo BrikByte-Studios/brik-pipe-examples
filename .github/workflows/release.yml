@@ -19,8 +19,6 @@ name: Release (BrikByteOS Example)
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       bump:
@@ -41,35 +39,26 @@ permissions:
 
 jobs:
   # ------------------------------------------------------------
-  # PR Preview (safe): no commits, no changelog file writes
+  # PR Preview (safe): uses reusable workflow at JOB level
   # ------------------------------------------------------------
   pr_changelog_preview:
     name: Changelog preview (PR)
     if: ${{ github.event_name == 'pull_request' }}
-    runs-on: ubuntu-latest
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/changelog-builder.yml@main
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Build changelog (preview)
-        uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/changelog-builder.yml@main
-        with:
-          mode: preview
-          # No version required in preview mode (by design)
-          from_ref: ""         # let the reusable workflow resolve last SemVer tag -> HEAD
-          to_ref: ""           # default HEAD
-          output_file: CHANGELOG.md
-          enforcement_mode: warn
-          include_merges: false
-          audit_enabled: true
-          commit_changes: false
+    with:
+      mode: preview
+      # Let range resolver decide (last SemVer tag -> HEAD) if your workflow supports defaults
+      # If your reusable workflow requires explicit refs, pass them here.
+      output_file: CHANGELOG.md
+      enforcement_mode: warn
+      include_merges: false
+      audit_enabled: true
+      commit_changes: false
 
   # ------------------------------------------------------------
-  # Debug (optional): useful for proving policy file presence
-  # Runs only for workflow_dispatch (release) to reduce noise
+  # Debug (optional) — normal job (steps ok)
   # ------------------------------------------------------------
   debug:
     if: ${{ github.event_name == 'workflow_dispatch' }}
@@ -88,7 +77,7 @@ jobs:
 
   # ------------------------------------------------------------
   # Release (manual): semver tag workflow
-  # Safety: only allow tagging from main
+  # Safety: only allow on main
   # ------------------------------------------------------------
   release:
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' }}
