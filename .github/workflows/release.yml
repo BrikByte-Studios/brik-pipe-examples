@@ -13,7 +13,7 @@
 # -----------
 # - All release logic is centralized in brik-pipe-actions reusable workflows
 # - This repo contains NO custom tagging/changelog logic
-# - Prevents policy drift.
+# - Prevents policy drift
 # =============================================================================
 
 name: Release (BrikByteOS Example)
