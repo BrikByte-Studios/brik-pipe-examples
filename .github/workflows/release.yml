@@ -5,12 +5,16 @@
 #
 # Purpose:
 # --------
-# - PRs: changelog preview (no writes)
+# - PRs: Release PR workflow (PIPE-CORE-3.2.4)
+#        - resolves version from release/vX.Y.Z
+#        - runs changelog builder in preview mode
+#        - enforces PIPE-CHANGELOG check
+#        - optional PR comment summary (safe, no forks)
 # - Manual release: semver tag + changelog write (trusted branch only)
 #
 # Governance:
 # -----------
-# - All release logic is centralized in brik-pipe-actions reusable workflows
+# - Release PR logic is centralized in brik-pipe-actions reusable workflows
 # - This repo contains NO custom tagging/changelog logic.
 # =============================================================================
 
@@ -39,23 +43,24 @@ permissions:
 
 jobs:
   # ------------------------------------------------------------
-  # PR Preview (safe): uses reusable workflow at JOB level
+  # PR Release Gate (safe): call PIPE-CORE-3.2.4 orchestrator
   # ------------------------------------------------------------
-  pr_changelog_preview:
-    name: Changelog preview (PR)
+  pr_release_gate:
+    name: PIPE-CHANGELOG (Release PR)
     if: ${{ github.event_name == 'pull_request' }}
-    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/changelog-builder.yml@main
+    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/release-pr.yml@main
     permissions:
       contents: read
+      pull-requests: write # only needed if release-pr.yml posts PR summary comment
     with:
       mode: preview
-      # Let range resolver decide (last SemVer tag -> HEAD) if your workflow supports defaults
-      # If your reusable workflow requires explicit refs, pass them here.
       output_file: CHANGELOG.md
       enforcement_mode: warn
       include_merges: false
       audit_enabled: true
-      commit_changes: false
+      comment_summary: true
+      # Optionally constrain branch pattern in the reusable workflow itself.
+      # The reusable should ignore non-release branches (no-op or success w/ message).
 
   # ------------------------------------------------------------
   # Debug (optional) — normal job (steps ok)
