@@ -11,7 +11,7 @@
 # Governance:
 # -----------
 # - All release logic is centralized in brik-pipe-actions reusable workflows
-# - This repo contains NO custom tagging/changelog logic
+# - This repo contains NO custom tagging/changelog logic.
 # =============================================================================
 
 name: Release (BrikByteOS Example)
