@@ -52,7 +52,7 @@ jobs:
     uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/release-pr.yml@main
     permissions:
       contents: read
-      pull-requests: write # only needed if release-pr.yml posts PR summary comment
+      pull-requests: write
     with:
       output_file: CHANGELOG.md
       enforcement_mode: warn
@@ -108,56 +108,51 @@ jobs:
           echo "previous_version=${{ needs.release.outputs.previous_version }}"
 
   # ------------------------------------------------------------
-  # Changelog write (manual release only)
-  # Safety: only on main + only when NOT dry_run
+  # Changelog write + artifact handoff (reliable)
+  #
+  # WHY:
+  # - Jobs do not share workspace.
+  # - Reusable workflow "write+commit" may not push / may not be visible in this run.
+  # - So we generate CHANGELOG.md in THIS job and upload it as an artifact.
+  #
+  # NOTE:
+  # - This does NOT require pushing back to main to publish release notes.
+  # - If you still want to commit CHANGELOG.md to main, do it in a separate follow-up task.
   # ------------------------------------------------------------
-  changelog:
-    name: Build changelog (write)
+  changelog_generate_and_upload:
+    name: Generate CHANGELOG.md + upload artifact
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.dry_run == false }}
     needs: [release]
-    uses: BrikByte-Studios/brik-pipe-actions/.github/workflows/changelog-builder.yml@main
-    permissions:
-      contents: write
-    with:
-      mode: write
-      version: ${{ needs.release.outputs.new_version }}
-      from_ref: ${{ needs.release.outputs.previous_version }}
-      to_ref: ${{ needs.release.outputs.sha }}
-      output_file: CHANGELOG.md
-      enforcement_mode: warn
-      include_merges: false
-      audit_enabled: true
-      commit_changes: true
-      bot_name: brikbyte-bot
-      bot_email: brikbyte-bot@users.noreply.github.com
-      commit_message: "chore(release): update changelog for ${{ needs.release.outputs.new_version }}"
-
-  # ------------------------------------------------------------
-  # Upload CHANGELOG artifact for reusable publisher (artifact handoff)
-  # IMPORTANT:
-  # - Jobs do not share workspace; we must upload an artifact.
-  # - We checkout and pull latest main so CHANGELOG.md includes the commit from changelog job.
-  # ------------------------------------------------------------
-  upload_changelog:
-    name: Upload CHANGELOG for publishing job
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.dry_run == false }}
-    needs: [changelog, release]
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Ensure latest main + changelog exists
+      - name: Generate changelog (write mode, no commit)
+        id: cl
+        uses: BrikByte-Studios/brik-pipe-actions/.github/actions/changelog-builder@main
+        with:
+          mode: "write"
+          version: ${{ needs.release.outputs.new_version }}
+          from_ref: ${{ needs.release.outputs.previous_version }}
+          to_ref: ${{ needs.release.outputs.sha }}
+          output_file: "CHANGELOG.md"
+          enforcement_mode: "warn"
+          include_merges: "false"
+          audit_enabled: "true"
+          audit_dir: ".audit"
+          commit_changes: "false"
+
+      - name: Ensure CHANGELOG exists
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin main --prune
-          git checkout main
-          git pull --ff-only origin main
-          test -f CHANGELOG.md || (echo "CHANGELOG.md missing after changelog job" && exit 1)
+          test -f CHANGELOG.md || (echo "CHANGELOG.md missing after changelog generation" && exit 1)
+          echo "CHANGELOG.md bytes=$(wc -c < CHANGELOG.md)"
 
       - name: Upload changelog file
         uses: actions/upload-artifact@v4
@@ -165,6 +160,13 @@ jobs:
           name: changelog-md
           path: CHANGELOG.md
           if-no-files-found: error
+
+      - name: Upload changelog audit bundle (optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-audit
+          path: .audit
+          if-no-files-found: warn
 
   # ------------------------------------------------------------
   # Build Example Artifacts (example repo only)
@@ -187,7 +189,6 @@ jobs:
           mkdir -p dist/release
           echo "BrikByteOS Example artifact for ${{ needs.release.outputs.new_version }}" > dist/release/example.txt
 
-      # Placeholder until PIPE-CORE-3.3.4 is fully wired into packs/actions
       - name: Generate placeholder SBOM + SHA256
         shell: bash
         run: |
@@ -214,35 +215,26 @@ jobs:
   publish_artifacts:
     name: Publish artifacts (GitHub Release)
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.dry_run == false }}
-    needs: [release, build_release_artifacts, upload_changelog]
+    needs: [release, build_release_artifacts, changelog_generate_and_upload]
     uses: BrikByte-Studios/.github/.github/workflows/reusable-publish-artifacts.yml@main
     permissions:
       contents: write
     with:
-      # --- Required ---
       tag: ${{ needs.release.outputs.tag }}
 
-      # The reusable downloads release-dist into dist/release, so globs should match that layout.
       artifacts_glob: "dist/release/*"
-
-      # --- Attachments (PIPE-CORE-3.3.4 will formalize this) ---
       attachments_glob: "dist/release/*.json,dist/release/*.sha256,dist/release/*.spdx.json,dist/release/*.cdx.json"
 
-      # --- Release controls ---
-      overwrite_policy: "fail" # fail | skip | overwrite
+      overwrite_policy: "fail"
       draft: false
       prerelease: false
 
-      # We provide body_path and also provide changelog artifact (downloaded by reusable).
       body_path: "CHANGELOG.md"
       generate_release_notes: false
 
-      # --- Audit evidence ---
       audit_dir: ".audit"
       audit_namespace: "release/artifacts"
       require_attachments: true
 
-      # --- Artifact handoff names (must match upload jobs) ---
       dist_artifact_name: "release-dist"
       changelog_artifact_name: "changelog-md"
-      # notes_artifact_name left default (unused because generate_release_notes=false)
