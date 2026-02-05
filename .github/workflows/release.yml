@@ -132,3 +132,64 @@ jobs:
       bot_name: brikbyte-bot
       bot_email: brikbyte-bot@users.noreply.github.com
       commit_message: "chore(release): update changelog for ${{ needs.release.outputs.new_version }}"
+
+  # ------------------------------------------------------------
+  # Build Example Artifacts (example repo only)
+  # Produces dist/release/* + placeholder SBOM + hashes
+  # ------------------------------------------------------------
+  build_release_artifacts:
+    name: Build example release artifacts
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.dry_run == false }}
+    needs: [release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create example artifact outputs
+        run: |
+          mkdir -p dist/release
+          echo "BrikByteOS Example artifact for ${{ needs.release.outputs.new_version }}" > dist/release/example.txt
+
+      # Placeholder until PIPE-CORE-3.3.4 is fully wired into packs/actions
+      - name: Generate placeholder SBOM + SHA256
+        run: |
+          echo '{ "bomFormat": "CycloneDX", "specVersion": "1.5", "metadata": { "component": { "name": "brik-pipe-examples", "version": "${{ needs.release.outputs.new_version }}" } } }' \
+            > dist/release/sbom.cdx.json
+          sha256sum dist/release/* > dist/release/integrity-hashes.sha256
+
+
+  # ------------------------------------------------------------
+  # Publish Release Artifacts (GitHub Releases) — PIPE-CORE-3.3.1
+  # Safety: only on main + only when NOT dry_run
+  # Depends on: release (tag outputs) + changelog (optional notes)
+  # ------------------------------------------------------------
+  publish_artifacts:
+    name: Publish artifacts (GitHub Release)
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.dry_run == false }}
+    needs: [release, changelog, build_release_artifacts]
+    uses: BrikByte-Studios/.github/.github/workflows/reusable-publish-artifacts.yml@main
+    permissions:
+      contents: write
+    with:
+      # --- Required ---
+      artifacts_glob: "dist/release/*"
+
+      # --- Attachments (PIPE-CORE-3.3.4 will formalize this) ---
+      attachments_glob: "dist/release/*.json,dist/release/*.sha256,dist/release/*.spdx.json,dist/release/*.cdx.json"
+
+      # --- Release controls ---
+      overwrite_policy: "fail"     # fail | skip | overwrite
+      draft: false
+      prerelease: false
+
+      # --- Optional: release notes file (if your reusable supports it) ---
+      # If reusable reads CHANGELOG.md or accepts body_path, keep this:
+      body_path: "CHANGELOG.md"
+
+      # --- Audit evidence ---
+      audit_dir: ".audit"
+      audit_namespace: "release/artifacts"
+      require_attachments: true
+
