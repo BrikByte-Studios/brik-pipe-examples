@@ -11,6 +11,7 @@
 #        - enforces PIPE-CHANGELOG check
 #        - optional PR comment summary (safe, no forks)
 # - Manual release: semver tag + changelog write (trusted branch only)
+# - Manual release: build + publish release artifacts to GitHub Releases (PIPE-CORE-3.3.1)
 #
 # Governance:
 # -----------
@@ -58,11 +59,9 @@ jobs:
       include_merges: false
       audit_enabled: true
       comment_summary: true
-      # Optionally constrain branch pattern in the reusable workflow itself.
-      # The reusable should ignore non-release branches (no-op or success w/ message).
 
   # ------------------------------------------------------------
-  # Debug (optional) — normal job (steps ok)
+  # Debug (optional)
   # ------------------------------------------------------------
   debug:
     if: ${{ github.event_name == 'workflow_dispatch' }}
@@ -134,6 +133,40 @@ jobs:
       commit_message: "chore(release): update changelog for ${{ needs.release.outputs.new_version }}"
 
   # ------------------------------------------------------------
+  # Upload CHANGELOG artifact for reusable publisher (artifact handoff)
+  # IMPORTANT:
+  # - Jobs do not share workspace; we must upload an artifact.
+  # - We checkout and pull latest main so CHANGELOG.md includes the commit from changelog job.
+  # ------------------------------------------------------------
+  upload_changelog:
+    name: Upload CHANGELOG for publishing job
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.dry_run == false }}
+    needs: [changelog, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure latest main + changelog exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --prune
+          git checkout main
+          git pull --ff-only origin main
+          test -f CHANGELOG.md || (echo "CHANGELOG.md missing after changelog job" && exit 1)
+
+      - name: Upload changelog file
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-md
+          path: CHANGELOG.md
+          if-no-files-found: error
+
+  # ------------------------------------------------------------
   # Build Example Artifacts (example repo only)
   # Produces dist/release/* + placeholder SBOM + hashes
   # ------------------------------------------------------------
@@ -148,49 +181,68 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Create example artifact outputs
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p dist/release
           echo "BrikByteOS Example artifact for ${{ needs.release.outputs.new_version }}" > dist/release/example.txt
 
       # Placeholder until PIPE-CORE-3.3.4 is fully wired into packs/actions
       - name: Generate placeholder SBOM + SHA256
+        shell: bash
         run: |
+          set -euo pipefail
           echo '{ "bomFormat": "CycloneDX", "specVersion": "1.5", "metadata": { "component": { "name": "brik-pipe-examples", "version": "${{ needs.release.outputs.new_version }}" } } }' \
             > dist/release/sbom.cdx.json
           sha256sum dist/release/* > dist/release/integrity-hashes.sha256
 
+      - name: Upload release artifacts for publishing job
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-dist
+          path: dist/release
+          if-no-files-found: error
 
   # ------------------------------------------------------------
   # Publish Release Artifacts (GitHub Releases) — PIPE-CORE-3.3.1
+  #
   # Safety: only on main + only when NOT dry_run
-  # Depends on: release (tag outputs) + changelog (optional notes).
+  # Uses artifact handoff:
+  # - release-dist (dist/release/*)
+  # - changelog-md (CHANGELOG.md)
   # ------------------------------------------------------------
   publish_artifacts:
     name: Publish artifacts (GitHub Release)
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.dry_run == false }}
-    needs: [release, changelog, build_release_artifacts]
+    needs: [release, build_release_artifacts, upload_changelog]
     uses: BrikByte-Studios/.github/.github/workflows/reusable-publish-artifacts.yml@main
     permissions:
       contents: write
     with:
       # --- Required ---
       tag: ${{ needs.release.outputs.tag }}
+
+      # The reusable downloads release-dist into dist/release, so globs should match that layout.
       artifacts_glob: "dist/release/*"
 
       # --- Attachments (PIPE-CORE-3.3.4 will formalize this) ---
       attachments_glob: "dist/release/*.json,dist/release/*.sha256,dist/release/*.spdx.json,dist/release/*.cdx.json"
 
       # --- Release controls ---
-      overwrite_policy: "fail"     # fail | skip | overwrite
+      overwrite_policy: "fail" # fail | skip | overwrite
       draft: false
       prerelease: false
 
-      # --- Optional: release notes file (if your reusable supports it) ---
-      # If reusable reads CHANGELOG.md or accepts body_path, keep this:
+      # We provide body_path and also provide changelog artifact (downloaded by reusable).
       body_path: "CHANGELOG.md"
+      generate_release_notes: false
 
       # --- Audit evidence ---
       audit_dir: ".audit"
       audit_namespace: "release/artifacts"
       require_attachments: true
 
+      # --- Artifact handoff names (must match upload jobs) ---
+      dist_artifact_name: "release-dist"
+      changelog_artifact_name: "changelog-md"
+      # notes_artifact_name left default (unused because generate_release_notes=false)
