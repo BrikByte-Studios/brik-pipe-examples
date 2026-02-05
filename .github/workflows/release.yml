@@ -204,6 +204,12 @@ jobs:
           path: dist/release
           if-no-files-found: error
 
+      - run: |
+          echo "event=${{ github.event_name }}"
+          echo "ref=${{ github.ref }}"
+          echo "ref_name=${{ github.ref_name }}"
+          echo "dry_run=${{ inputs.dry_run }}"
+
   # ------------------------------------------------------------
   # Publish Release Artifacts (GitHub Releases) — PIPE-CORE-3.3.1
   #
