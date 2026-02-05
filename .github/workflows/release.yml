@@ -219,7 +219,10 @@ jobs:
     uses: BrikByte-Studios/.github/.github/workflows/reusable-publish-artifacts.yml@main
     permissions:
       contents: write
+    secrets:
+      release_token: ${{ secrets.BRIKBYTE_RELEASE_TOKEN }}
     with:
+      repository: ${{ github.repository }}
       tag: ${{ needs.release.outputs.tag }}
 
       artifacts_glob: "dist/release/*"
@@ -238,3 +241,4 @@ jobs:
 
       dist_artifact_name: "release-dist"
       changelog_artifact_name: "changelog-md"
+
