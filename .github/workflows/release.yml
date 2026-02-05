@@ -163,7 +163,7 @@ jobs:
   # ------------------------------------------------------------
   # Publish Release Artifacts (GitHub Releases) — PIPE-CORE-3.3.1
   # Safety: only on main + only when NOT dry_run
-  # Depends on: release (tag outputs) + changelog (optional notes)
+  # Depends on: release (tag outputs) + changelog (optional notes).
   # ------------------------------------------------------------
   publish_artifacts:
     name: Publish artifacts (GitHub Release)
