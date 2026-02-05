@@ -210,7 +210,7 @@ jobs:
   # Safety: only on main + only when NOT dry_run
   # Uses artifact handoff:
   # - release-dist (dist/release/*)
-  # - changelog-md (CHANGELOG.md)
+  # - changelog-md (CHANGELOG.md).
   # ------------------------------------------------------------
   publish_artifacts:
     name: Publish artifacts (GitHub Release)
