@@ -326,6 +326,17 @@ jobs:
           set -euo pipefail
           echo "S3_PREFIX=${{ inputs.s3_prefix }}${GITHUB_REPOSITORY}/${{ needs.release.outputs.tag }}/" >> "$GITHUB_ENV"
 
+      - name: Debug AWS after creds (safe)
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: minioadmin
+          AWS_SECRET_ACCESS_KEY: minioadmin
+          AWS_REGION: us-east-1
+        run: |
+          set -euo pipefail
+          aws configure list || true
+          aws s3api list-buckets --endpoint-url http://localhost:9000 --region us-east-1 || true
+
       - name: Sanity - show which creds source aws cli uses (safe)
         shell: bash
         run: |
