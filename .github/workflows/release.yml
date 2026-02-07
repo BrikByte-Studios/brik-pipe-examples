@@ -268,47 +268,46 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.dry_run == false && inputs.publish_s3 == true }}
     needs: [release, build_release_artifacts, changelog_generate_and_upload]
     runs-on: ubuntu-latest
-
     permissions:
       contents: read
       id-token: write
 
-    services:
-      minio:
-        image: minio/minio:RELEASE.2024-12-18T09-31-35Z
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-        ports:
-          - 9000:9000
-        options: >-
-          --name minio
-
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
         with:
           name: release-dist
           path: dist/release
 
-      - uses: actions/download-artifact@v4
+      - name: Download changelog
+        uses: actions/download-artifact@v4
         with:
           name: changelog-md
           path: .
 
-      - name: Wait for MinIO to be ready
+      - name: Start MinIO (local)
         shell: bash
         run: |
           set -euo pipefail
-          for i in {1..40}; do
-            if curl -fsS "http://localhost:9000/minio/health/ready" > /dev/null; then
-              echo "MinIO is ready."
+          docker run -d --name minio \
+            -p 9000:9000 -p 9001:9001 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:RELEASE.2024-11-07T00-52-20Z \
+            server /data --console-address ":9001"
+
+          # Wait for readiness
+          for i in {1..30}; do
+            if curl -fsS http://localhost:9000/minio/health/ready >/dev/null; then
+              echo "MinIO ready"
               exit 0
             fi
-            echo "Waiting for MinIO... ($i/40)"
             sleep 2
           done
+          echo "MinIO failed to become ready" >&2
+          docker logs minio || true
           exit 1
 
       - name: Create bucket (MinIO)
@@ -317,42 +316,37 @@ jobs:
           set -euo pipefail
           curl -sSfL https://dl.min.io/client/mc/release/linux-amd64/mc -o mc
           chmod +x mc
-          ./mc alias set local "http://localhost:9000" minioadmin minioadmin
+          ./mc alias set local http://localhost:9000 minioadmin minioadmin
           ./mc mb --ignore-existing "local/${{ inputs.s3_bucket }}"
           ./mc ls "local/${{ inputs.s3_bucket }}"
 
-      - name: Compute S3 prefix
-        id: s3
+      - name: Compute dynamic prefix
         shell: bash
         run: |
           set -euo pipefail
-          echo "prefix=releases/${GITHUB_REPOSITORY}/${{ needs.release.outputs.tag }}/" >> "$GITHUB_OUTPUT"
+          echo "S3_PREFIX=${{ inputs.s3_prefix }}${GITHUB_REPOSITORY}/${{ needs.release.outputs.tag }}/" >> "$GITHUB_ENV"
 
       - name: Publish to S3-compatible storage (PIPE-CORE-3.3.2)
         uses: BrikByte-Studios/brik-pipe-actions/.github/actions/publish-s3-artifacts@main
         with:
-          endpoint: "http://localhost:9000"
-          aws_region: "us-east-1"
+          endpoint: http://localhost:9000
           bucket: ${{ inputs.s3_bucket }}
-          prefix: ${{ steps.s3.outputs.prefix }}
+          prefix: ${{ env.S3_PREFIX }}
           repo: ${{ github.repository }}
           tag: ${{ needs.release.outputs.tag }}
 
           artifacts_glob: "dist/release/*"
           attachments_glob: "dist/release/*.json,dist/release/*.sha256,dist/release/*.spdx.json,dist/release/*.cdx.json"
-          require_attachments: "true"
 
           access_key_id: "minioadmin"
           secret_access_key: "minioadmin"
 
-          encryption: "none"     # MinIO SSE varies; enforce on AWS later
+          encryption: "none"   # MinIO local test (later: AES256/kms in real env)
           overwrite_policy: "fail"
-          concurrency: "4"
-          max_attempts: "5"
 
-          dry_run: "false"
           audit_dir: ".audit"
           audit_namespace: "release/s3-artifacts"
+
       - name: Upload S3 audit bundle
         uses: actions/upload-artifact@v4
         with:
