@@ -326,6 +326,14 @@ jobs:
           set -euo pipefail
           echo "S3_PREFIX=${{ inputs.s3_prefix }}${GITHUB_REPOSITORY}/${{ needs.release.outputs.tag }}/" >> "$GITHUB_ENV"
 
+      - name: Sanity - show which creds source aws cli uses (safe)
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws --version
+          aws configure list || true
+          env | grep -E '^AWS_' | sed 's/SECRET_ACCESS_KEY=.*/SECRET_ACCESS_KEY=***REDACTED***/' || true
+
       - name: Publish to S3-compatible storage (PIPE-CORE-3.3.2)
         uses: BrikByte-Studios/brik-pipe-actions/.github/actions/publish-s3-artifacts@main
         with:
