@@ -55,9 +55,9 @@ on:
         default: "brikbyte-artifacts"
 
       s3_prefix:
-        description: "Prefix for objects"
+        description: "Prefix for objects (base). Final path will append repo + tag."
         required: false
-        default: "releases/${{ github.repository }}/"
+        default: "releases/"
 
 # Default permissions: read-only (least privilege)
 permissions:
@@ -321,13 +321,20 @@ jobs:
           ./mc mb --ignore-existing "local/${{ inputs.s3_bucket }}"
           ./mc ls "local/${{ inputs.s3_bucket }}"
 
+      - name: Compute S3 prefix
+        id: s3
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "prefix=releases/${GITHUB_REPOSITORY}/${{ needs.release.outputs.tag }}/" >> "$GITHUB_OUTPUT"
+
       - name: Publish to S3-compatible storage (PIPE-CORE-3.3.2)
         uses: BrikByte-Studios/brik-pipe-actions/.github/actions/publish-s3-artifacts@main
         with:
           endpoint: "http://localhost:9000"
           aws_region: "us-east-1"
           bucket: ${{ inputs.s3_bucket }}
-          prefix: ${{ inputs.s3_prefix }}${{ needs.release.outputs.tag }}/
+          prefix: ${{ steps.s3.outputs.prefix }}
           repo: ${{ github.repository }}
           tag: ${{ needs.release.outputs.tag }}
 
