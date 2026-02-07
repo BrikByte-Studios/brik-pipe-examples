@@ -381,6 +381,8 @@ jobs:
         with:
           name: s3-audit
           path: .audit
-          if-no-files-found: warn
+          if-no-files-found: error
+          include-hidden-files: true
+
 
 
