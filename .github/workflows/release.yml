@@ -347,6 +347,16 @@ jobs:
           audit_dir: ".audit"
           audit_namespace: "release/s3-artifacts"
 
+      - name: Debug S3 results
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "---- results.txt ----"
+          cat .audit/*/release/s3-artifacts/s3/results.txt || true
+          echo "---- planned.txt ----"
+          cat .audit/*/release/s3-artifacts/s3/planned.txt || true
+
       - name: Upload S3 audit bundle
         uses: actions/upload-artifact@v4
         with:
