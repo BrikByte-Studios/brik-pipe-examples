@@ -27,11 +27,11 @@ jobs:
           repository: BrikByte-Studios/brik-pipe-cli
           path: brik-pipe-cli
           # If brik-pipe-cli is private, you MUST use a token that can read it:
-          # token: ${{ secrets.BRIKBYTE_REPO_READ_TOKEN }}.
+          # token: ${{ secrets.BRIKBYTE_REPO_READ_TOKEN }}
 
       # 3) Build bb from the CLI repo (where go.mod exists)
       - name: Build bb
-        working-directory: brikbyteos-cli
+        working-directory: brik-pipe-cli
         run: go build -o ../bb ./cmd/bb
 
       # 4) Validate sample configs (in the examples repo)
