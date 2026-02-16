@@ -1,33 +1,44 @@
-name: Validate bb.yaml Configs
+name: Validate bb.yaml configs
 
 on:
   push:
-    branches: [ main ]
   pull_request:
 
-jobs:
-  validate:
-    runs-on: ubuntu-latest
+permissions:
+  contents: read
 
+jobs:
+  validate-configs:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout examples repo
+      # 1) Checkout examples repo (this repo)
+      - name: Checkout brik-pipe-examples
         uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-            go-version: "1.22.x"
+          go-version: "1.22.x"
 
+      # 2) Checkout CLI repo into a subfolder
+      - name: Checkout brikbyteos-cli
+        uses: actions/checkout@v4
+        with:
+          repository: BrikByte-Studios/brik-pipe-cli
+          path: brik-pipe-cli
+          # If brik-pipe-cli is private, you MUST use a token that can read it:
+          # token: ${{ secrets.BRIKBYTE_REPO_READ_TOKEN }}
+
+      # 3) Build bb from the CLI repo (where go.mod exists)
       - name: Build bb
-        run: go build -o bb ./cmd/bb
+        working-directory: brikbyteos-cli
+        run: go build -o ../bb ./cmd/bb
 
-      - name: Validate unit config
-        run: ./bb test --validate --config configs/bb.unit.yaml
-
-      - name: Validate api config
-        run: ./bb test --validate --config configs/bb.api.yaml
-
-      - name: Validate ui config
-        run: ./bb test --validate --config configs/bb.ui.yaml
-
-      - name: Validate ingest config
-        run: ./bb test --validate --config configs/bb.ingest.yaml
+      # 4) Validate sample configs (in the examples repo)
+      - name: Validate configs
+        run: |
+          ./bb test --validate --config configs/bb.unit.yaml
+          ./bb test --validate --config configs/bb.api.yaml
+          ./bb test --validate --config configs/bb.ui.yaml
+          # optional:
+          ./bb test --validate --config configs/bb.ingest.yaml
