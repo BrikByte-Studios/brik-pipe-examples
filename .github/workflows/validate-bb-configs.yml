@@ -21,17 +21,17 @@ jobs:
           go-version: "1.22.x"
 
       # 2) Checkout CLI repo into a subfolder
-      - name: Checkout brik-pipe-cli
+      - name: Checkout brikbyteos-cli
         uses: actions/checkout@v4
         with:
-          repository: BrikByte-Studios/brik-pipe-cli
-          path: brik-pipe-cli
-          # If brik-pipe-cli is private, you MUST use a token that can read it:
+          repository: BrikByte-Studios/brikbyteos-cli
+          path: brikbyteos-cli
+          # If brikbyteos-cli is private, you MUST use a token that can read it:
           # token: ${{ secrets.BRIKBYTE_REPO_READ_TOKEN }}
 
       # 3) Build bb from the CLI repo (where go.mod exists)
       - name: Build bb
-        working-directory: brik-pipe-cli
+        working-directory: brikbyteos-cli
         run: go build -o ../bb ./cmd/bb
 
       # 4) Validate sample configs (in the examples repo)
