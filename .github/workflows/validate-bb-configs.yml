@@ -1,0 +1,30 @@
+name: Validate bb.yaml Configs
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout examples repo
+        uses: actions/checkout@v4
+
+      - name: Install bb CLI
+        run: |
+          go install github.com/BrikByte-Studios/brikbyteos-cli/cmd/bb@latest
+
+      - name: Validate unit config
+        run: bb test --validate --config configs/bb.unit.yaml
+
+      - name: Validate api config
+        run: bb test --validate --config configs/bb.api.yaml
+
+      - name: Validate ui config
+        run: bb test --validate --config configs/bb.ui.yaml
+
+      - name: Validate ingest config
+        run: bb test --validate --config configs/bb.ingest.yaml

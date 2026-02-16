@@ -1,0 +1,15 @@
+version: "0.0"
+
+defaults:
+  artifacts_dir: ".artifacts"
+
+suites:
+  - id: "contract-ingest"
+    type: "contract"
+    adapter: "contract/pact"
+    mode: "ingest"
+    tags: ["contract"]
+
+    report_paths:
+      - "reports/pact/*.json"
+    report_format: "pact-json"

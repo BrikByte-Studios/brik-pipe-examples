@@ -1,0 +1,18 @@
+version: "0.0"
+
+defaults:
+  timeout_ms: 600000
+  env:
+    HEADLESS: "true"
+
+suites:
+  - id: "ui-playwright"
+    type: "ui"
+    adapter: "ui/playwright"
+    mode: "execute"
+    tags: ["ui", "regression"]
+
+    command: "npx"
+    args:
+      - "playwright"
+      - "test"
