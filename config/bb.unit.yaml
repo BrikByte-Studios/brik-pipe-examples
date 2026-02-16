@@ -1,0 +1,21 @@
+version: "0.0"
+
+defaults:
+  timeout_ms: 300000
+  env:
+    NODE_ENV: "test"
+  workdir: "."
+  artifacts_dir: ".artifacts"
+
+suites:
+  - id: "unit-jest"
+    type: "unit"
+    adapter: "unit/jest"
+    mode: "execute"
+    tags: ["smoke", "ci"]
+
+    command: "npm"
+    args:
+      - "test"
+      - "--"
+      - "--ci"
