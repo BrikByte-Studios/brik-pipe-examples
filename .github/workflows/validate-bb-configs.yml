@@ -27,7 +27,7 @@ jobs:
           repository: BrikByte-Studios/brikbyteos-cli
           path: brikbyteos-cli
           # If brikbyteos-cli is private, you MUST use a token that can read it:
-          # token: ${{ secrets.BRIKBYTE_REPO_READ_TOKEN }}
+          token: ${{ secrets.BRIKBYTE_REPO_READ_TOKEN }}
 
       # 3) Build bb from the CLI repo (where go.mod exists)
       - name: Build bb
