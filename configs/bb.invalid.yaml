@@ -1,0 +1,7 @@
+version: "0.0"
+
+suites:
+  - id: "bad-suite"
+    type: "unit"
+    mode: "execute"
+    # missing command -> should fail

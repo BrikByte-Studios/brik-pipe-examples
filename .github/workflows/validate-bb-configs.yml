@@ -42,3 +42,13 @@ jobs:
           ./bb test --validate --config configs/bb.ui.yaml
           # optional:
           ./bb test --validate --config configs/bb.ingest.yaml
+
+      - name: Validate invalid config (expected failure)
+        run: |
+          set +e
+          bb test --validate --config configs/bb.invalid.yaml
+          EXIT_CODE=$?
+          if [ "$EXIT_CODE" -eq 0 ]; then
+            echo "Expected failure but got success"
+            exit 1
+          fi
