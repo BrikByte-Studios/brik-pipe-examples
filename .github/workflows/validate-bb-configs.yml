@@ -27,31 +27,18 @@ jobs:
           repository: BrikByte-Studios/brikbyteos-cli
           path: brikbyteos-cli
           # If brikbyteos-cli is private, you MUST use a token that can read it:
-          token: ${{ secrets.BRIKBYTE_REPO_READ_TOKEN }}
+          # token: ${{ secrets.BRIKBYTE_REPO_READ_TOKEN }}
 
       # 3) Build bb from the CLI repo (where go.mod exists)
       - name: Build bb
         working-directory: brikbyteos-cli
         run: go build -o ../bb ./cmd/bb
 
-      - name: Checkout brik-pipe-examples
-        uses: actions/checkout@v4
-        with:
-          repository: BrikByte-Studios/brik-pipe-examples
-          path: brik-pipe-examples
-          token: ${{ secrets.BRIKBYTE_REPO_READ_TOKEN }}
-
-      # 4) Validate sample configs (in the examples repo).
-      - name: Validate example configs
+      # 4) Validate sample configs (in the examples repo)
+      - name: Validate configs
         run: |
-          pwd
-          ls -la
-          ls -la configs || true
-          find . -maxdepth 3 -type f -name "bb.unit.yaml" -print
-
-          ../bb test --validate --config configs/bb.unit.yaml
-          ../bb test --validate --config configs/bb.api.yaml
-          ../bb test --validate --config configs/bb.ui.yaml
+          ./bb test --validate --config configs/bb.unit.yaml
+          ./bb test --validate --config configs/bb.api.yaml
+          ./bb test --validate --config configs/bb.ui.yaml
           # optional:
-          # ../bb test --validate --config configs/bb.ingest.yaml
-        working-directory: brik-pipe-examples
+          ./bb test --validate --config configs/bb.ingest.yaml
