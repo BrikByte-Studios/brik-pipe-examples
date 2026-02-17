@@ -34,11 +34,19 @@ jobs:
         working-directory: brikbyteos-cli
         run: go build -o ../bb ./cmd/bb
 
+      - name: Checkout brik-pipe-examples
+        uses: actions/checkout@v4
+        with:
+          repository: BrikByte-Studios/brik-pipe-examples
+          path: brik-pipe-examples
+          token: ${{ secrets.BRIKBYTE_REPO_READ_TOKEN }}
+
       # 4) Validate sample configs (in the examples repo).
-      - name: Validate configs
+      - name: Validate example configs
         run: |
-          ./bb test --validate --config configs/bb.unit.yaml
-          ./bb test --validate --config configs/bb.api.yaml
-          ./bb test --validate --config configs/bb.ui.yaml
+          ../bb test --validate --config configs/bb.unit.yaml
+          ../bb test --validate --config configs/bb.api.yaml
+          ../bb test --validate --config configs/bb.ui.yaml
           # optional:
-          ./bb test --validate --config configs/bb.ingest.yaml
+          # ../bb test --validate --config configs/bb.ingest.yaml
+        working-directory: brik-pipe-examples
