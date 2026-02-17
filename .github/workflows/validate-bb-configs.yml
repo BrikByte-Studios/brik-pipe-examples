@@ -44,6 +44,11 @@ jobs:
       # 4) Validate sample configs (in the examples repo).
       - name: Validate example configs
         run: |
+          pwd
+          ls -la
+          ls -la configs || true
+          find . -maxdepth 3 -type f -name "bb.unit.yaml" -print
+
           ../bb test --validate --config configs/bb.unit.yaml
           ../bb test --validate --config configs/bb.api.yaml
           ../bb test --validate --config configs/bb.ui.yaml
