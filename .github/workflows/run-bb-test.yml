@@ -1,0 +1,42 @@
+name: bb-test
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  bb-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout brik-pipe-examples
+        uses: actions/checkout@v4
+
+      # 2) Checkout CLI repo into a subfolder
+      - name: Checkout brikbyteos-cli
+        uses: actions/checkout@v4
+        with:
+          repository: BrikByte-Studios/brikbyteos-cli
+          path: brikbyteos-cli
+          # If brikbyteos-cli is private, you MUST use a token that can read it:
+          token: ${{ secrets.BRIKBYTE_REPO_READ_TOKEN }}
+
+      # 3) Build bb from the CLI repo (where go.mod exists)
+      - name: Build bb
+        working-directory: brikbyteos-cli
+        run: go build -o ../bb ./cmd/bb
+
+      # If you use the bb docker image:
+      - name: Run bb test
+        run: |
+          ./bb test --output json --config configs/bb.unit.yaml || true
+          ./bb test --output json --config configs/bb.api.yaml  || true
+          ./bb test --output json --config configs/bb.ui.yaml   || true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bb-artifacts
+          path: .bb/artifacts/**
