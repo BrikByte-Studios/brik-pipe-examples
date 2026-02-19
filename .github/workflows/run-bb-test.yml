@@ -1,6 +1,7 @@
 name: bb-test
 
 on:
+  push:
   pull_request:
 
 permissions:
