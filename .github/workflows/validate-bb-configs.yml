@@ -34,7 +34,7 @@ jobs:
         working-directory: brikbyteos-cli
         run: go build -o ../bb ./cmd/bb
 
-      # 4) Validate sample configs (in the examples repo)
+      # 4) Validate sample configs (in the examples repo).
       - name: Validate configs
         run: |
           ./bb test --validate --config configs/bb.unit.yaml
