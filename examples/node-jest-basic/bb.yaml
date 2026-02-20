@@ -14,16 +14,8 @@ suites:
     mode: "execute"
     tags: ["smoke", "ci"]
 
-    # Adapter options (preferred)
-    run_in_band: true
-
-    # Optional filters (uncomment to demo)
-    # test_name_pattern: "sum works"
-    # test_path_pattern: "src/.*\\.test\\.js$"
-
-    # Recommended: stay deterministic (default false)
-    allow_global_jest: false
-
-    # Optional safe extras (adapter will reject disallowed args)
-    extra_args:
-      - "--detectOpenHandles"
+    command: "npm"
+    args:
+      - "test"
+      - "--"
+      - "--ci"
