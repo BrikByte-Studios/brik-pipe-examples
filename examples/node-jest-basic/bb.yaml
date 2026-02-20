@@ -1,0 +1,29 @@
+version: "0.0"
+
+defaults:
+  timeout_ms: 300000
+  env:
+    NODE_ENV: "test"
+  workdir: "examples/node-jest-basic"
+  artifacts_dir: ".bb/artifacts"
+
+suites:
+  - id: "unit-jest"
+    type: "unit"
+    adapter: "unit/jest"
+    mode: "execute"
+    tags: ["smoke", "ci"]
+
+    # Adapter options (preferred)
+    run_in_band: true
+
+    # Optional filters (uncomment to demo)
+    # test_name_pattern: "sum works"
+    # test_path_pattern: "src/.*\\.test\\.js$"
+
+    # Recommended: stay deterministic (default false)
+    allow_global_jest: false
+
+    # Optional safe extras (adapter will reject disallowed args)
+    extra_args:
+      - "--detectOpenHandles"

@@ -5,7 +5,7 @@ defaults:
   env:
     NODE_ENV: "test"
   workdir: "."
-  artifacts_dir: ".artifacts"
+  artifacts_dir: ".bb/artifacts"
 
 suites:
   - id: "unit-jest"
@@ -13,9 +13,5 @@ suites:
     adapter: "unit/jest"
     mode: "execute"
     tags: ["smoke", "ci"]
-
-    command: "npm"
-    args:
-      - "test"
-      - "--"
-      - "--ci"
+    run_in_band: true
+    allow_global_jest: false
