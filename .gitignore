@@ -1,0 +1,38 @@
+# =========================
+# Node
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml.backup
+
+# Lockfiles SHOULD be committed.
+# Keep:
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# =========================
+# Build outputs
+# =========================
+dist/
+build/
+coverage/
+
+# =========================
+# bb artifacts
+# =========================
+.bb/
+.artifacts/
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Environment
+# =========================
+.env
+.env.*
