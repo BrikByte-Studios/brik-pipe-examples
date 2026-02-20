@@ -13,5 +13,8 @@ suites:
     adapter: "unit/jest"
     mode: "execute"
     tags: ["smoke", "ci"]
-    run_in_band: true
-    allow_global_jest: false
+    command: "npm"
+    args:
+      - "test"
+      - "--"
+      - "--ci"
