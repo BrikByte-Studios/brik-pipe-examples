@@ -64,7 +64,7 @@ jobs:
           make build
 
       # --------------------------------------------
-      # Run bb test.
+      # Run bb test
       # --------------------------------------------
       - name: Run bb test (Jest adapter)
         working-directory: examples/node-jest-basic
