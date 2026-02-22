@@ -49,7 +49,7 @@ jobs:
           cache-dependency-path: examples/node-jest-basic/package-lock.json
 
       # --------------------------------------------
-      # Install example dependencies
+      # Install example dependencies.
       # --------------------------------------------
       - name: Install deps (jest example)
         working-directory: examples/node-jest-basic
