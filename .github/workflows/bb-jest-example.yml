@@ -73,6 +73,16 @@ jobs:
             --config bb.yaml \
             --out .bb/artifacts
 
+      - name: Show bb results (debug)
+        working-directory: examples/node-jest-basic
+        run: |
+          echo "=== bb-results.json ==="
+          test -f .bb/artifacts/bb-results.json && cat .bb/artifacts/bb-results.json || true
+          echo "=== tree artifacts ==="
+          find .bb/artifacts -maxdepth 4 -type f -print || true
+          echo "=== raw logs ==="
+          find .bb/artifacts/raw -maxdepth 6 -type f -name "*.log" -print -exec sed -n '1,200p' {} \; || true
+
       # --------------------------------------------
       # Validate artifact structure (Phase 0 contract)
       # --------------------------------------------
