@@ -9,4 +9,8 @@ suites:
     adapter: unit/jest
     mode: execute
     workdir: .
-    args: []
+    command: "npm"
+    args:
+      - "test"
+      - "--"
+      - "--ci"
