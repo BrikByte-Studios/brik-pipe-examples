@@ -1,21 +1,38 @@
+# BrikByteOS — Example: Unit/Jest (Phase 0)
+#
+# This config demonstrates deterministic execution of Jest via:
+#   adapter_id: unit/jest
+#
+# Phase 0 constraints:
+#   - Execute mode only
+#   - Local Jest required (node_modules/.bin/jest)
+#   - Artifacts written under .bb/artifacts
+
 version: "0.0"
 
-defaults:
-  timeout_ms: 300000
-  env:
-    NODE_ENV: "test"
-  workdir: "examples/node-jest-basic"
-  artifacts_dir: ".bb/artifacts"
+project:
+  name: "node-jest-basic"
+  description: "Minimal Node + Jest example for BrikByteOS Phase 0"
 
 suites:
-  - id: "unit-jest"
-    type: "unit"
-    adapter: "unit/jest"
-    mode: "execute"
-    tags: ["smoke", "ci"]
+  - id: unit-jest
+    name: "Unit Tests (Jest)"
+    type: unit
+    adapter_id: unit/jest
+    mode: execute
 
-    command: "npm"
-    args:
-      - "test"
-      - "--"
-      - "--ci"
+    # Workdir is relative to this bb.yaml file
+    workdir: .
+
+    # Phase 0: No passthrough args allowed (keep deterministic)
+    args: []
+
+    # Optional (engine may set this)
+    timeout_seconds: 300
+
+outputs:
+  format: json
+  file: ".bb/artifacts/bb-results.json"
+
+artifacts:
+  root: ".bb/artifacts"

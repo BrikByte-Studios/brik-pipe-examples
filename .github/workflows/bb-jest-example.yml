@@ -1,4 +1,4 @@
-name: bb test (jest example)
+name: Phase 0 — Jest Adapter Integration
 
 on:
   workflow_dispatch:
@@ -13,9 +13,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # --------------------------------------------
+      # Checkout examples repo (this repo)
+      # --------------------------------------------
       - name: Checkout brik-pipe-examples
         uses: actions/checkout@v4
 
+      # --------------------------------------------
+      # Checkout CLI repo (private)
+      # --------------------------------------------
       - name: Checkout brikbyteos-cli
         uses: actions/checkout@v4
         with:
@@ -23,12 +29,18 @@ jobs:
           path: brikbyteos-cli
           token: ${{ secrets.BRIKBYTE_REPO_READ_TOKEN }}
 
+      # --------------------------------------------
+      # Setup Go (for building bb)
+      # --------------------------------------------
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.22.x"
           cache: true
 
+      # --------------------------------------------
+      # Setup Node (for Jest example)
+      # --------------------------------------------
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -36,28 +48,62 @@ jobs:
           cache: npm
           cache-dependency-path: examples/node-jest-basic/package-lock.json
 
+      # --------------------------------------------
+      # Install example dependencies
+      # --------------------------------------------
       - name: Install deps (jest example)
         working-directory: examples/node-jest-basic
         run: npm ci
 
-      - name: Build bb
+      # --------------------------------------------
+      # Build bb CLI
+      # --------------------------------------------
+      - name: Build bb CLI
         working-directory: brikbyteos-cli
-        run: go build -o ../bb ./cmd/bb
-
-      - name: Run bb test (jest example)
         run: |
-          ./bb version
-          ./bb test --output json --config examples/node-jest-basic/bb.yaml
+          go test ./...
+          go build -o bb ./cmd/bb
 
-      - name: Assert artifacts exist
-        if: always()
+      # --------------------------------------------
+      # Run bb test
+      # --------------------------------------------
+      - name: Run bb test (Jest adapter)
+        working-directory: examples/node-jest-basic
         run: |
-          test -f .bb/artifacts/bb-results.json
-          test -f .bb/artifacts/raw/unit-jest/reports/jest-results.json
+          ../../brikbyteos-cli/bb test \
+            --config bb.yaml \
+            --out .bb/artifacts
 
+      # --------------------------------------------
+      # Validate artifact structure (Phase 0 contract)
+      # --------------------------------------------
+      - name: Validate artifact contract
+        working-directory: examples/node-jest-basic
+        run: |
+          test -f .bb/artifacts/raw/unit-jest/reports/jest-results.json || (echo "Missing Jest report" && exit 1)
+          test -f .bb/artifacts/raw/unit-jest/logs/stdout.log || (echo "Missing stdout log" && exit 1)
+          test -f .bb/artifacts/raw/unit-jest/logs/stderr.log || (echo "Missing stderr log" && exit 1)
+          test -f .bb/artifacts/bb-results.json || (echo "Missing bb-results.json" && exit 1)
+
+      # --------------------------------------------
+      # Schema sanity check (Phase 0 minimal validation)
+      # Replace with strict validator when available
+      # --------------------------------------------
+      - name: Validate bb-results.json (structural)
+        working-directory: examples/node-jest-basic
+        run: |
+          node -e "
+            const fs=require('fs');
+            const j=JSON.parse(fs.readFileSync('.bb/artifacts/bb-results.json','utf8'));
+            if(!j) process.exit(1);
+            console.log('bb-results.json parsed OK');
+          "
+
+      # --------------------------------------------
+      # Upload artifacts for traceability
+      # --------------------------------------------
       - name: Upload artifacts
-        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bb-artifacts-jest-example
-          path: .bb/artifacts/**
+          name: bb-phase0-jest-artifacts
+          path: examples/node-jest-basic/.bb/artifacts
