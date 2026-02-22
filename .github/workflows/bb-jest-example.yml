@@ -63,13 +63,20 @@ jobs:
         run: |
           make build
 
+      - name: Debug paths
+        run: |
+          pwd
+          ls -la
+          ls -la brikbyteos-cli || true
+          ls -la examples/node-jest-basic || true
+
       # --------------------------------------------
       # Run bb test
       # --------------------------------------------
       - name: Run bb test (Jest adapter)
         working-directory: examples/node-jest-basic
         run: |
-          ../../brikbyteos-cli/bb test \
+          "${GITHUB_WORKSPACE}/brikbyteos-cli/bb" test \
             --config bb.yaml \
             --out .bb/artifacts
 
